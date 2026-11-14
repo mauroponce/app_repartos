@@ -1,0 +1,29 @@
+one:
+  company: one
+  name: Almacén San Martín
+  contact: María Pérez
+  phone: +54 11 5555-0001
+  email: pedidos@almacen.test
+  address: San Martín 123
+  city: Adrogué
+  status: active
+  latitude: -34.8003128
+  longitude: -58.3370290
+
+inactive:
+  company: one
+  name: Kiosco Cerrado
+  phone: +54 11 5555-0002
+  address: Mitre 321
+  city: Banfield
+  status: inactive
+
+other_company:
+  company: two
+  name: Comercio Privado Norte
+  phone: +54 11 5555-0003
+  address: Belgrano 456
+  city: Tigre
+  status: active
+  latitude: -34.4262
+  longitude: -58.5796

@@ -1,0 +1,24 @@
+<% content_for :title, "#{@driver.name} · App Repartos" %>
+<% content_for :modal_page, "true" %>
+<%= turbo_frame_tag "modal", target: "_top" do %>
+  <dialog class="customer-dialog" data-controller="modal" data-modal-return-url-value="<%= drivers_path %>" data-action="click->modal#backdrop close->modal#closed" aria-labelledby="driver-detail-title">
+    <div class="modal-title"><div><div class="eyebrow">Equipo de repartidores</div><h1 id="driver-detail-title"><%= @driver.name %></h1><p><%= Current.company.name %></p></div><%= link_to drivers_path, class: "icon-btn", aria: { label: "Cerrar detalle" }, data: { action: "modal#close" } do %><%= icon("close") %><% end %></div>
+    <span class="chip <%= @driver.status %>"><%= @driver.active? ? "Activo" : "Inactivo" %></span>
+    <dl class="drawer-data">
+      <% [["Email de acceso", @driver.email_address], ["Teléfono", @driver.phone], ["Repartos asociados", @driver.delivery_runs.count]].each do |label, value| %>
+        <div class="drawer-data-row"><dt><%= label %></dt><dd><%= value.presence || "Sin informar" %></dd></div>
+      <% end %>
+    </dl>
+    <h2 class="section-overline">Últimos repartos</h2>
+    <% if @delivery_runs.any? %>
+      <div class="drawer-subtable">
+        <% @delivery_runs.each do |run| %><%= link_to delivery_run_path(run), class: "drawer-subitem" do %><span><b><%= run.name %></b><small><%= l(run.scheduled_date) %></small></span><span class="chip <%= run.status %>"><%= operation_status(run.status) %></span><% end %><% end %>
+      </div>
+    <% else %>
+      <p class="drawer-note">Todavía no tiene repartos asociados.</p>
+    <% end %>
+    <div class="form-actions"><%= link_to "Volver a repartidores", drivers_path, class: "btn btn-white", data: { action: "modal#close" } %><%= link_to edit_driver_path(@driver), class: "btn btn-dark", data: { turbo_frame: "modal" } do %><%= icon("edit") %>Editar repartidor<% end %></div>
+    <div class="drawer-actions"><%= button_to driver_path(@driver), method: :delete, class: "btn btn-danger btn-sm", form: { data: { turbo_confirm: "¿Eliminar a #{@driver.name}? Esta acción no se puede deshacer.", turbo_frame: "_top" } } do %><%= icon("trash", "sm") %>Eliminar repartidor<% end %></div>
+    <p class="hint">Si tiene repartos asociados, cambiá su estado a inactivo desde la edición para conservar el historial.</p>
+  </dialog>
+<% end %>

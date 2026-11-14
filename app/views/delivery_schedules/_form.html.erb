@@ -1,0 +1,19 @@
+<%= form_with model: [@customer, @delivery_schedule], class: "management-form", data: { controller: "nested-items" } do |form| %>
+  <%= render "shared/validation_errors", record: @delivery_schedule %>
+  <div class="field-grid">
+    <div class="field"><%= form.label :weekday, "Día semanal *" %><%= form.select :weekday, DeliverySchedule::WEEKDAYS.map { |number, name| [name, number] }, {}, required: true %></div>
+    <div class="field"><%= form.label :active, "Estado" %><%= form.select :active, [["Activa", true], ["Inactiva", false]] %></div>
+    <div class="field"><%= form.label :starts_on, "Desde *" %><%= form.date_field :starts_on, required: true %></div>
+    <div class="field"><%= form.label :ends_on, "Hasta (opcional)" %><%= form.date_field :ends_on %></div>
+    <div class="field"><%= form.label :preferred_time, "Horario puntual" %><%= form.time_field :preferred_time %></div>
+    <p class="hint">Elegí horario puntual o completá una franja. Zona horaria: <%= Current.company.time_zone %>.</p>
+    <div class="field"><%= form.label :window_start, "Franja: inicio" %><%= form.time_field :window_start %></div>
+    <div class="field"><%= form.label :window_end, "Franja: fin" %><%= form.time_field :window_end %></div>
+    <div class="field full"><%= form.label :notes, "Observaciones" %><%= form.text_area :notes, rows: 2 %></div>
+  </div>
+  <h2 class="section-title">Productos habituales</h2>
+  <div data-nested-items-target="list"><%= form.fields_for :delivery_schedule_items do |fields| %><%= render "shared/merchandise_row", fields: fields, delivery: false %><% end %></div>
+  <template data-nested-items-target="template"><%= form.fields_for :delivery_schedule_items, DeliveryScheduleItem.new, child_index: "NEW_RECORD" do |fields| %><%= render "shared/merchandise_row", fields: fields, delivery: false %><% end %></template>
+  <button type="button" class="btn btn-white" data-action="nested-items#add">+ Agregar producto o ítem manual</button>
+  <div class="form-actions"><%= link_to "Cancelar", customer_path(@customer), class: "btn btn-white" %><%= form.submit "Guardar programación", class: "btn btn-dark", data: { turbo_submits_with: "Guardando..." } %></div>
+<% end %>

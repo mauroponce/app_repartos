@@ -1,0 +1,23 @@
+es-AR:
+  activerecord:
+    models:
+      customer: Cliente
+      user: Usuario
+    attributes:
+      user:
+        name: Nombre y apellido
+        email_address: Email de acceso
+        phone: Teléfono
+        status: Estado
+        password: Contraseña
+        password_confirmation: Confirmación de contraseña
+      customer:
+        name: Nombre del comercio
+        contact: Persona de contacto
+        phone: Teléfono
+        email: Email
+        address: Dirección
+        city: Ciudad / zona
+        status: Estado
+        latitude: Latitud
+        longitude: Longitud

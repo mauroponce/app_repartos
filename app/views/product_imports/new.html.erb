@@ -1,0 +1,5 @@
+<div class="heading"><div><h1>Importar productos</h1><p>Revisá las filas antes de confirmar la importación.</p></div><%= link_to "Descargar plantilla CSV", template_product_imports_path, class: "btn btn-white", data: { turbo: false } %></div>
+<section class="management-panel">
+  <p>Formato: CSV en UTF-8 o XLSX, primera hoja con encabezados. Hasta 5 MB y 1.000 productos.</p><p class="drawer-note">Las unidades admitidas son <%= DeliveryUnits::CODES.join(", ") %>. El SKU reconoce productos existentes de tu empresa. Las filas sin SKU crean productos nuevos; reimportarlas vuelve a crearlos.</p>
+  <%= form_with url: product_imports_path, multipart: true, class: "management-form" do |form| %><div class="field"><%= form.label :file, "Archivo de productos *" %><%= form.file_field :file, accept: ".csv,.xlsx", required: true %></div><div class="form-actions"><%= link_to "Cancelar", products_path, class: "btn btn-white" %><%= form.submit "Previsualizar archivo", class: "btn btn-dark", data: { turbo_submits_with: "Leyendo..." } %></div><% end %>
+</section>

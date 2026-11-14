@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+/* Catalog, recurring schedules and daily delivery operations. */
+.management-panel{padding:24px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);margin-bottom:18px}
+.management-form{display:grid;gap:16px;max-width:100%}
+.field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+.full{grid-column:1/-1}
+.management-form .form-actions{padding:18px 0 0;margin-top:7px;flex-wrap:wrap}
+.section-title{font-size:16px;font-weight:750;margin:8px 0}
+.scheduled-deliveries{margin-top:25px;border-top:1px solid var(--line);padding-top:18px}
+.scheduled-deliveries h2,.visit-card h2{font-size:16px;font-weight:750}
+.schedule-card{border:1px solid var(--line);padding:15px;border-radius:12px;margin-top:12px}
+.merchandise-summary{display:grid;gap:5px;margin:12px 0;font-size:12px}
+.merchandise-row{border:1px solid var(--line);border-radius:13px;padding:16px;margin:0 0 15px}
+.merchandise-row legend{font-size:12px;font-weight:700;padding:0 6px}
+.remove-item{margin-top:12px;color:#a84c4c}
+.check-field{display:flex;align-items:flex-start;gap:10px;font-size:12px;line-height:1.7}
+.check-field input{width:17px;height:17px;margin-top:3px;flex-shrink:0;accent-color:#9274d0}
+.generation-actions{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:20px}
+.visit-list{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}.management-panel,.visit-list{min-width:0}.visit-card{margin:0}.visit-card .table-scroll{margin-top:20px}
+.visit-card .panel-heading p{color:var(--muted);font-size:12px;margin-top:6px}
+.chip.completed{background:#e9f8f0;color:#3e9b73}.chip.in_progress{background:#f2edff;color:#8168bd}
+.chip.cancelled,.chip.not_attended,.chip.closed{background:#fff0ee;color:#a84c4c}
+.import-errors{color:#a84c4c;min-width:210px;display:grid;gap:5px}.import-preview .data-table td{vertical-align:top}
+@media(max-width:600px){.field-grid{grid-template-columns:minmax(0,1fr)}.management-panel{padding:17px}.merchandise-row{padding:12px}.scheduled-deliveries .panel-heading{align-items:flex-start}.generation-actions{align-items:flex-start;flex-direction:column}}

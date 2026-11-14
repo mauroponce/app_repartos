@@ -1,0 +1,35 @@
+bread:
+  company: one
+  delivery_schedule: tuesday
+  product: bread
+  description: Pan lactal
+  quantity: 20
+  unit: pack
+  position: 1
+
+pizza:
+  company: one
+  delivery_schedule: friday
+  product: pizza
+  description: Pizzetas
+  quantity: 10
+  unit: pack
+  position: 1
+
+almonds:
+  company: two
+  delivery_schedule: monday
+  product: almonds
+  description: Almendras
+  quantity: 10
+  unit: kg
+  position: 1
+
+flour:
+  company: two
+  delivery_schedule: monday
+  product: flour
+  description: Harina bolsa 25 kg
+  quantity: 2
+  unit: bag
+  position: 2

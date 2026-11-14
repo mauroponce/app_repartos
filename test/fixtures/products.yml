@@ -1,0 +1,35 @@
+bread:
+  company: one
+  sku: PAN-01
+  name: Pan lactal
+  unit: pack
+  active: true
+
+pizza:
+  company: one
+  sku: PIZ-01
+  name: Pizzetas
+  unit: pack
+  active: true
+
+almonds:
+  company: two
+  sku: ALM-01
+  name: Almendras
+  unit: kg
+  active: true
+
+flour:
+  company: two
+  sku: HAR-01
+  name: Harina bolsa 25 kg
+  unit: bag
+  package_content_quantity: 25
+  package_content_unit: kg
+  active: true
+
+inactive:
+  company: one
+  name: Producto retirado
+  unit: box
+  active: false

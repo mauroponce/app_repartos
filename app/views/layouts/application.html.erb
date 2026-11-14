@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+  <head><title><%= content_for(:title) || "App Repartos" %></title><%= render "shared/head" %></head>
+  <body>
+    <%= render "shared/icons" %>
+    <div class="shell" data-controller="shell" data-action="turbo:before-cache@document->shell#reset">
+      <%= render "shared/sidebar" %>
+      <button type="button" class="mobile-scrim" data-action="shell#mobile" aria-label="Cerrar menú"></button>
+      <div class="main-shell">
+        <header class="topbar">
+          <div><button type="button" class="mobile-menu" data-action="shell#mobile" aria-label="Abrir menú"><%= icon("menu", "lg") %></button><%= link_to customers_path(anchor: "customer-search"), class: "top-search" do %><%= icon("search", "sm") %><span class="placeholder">Buscar en tu directorio de clientes...</span><% end %></div>
+          <div class="top-brand"><strong>App Repartos</strong><span><%= Current.company.name %></span></div>
+          <div class="top-right"><span class="avatar"><%= initials(Current.user.name) %></span><span class="profile-name"><strong><%= Current.user.name %></strong><small><%= role_name(Current.user) %></small></span></div>
+        </header>
+        <main class="content" id="main-content"><%= render "shared/flash" %><%= yield %></main>
+      </div>
+    </div>
+    <%= turbo_frame_tag "modal", target: "_top" unless content_for?(:modal_page) %>
+  </body>
+</html>

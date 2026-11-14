@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+  <head><title>Ingresar · App Repartos</title><%= render "shared/head" %></head>
+  <body>
+    <%= render "shared/icons" %>
+    <main class="auth-stage">
+      <section class="auth-card">
+        <div class="brand auth-brand"><span class="brand-symbol"><%= icon("package") %></span><div class="brand-words"><strong>App Repartos</strong><small>Centro de operaciones</small></div></div>
+        <%= render "shared/flash" %>
+        <%= yield %>
+      </section>
+      <p class="footer-note">Tu operación, siempre en movimiento.</p>
+    </main>
+  </body>
+</html>

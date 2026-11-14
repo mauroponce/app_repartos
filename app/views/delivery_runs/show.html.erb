@@ -1,0 +1,14 @@
+<% content_for :title, "#{@delivery_run.name} · App Repartos" %>
+<div class="breadcrumb"><%= link_to "Repartos", delivery_runs_path %><%= icon("chevron-right") %><strong><%= l(@delivery_run.scheduled_date) %></strong></div>
+<div class="heading"><div><h1><%= @delivery_run.name %></h1><p><%= l(@delivery_run.scheduled_date) %> · <%= @delivery_run.driver&.name || "Sin repartidor asignado" %> · <%= operation_status(@delivery_run.status) %></p></div><div class="heading-actions"><%= link_to "Editar reparto", edit_delivery_run_path(@delivery_run), class: "btn btn-white" %><%= link_to "Agregar visita manual", new_delivery_run_visit_path(@delivery_run), class: "btn btn-dark" %></div></div>
+<% if @delivery_run.draft? || @delivery_run.assigned? %><div class="generation-actions"><%= button_to "Agregar programaciones aplicables", generate_delivery_run_path(@delivery_run), method: :post, class: "btn btn-white" %><p class="hint">Agrega las programaciones que faltan. Conserva los datos y cantidades de las visitas ya creadas.</p></div><% end %>
+<div class="visit-list">
+  <% @visits.each do |visit| %>
+    <article class="management-panel visit-card"><div class="panel-heading"><div><h2><%= visit.position %>. <%= visit.customer_name %></h2><p><%= visit.customer_address %></p></div><span class="chip <%= visit.status %>"><%= operation_status(visit.status) %></span></div><p class="hint"><%= visit.delivery_schedule_id ? "Desde programación semanal" : "Visita manual" %></p>
+      <div class="table-scroll" tabindex="0" role="region" aria-label="Productos de la visita, desplazamiento horizontal"><table class="data-table"><thead><tr><th>Producto</th><th>Unidad</th><th>Planificado</th><th>Entregado</th><th>Diferencia</th></tr></thead><tbody><% visit.delivery_items.each do |item| %><tr><td><strong><%= item.description %></strong><% if item.notes.present? %><span class="subline"><%= item.notes %></span><% end %></td><td><%= DeliveryUnits::LABELS[item.unit] %></td><td><%= quantity_text(item.planned_quantity) %></td><td><%= quantity_text(item.delivered_quantity) %></td><td><%= item.difference.nil? ? "—" : quantity_text(item.difference) %></td></tr><% end %></tbody></table></div>
+      <% if visit.notes.present? %><p class="drawer-note"><%= visit.notes %></p><% end %>
+      <div class="drawer-actions"><%= link_to "Editar visita / registrar entrega", edit_delivery_run_visit_path(@delivery_run, visit), class: "text-action" %></div>
+    </article>
+  <% end %>
+  <% if @visits.empty? %><div class="empty"><h2>No hay visitas para esta fecha</h2><p>Agregá una visita manual o revisá las programaciones de tus clientes.</p></div><% end %>
+</div>

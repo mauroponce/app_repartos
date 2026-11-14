@@ -1,0 +1,22 @@
+<% content_for :title, "Productos · App Repartos" %>
+<div class="breadcrumb"><span>Operación</span><%= icon("chevron-right") %><strong>Productos</strong></div>
+<div class="heading"><div><div class="eyebrow">Catálogo de la empresa</div><h1>Productos</h1><p>Mercadería y unidades para tus entregas habituales.</p></div><div class="heading-actions"><%= link_to "Importar CSV / Excel", new_product_import_path, class: "btn btn-white" %><%= link_to "Nuevo producto", new_product_path, class: "btn btn-dark" %></div></div>
+<%= turbo_frame_tag "products", data: { turbo_action: "advance" } do %>
+  <div class="toolbar cards-toolbar">
+    <%= form_with url: products_path, method: :get, class: "filters" do |form| %>
+      <div class="field-search"><%= form.search_field :q, value: @query, placeholder: "Buscar nombre o SKU", aria: { label: "Buscar productos" } %></div>
+      <%= form.select :active, [["Todos los estados", ""], ["Activos", "true"], ["Inactivos", "false"]], { selected: @active_filter }, class: "select-filter", aria: { label: "Estado del producto" } %>
+      <%= form.submit "Buscar", class: "btn btn-white btn-sm" %>
+    <% end %><span class="result-count"><%= @filtered_count %> productos</span>
+  </div>
+  <div class="entity-grid">
+    <% @products.each do |product| %>
+      <article class="entity-card"><div class="entity-top"><span class="entity-avatar violet"><%= icon("package") %></span><span class="chip <%= product.active? ? 'active' : 'inactive' %>"><%= product.active? ? "Activo" : "Inactivo" %></span></div><h2><%= product.name %></h2><p>SKU: <%= product.sku.presence || "Sin SKU" %></p><p>Unidad de entrega: <%= DeliveryUnits::LABELS[product.unit] %></p>
+        <% if product.package_content_quantity %><p>Contenido: <%= quantity_text(product.package_content_quantity) %> <%= product.package_content_unit %></p><% end %>
+        <div class="entity-footer"><%= link_to "Editar", edit_product_path(product), class: "text-action", data: { turbo_frame: "_top" } %><%= button_to(product.active? ? "Desactivar" : "Activar", product_path(product), method: :patch, params: { product: { active: !product.active? } }, class: "btn btn-white btn-sm", form: { data: { turbo_frame: "_top" } }) %></div>
+      </article>
+    <% end %>
+    <% if @products.empty? %><div class="empty"><h2>No hay productos para mostrar</h2><p>Agregá productos o ajustá los filtros.</p></div><% end %>
+  </div>
+  <nav class="table-footer" aria-label="Paginación de productos"><span>Página <%= @page %> de <%= @pages %></span><div class="pagination"><% if @page > 1 %><%= link_to "← Anterior", products_path(q: @query, active: @active_filter, page: @page - 1), class: "btn btn-white btn-sm" %><% end %><% if @page < @pages %><%= link_to "Siguiente →", products_path(q: @query, active: @active_filter, page: @page + 1), class: "btn btn-white btn-sm" %><% end %></div></nav>
+<% end %>

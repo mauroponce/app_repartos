@@ -1,0 +1,53 @@
+<% content_for :title, "Clientes · App Repartos" %>
+<div class="breadcrumb"><span>Operación</span><%= icon("chevron") %><strong>Clientes</strong></div>
+<div class="heading">
+  <div><div class="eyebrow">Directorio</div><h1>Clientes</h1><p>Organizá tus comercios, sus contactos y direcciones para cada reparto.</p></div>
+  <div class="heading-actions"><%= link_to new_customer_path, class: "btn btn-dark", data: { turbo_frame: "modal" } do %><%= icon("plus") %> Nuevo cliente<% end %></div>
+</div>
+<section class="kpi-grid" aria-label="Resumen de clientes">
+  <% [["Clientes registrados", @total, "En el directorio", "violet", "store"], ["Clientes activos", @active, "Con servicio habilitado", "good", "check-circle"], ["Clientes inactivos", @inactive, "Sin servicio habilitado", "peach", "store"], ["Ciudades / zonas", @cities, "Cobertura de tus clientes", "pink", "pin"]].each do |label, value, caption, color, symbol| %>
+    <article class="kpi"><span class="kpi-label"><%= label %></span><strong class="kpi-value"><%= value %></strong><span class="kpi-tag <%= color %>"><%= icon(symbol, "sm") %><%= caption %></span><span class="metric-art <%= color %>" aria-hidden="true"><%= icon(symbol) %></span></article>
+  <% end %>
+</section>
+<%= turbo_frame_tag "directory", data: { turbo_action: "advance", controller: "filter", filter_url_value: autocomplete_customers_path, action: "click@window->filter#outside turbo:before-frame-render->filter#rememberFocus turbo:frame-render->filter#restoreFocus" } do %>
+  <section class="panel table-panel" aria-labelledby="customer-list-title">
+    <div class="panel-heading">
+      <div><h2 class="panel-title" id="customer-list-title">Listado de clientes</h2><p class="panel-sub">Comercios, contactos y direcciones de tu empresa</p></div>
+      <span class="result-count" role="status"><%= pluralize(@filtered_count, "cliente", "clientes") %></span>
+    </div>
+    <div class="toolbar">
+      <%= form_with url: customers_path, method: :get, class: "filters", data: { filter_target: "form", action: "submit->filter#cancel", turbo_frame: "directory", turbo_action: "advance" } do |form| %>
+        <div class="customer-autocomplete" data-filter-target="autocomplete" data-action="focusout->filter#leave">
+          <div class="field-search"><%= icon("search", "sm") %><%= form.search_field :q, value: @query, id: "customer-search", placeholder: "Buscar comercio, contacto o ciudad...", autocomplete: "off", maxlength: 120, role: "combobox", aria: { label: "Buscar clientes", autocomplete: "list", controls: "customer-suggestions", expanded: "false" }, data: { filter_target: "query", action: "input->filter#search keydown->filter#navigate" } %></div>
+          <ul id="customer-suggestions" class="customer-suggestions" role="listbox" aria-label="Clientes sugeridos" data-filter-target="suggestions" hidden></ul>
+          <span class="sr-only" role="status" data-filter-target="message"></span>
+        </div>
+        <%= form.select :status, [["Todos los estados", ""], ["Activos", "active"], ["Inactivos", "inactive"]], { selected: @status }, class: "select-filter", aria: { label: "Filtrar por estado" }, data: { action: "change->filter#submit" } %>
+        <%= form.submit "Buscar", class: "btn btn-white btn-sm" %>
+        <% if @query.present? || @status.present? %><%= link_to "Limpiar", customers_path, class: "text-action" %><% end %>
+      <% end %>
+    </div>
+    <div class="table-scroll" tabindex="0" role="region" aria-label="Listado de clientes, desplazamiento horizontal">
+      <table class="data-table customers-table">
+        <caption class="sr-only">Clientes ordenados alfabéticamente por nombre</caption>
+        <thead><tr><th scope="col" aria-sort="ascending">CLIENTE</th><th scope="col">CONTACTO</th><th scope="col">DIRECCIÓN / CIUDAD</th><th scope="col">TELÉFONO</th><th scope="col">ESTADO</th><th scope="col"><span class="sr-only">Acciones</span></th></tr></thead>
+        <tbody id="customers"><%= render @customers %></tbody>
+      </table>
+    </div>
+    <% if @customers.empty? %>
+      <div class="empty">
+        <span class="illustration"><%= icon("store", "lg") %></span>
+        <h2><%= @total.zero? ? "Tu directorio empieza acá" : "No encontramos clientes" %></h2>
+        <p><%= @total.zero? ? "Agregá tu primer comercio y empezá a organizar tus repartos." : "Probá con otro nombre, ciudad o estado." %></p>
+        <%= link_to "Nuevo cliente", new_customer_path, class: "btn btn-dark btn-sm", data: { turbo_frame: "modal" } %>
+      </div>
+    <% end %>
+    <nav class="table-footer" aria-label="Paginación de clientes">
+      <span>Página <%= @page %> de <%= @pages %> · Ordenados por nombre</span>
+      <div class="pagination">
+        <% if @page > 1 %><%= link_to "← Anterior", customers_path(q: @query, status: @status, page: @page - 1), class: "btn btn-white btn-sm" %><% end %>
+        <% if @page < @pages %><%= link_to "Siguiente →", customers_path(q: @query, status: @status, page: @page + 1), class: "btn btn-white btn-sm" %><% end %>
+      </div>
+    </nav>
+  </section>
+<% end %>

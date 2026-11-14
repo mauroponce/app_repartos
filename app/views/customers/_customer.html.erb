@@ -1,0 +1,8 @@
+<tr class="customer-row" id="<%= dom_id(customer) %>">
+  <td><div class="td-person"><span class="mini-avatar <%= %w[violet blue mint peach pink][customer.id % 5] %>" aria-hidden="true"><%= initials(customer.name) %></span><%= link_to customer.name, customer_path(customer), class: "customer-name", data: { turbo_frame: "modal" } %></div></td>
+  <td><strong><%= customer.contact.presence || "—" %></strong><% if customer.email.present? %><span class="subline"><%= customer.email %></span><% end %></td>
+  <td><span class="customer-address"><%= icon("pin", "sm") %><%= customer.address %></span><span class="subline"><%= customer.city %></span></td>
+  <td class="customer-phone"><%= customer.phone %></td>
+  <td><span class="chip <%= customer.status %>"><%= customer_status(customer) %></span></td>
+  <td><%= link_to customer_path(customer), class: "row-link", data: { turbo_frame: "modal" }, aria: { label: "Ver cliente #{customer.name}" } do %><%= icon("chevron", "sm") %><% end %></td>
+</tr>

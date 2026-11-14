@@ -1,0 +1,65 @@
+name: app_repartos
+
+x-app: &app
+  build: .
+  image: app_repartos-development
+  environment:
+    RAILS_ENV: development
+    DATABASE_HOST: db
+    DATABASE_USERNAME: repartos
+    DATABASE_PASSWORD: repartos_local
+    RAILS_MAX_THREADS: 5
+    PHOTON_URL: ${PHOTON_URL:-https://photon.komoot.io/api/}
+    OSM_TILES_URL: ${OSM_TILES_URL:-}
+  volumes:
+    - .:/rails
+    - bundle:/usr/local/bundle
+  depends_on:
+    db:
+      condition: service_healthy
+
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: repartos
+      POSTGRES_PASSWORD: repartos_local
+      POSTGRES_DB: app_repartos_development
+    volumes:
+      - postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U repartos -d app_repartos_development"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  setup:
+    <<: *app
+    command: ["bin/rails", "db:prepare", "tailwindcss:build"]
+  web:
+    <<: *app
+    ports:
+      - "127.0.0.1:3006:3000"
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:3000/up"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  worker:
+    <<: *app
+    command: ["bin/jobs"]
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+  css:
+    <<: *app
+    command: ["bin/rails", "tailwindcss:watch[always]"]
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+
+volumes:
+  postgres:
+  bundle:

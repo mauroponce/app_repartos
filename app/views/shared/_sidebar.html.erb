@@ -1,0 +1,25 @@
+<aside class="sidebar" id="sidebar" aria-label="Navegación principal">
+  <div class="brand">
+    <%= link_to admin_root_path, class: "brand-symbol", aria: { label: "App Repartos, inicio" } do %><%= icon("package") %><% end %>
+    <div class="brand-words"><strong>App Repartos</strong><small>Centro de operaciones</small></div>
+    <button type="button" class="collapse" data-action="shell#toggle" aria-label="Contraer menú"><%= icon("chevron-left", "sm") %></button>
+  </div>
+  <%= link_to customers_path(anchor: "customer-search"), class: "side-search" do %><%= icon("search", "sm") %><span>Buscar clientes...</span><% end %>
+  <div class="nav-group">
+    <div class="nav-label">Operación</div>
+    <nav class="side-nav">
+      <%= link_to drivers_path, class: "nav-link #{controller_name == 'drivers' ? 'active' : ''}", aria: { current: controller_name == "drivers" ? "page" : nil } do %><%= icon("users") %><span class="nav-text">Repartidores</span><% end %>
+      <%= link_to customers_path, class: "nav-link #{controller_name.in?(["customers", "delivery_schedules"]) ? 'active' : ''}", aria: { current: controller_name.in?(["customers", "delivery_schedules"]) ? "page" : nil } do %><%= icon("store") %><span class="nav-text">Clientes</span><% end %>
+      <%= link_to products_path, class: "nav-link #{controller_name.in?(["products", "product_imports"]) ? 'active' : ''}" do %><%= icon("package") %><span class="nav-text">Productos</span><% end %>
+      <%= link_to delivery_runs_path, class: "nav-link #{controller_name.in?(["delivery_runs", "visits"]) ? 'active' : ''}" do %><%= icon("route") %><span class="nav-text">Repartos</span><% end %>
+    </nav>
+  </div>
+  <div class="side-bottom">
+    <div class="side-stat">
+      <div class="mini-label"><span>Tu espacio de trabajo</span><%= icon("store", "sm") %></div>
+      <strong><%= Current.company.name %></strong>
+      <p>Todos tus clientes, en un solo lugar.</p>
+    </div>
+    <%= button_to session_path, method: :delete, class: "side-help" do %><%= icon("arrow", "sm") %><span>Cerrar sesión</span><% end %>
+  </div>
+</aside>

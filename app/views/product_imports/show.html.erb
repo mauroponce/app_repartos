@@ -1,0 +1,15 @@
+<div class="heading"><div><h1>Previsualización de productos</h1><p><%= @preview.size %> filas · Nada se guarda en el catálogo hasta confirmar.</p></div><%= link_to "Cargar otro archivo", new_product_import_path, class: "btn btn-white" %></div>
+<% if @product_import.confirmed_at %>
+  <div class="flash">Esta importación ya fue confirmada. Reintentar no crea duplicados.</div>
+<% elsif @product_import.expired? %>
+  <div class="flash alert">La previsualización venció. Volvé a cargar el archivo.</div>
+<% else %>
+  <section class="management-panel"><h2 class="section-title">Mapear columnas</h2><%= form_with url: product_import_path(@product_import), method: :patch, class: "management-form" do |form| %><div class="field-grid"><% ProductImporter::FIELDS.each do |field| %><div class="field"><%= label_tag "mapping_#{field}", field %><%= select_tag "mapping[#{field}]", options_for_select(@product_import.headers.each_with_index.map { |header, index| [header, index.to_s] }, @product_import.mapping[field]), include_blank: "Sin columna" %></div><% end %></div><div class="form-actions"><%= form.submit "Actualizar previsualización", class: "btn btn-white" %></div><% end %></section>
+  <section class="management-panel import-preview"><div class="table-scroll" tabindex="0" role="region" aria-label="Previsualización de productos, desplazamiento horizontal"><table class="data-table"><thead><tr><th>Fila</th><th>Acción</th><th>SKU</th><th>Nombre</th><th>Unidad</th><th>Contenido</th><th>Estado</th><th>Validación</th></tr></thead><tbody><% @preview.each do |row| %><tr><td><%= row.number %></td><td><%= row.action %></td><td><%= row.product.sku || "Sin SKU" %></td><td><%= row.product.name %></td><td><%= row.product.unit %></td><td><%= quantity_text(row.product.package_content_quantity) unless row.product.package_content_quantity.nil? %> <%= row.product.package_content_unit %></td><td><%= row.product.active? ? "Activo" : "Inactivo" %></td><td><% if row.errors.any? %><ul class="import-errors"><% row.errors.each do |message| %><li>Fila <%= row.number %>: <%= message %></li><% end %></ul><% else %>Válida<% end %></td></tr><% end %></tbody></table></div>
+    <%= form_with url: confirm_product_import_path(@product_import), class: "management-form" do |form| %>
+      <% if @preview.any? { |row| row.product.sku.blank? } %><label class="check-field"><%= check_box_tag :acknowledge_without_sku, "1", false, required: true %> Entiendo que las filas sin SKU crean productos nuevos y que futuras reimportaciones no podrán reconocerlos. No se buscan coincidencias por nombre.</label><% end %>
+      <p class="drawer-note">Se importan todas las filas en una sola transacción. Si alguna es inválida, no se importa ninguna. La previsualización vence a las 24 horas.</p>
+      <div class="form-actions"><%= form.submit "Confirmar importación", class: "btn btn-dark", disabled: @preview.any? { |row| row.errors.any? }, data: { turbo_submits_with: "Importando..." } %></div>
+    <% end %>
+  </section>
+<% end %>

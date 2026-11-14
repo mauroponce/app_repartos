@@ -1,0 +1,11 @@
+<%= form_with model: @product, class: "field-grid management-form" do |form| %>
+  <%= render "shared/validation_errors", record: @product %>
+  <div class="field full"><%= form.label :name, "Nombre *" %><%= form.text_field :name, required: true, maxlength: 255 %></div>
+  <div class="field"><%= form.label :sku, "SKU / código" %><%= form.text_field :sku, maxlength: 255 %></div>
+  <div class="field"><%= form.label :unit, "Unidad de entrega *" %><%= form.select :unit, DeliveryUnits.options, { prompt: "Elegí una unidad" }, required: true %></div>
+  <div class="field"><%= form.label :package_content_quantity, "Cantidad de contenido (opcional)" %><%= form.number_field :package_content_quantity, step: "0.001", min: "0.001" %></div>
+  <div class="field"><%= form.label :package_content_unit, "Unidad de contenido" %><%= form.select :package_content_unit, DeliveryUnits.options, include_blank: "Sin contenido informado" %></div>
+  <p class="hint full">El contenido describe el envase; no convierte las cantidades de entrega. Por ejemplo: 2 bolsas de 25 kg se entregan como 2 bolsas.</p>
+  <div class="field"><%= form.label :active, "Estado" %><%= form.select :active, [["Activo", true], ["Inactivo", false]] %></div>
+  <div class="form-actions full"><%= link_to "Cancelar", products_path, class: "btn btn-white" %><%= form.submit "Guardar producto", class: "btn btn-dark", data: { turbo_submits_with: "Guardando..." } %></div>
+<% end %>

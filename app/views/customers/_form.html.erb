@@ -1,0 +1,36 @@
+<%= form_with model: customer, class: "field-grid", data: customer_location_data(customer).merge(turbo_frame: "_top") do |form| %>
+  <% if customer.errors.any? %>
+    <div class="validation-errors field full" role="alert"><strong>Revisá los datos del cliente</strong><ul><% customer.errors.full_messages.each do |message| %><li><%= message %></li><% end %></ul></div>
+  <% end %>
+  <div class="field full"><%= form.label :name, "Nombre del cliente / comercio *" %><%= form.text_field :name, required: true, maxlength: 90, placeholder: "Ej. Almacén San Martín", autocomplete: "organization", autofocus: true, data: { location_target: "name" } %></div>
+  <div class="field"><%= form.label :contact, "Persona de contacto" %><%= form.text_field :contact, maxlength: 255, autocomplete: "name" %></div>
+  <div class="field"><%= form.label :phone, "Teléfono *" %><%= form.telephone_field :phone, required: true, maxlength: 255, placeholder: "+54 11...", autocomplete: "tel" %></div>
+  <div class="field full"><%= form.label :email, "Email" %><%= form.email_field :email, maxlength: 255, placeholder: "pedidos@comercio.com", autocomplete: "email" %></div>
+
+  <fieldset class="location-picker field full" aria-describedby="location-instructions">
+    <legend>Ubicación del cliente *</legend>
+    <p id="location-instructions" class="hint">Buscá una dirección o marcá el punto de entrega en el mapa. Podés arrastrar el marcador para ajustarlo.</p>
+    <div class="location-search">
+      <label for="customer-location-query" class="location-search-label">Buscar dirección</label>
+      <div class="location-search-row">
+        <input id="customer-location-query" type="search" maxlength="255" placeholder="Ej. Av. Espora 821, Adrogué" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="customer-location-results" aria-expanded="false" data-location-target="query" data-action="input->location#scheduleSearch keydown->location#keydown">
+        <button type="button" class="btn btn-white" data-action="location#search">Buscar</button>
+      </div>
+      <ul id="customer-location-results" class="location-results" role="listbox" aria-label="Direcciones sugeridas" data-location-target="results" hidden></ul>
+    </div>
+    <p class="location-message" data-location-target="searchMessage" role="status" aria-live="polite"></p>
+    <div class="customer-map" data-location-target="map" role="region" aria-label="Mapa de ubicación del cliente"></div>
+    <p class="location-message" data-location-target="positionMessage" role="status" aria-live="polite"><%= customer.located? ? "Ubicación guardada. Podés ajustar el marcador." : "Todavía no seleccionaste una ubicación." %></p>
+    <div class="location-coordinates">
+      <div class="field"><%= form.label :latitude, "Latitud *" %><%= form.number_field :latitude, required: true, step: "any", min: -90, max: 90, placeholder: "-34.8003128", data: { location_target: "latitude", action: "input->location#coordinatesChanged" } %></div>
+      <div class="field"><%= form.label :longitude, "Longitud *" %><%= form.number_field :longitude, required: true, step: "any", min: -180, max: 180, placeholder: "-58.3370290", data: { location_target: "longitude", action: "input->location#coordinatesChanged" } %></div>
+    </div>
+    <%= form.hidden_field :location_confirmed, value: customer.location_confirmed || "false", data: { location_target: "confirmed" } %>
+    <span class="hint">También podés ingresar las coordenadas directamente. Cambiar el texto de la dirección requiere confirmar nuevamente el punto.</span>
+  </fieldset>
+
+  <div class="field"><%= form.label :address, "Dirección de entrega *" %><%= form.text_field :address, required: true, maxlength: 255, placeholder: "Calle y número", autocomplete: "street-address", data: { location_target: "address", action: "input->location#addressChanged" } %></div>
+  <div class="field"><%= form.label :city, "Ciudad / zona *" %><%= form.text_field :city, required: true, maxlength: 255, placeholder: "Ej. Adrogué", autocomplete: "address-level2", data: { location_target: "city", action: "input->location#addressChanged" } %></div>
+  <div class="field full"><%= form.label :status, "Estado" %><%= form.select :status, [["Activo", "active"], ["Inactivo", "inactive"]] %><span class="hint">Los campos con * son obligatorios.</span></div>
+  <div class="field full"><div class="form-actions"><%= link_to "Cancelar", customers_path, class: "btn btn-white", data: { action: "modal#close" } %><%= form.button class: "btn btn-dark", data: { turbo_submits_with: "Guardando..." } do %><%= icon("check") %><%= customer.persisted? ? "Guardar cambios" : "Guardar cliente" %><% end %></div></div>
+<% end %>

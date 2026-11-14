@@ -1,0 +1,8 @@
+<tr class="driver-row" id="driver_<%= driver.id %>">
+  <td><div class="td-person"><span class="mini-avatar <%= %w[violet blue mint peach pink][driver.id % 5] %>" aria-hidden="true"><%= initials(driver.name) %></span><%= link_to driver.name, driver_path(driver), class: "customer-name", data: { turbo_frame: "modal" } %></div></td>
+  <td><%= driver.email_address %></td>
+  <td class="customer-phone"><%= driver.phone.presence || "Sin informar" %></td>
+  <td><%= @run_counts.fetch(driver.id, 0) %></td>
+  <td><span class="chip <%= driver.status %>"><%= driver.active? ? "Activo" : "Inactivo" %></span></td>
+  <td><%= link_to driver_path(driver), class: "row-link", data: { turbo_frame: "modal" }, aria: { label: "Ver repartidor #{driver.name}" } do %><%= icon("chevron", "sm") %><% end %></td>
+</tr>

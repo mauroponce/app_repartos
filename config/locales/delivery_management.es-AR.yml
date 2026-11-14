@@ -1,0 +1,77 @@
+es-AR:
+  activerecord:
+    models:
+      product: Producto
+      delivery_schedule: Programación
+      delivery_schedule_item: Producto programado
+      delivery_run: Reparto
+      visit: Visita
+      delivery_item: Mercadería entregada
+      product_import: Importación de productos
+    attributes:
+      company:
+        time_zone: Zona horaria
+      product:
+        company: Empresa
+        sku: SKU
+        name: Nombre
+        unit: Unidad
+        active: Estado
+        package_content_quantity: Cantidad de contenido
+        package_content_unit: Unidad de contenido
+      delivery_schedule:
+        company: Empresa
+        customer: Cliente
+        weekday: Día semanal
+        preferred_time: Horario puntual
+        window_start: Inicio de franja
+        window_end: Fin de franja
+        starts_on: Fecha de inicio
+        ends_on: Fecha de fin
+        active: Estado
+        notes: Observaciones
+        delivery_schedule_items: Productos
+        delivery_schedule_items.description: Descripción del producto
+        delivery_schedule_items.quantity: Cantidad del producto
+        delivery_schedule_items.unit: Unidad del producto
+        delivery_schedule_items.product: Producto
+        delivery_schedule_items.company: Empresa del producto
+        delivery_schedule_items.position: Orden del producto
+      delivery_schedule_item:
+        product: Producto
+        description: Descripción
+        quantity: Cantidad
+        unit: Unidad
+        position: Orden
+        company: Empresa
+        delivery_schedule: Programación
+      delivery_run:
+        company: Empresa
+        driver: Repartidor
+        scheduled_date: Fecha de reparto
+        name: Nombre
+        status: Estado
+      visit:
+        company: Empresa
+        customer: Cliente
+        customer_name: Nombre del cliente
+        customer_address: Dirección del cliente
+        delivery_run: Reparto
+        delivery_schedule: Programación
+        status: Resultado
+        position: Orden
+        delivery_items: Productos
+        delivery_items.product: Producto
+        delivery_items.description: Descripción del producto
+        delivery_items.unit: Unidad del producto
+        delivery_items.planned_quantity: Cantidad planificada
+        delivery_items.delivered_quantity: Cantidad entregada
+        delivery_items.company: Empresa del producto
+      delivery_item:
+        company: Empresa
+        visit: Visita
+        product: Producto
+        description: Descripción
+        unit: Unidad
+        planned_quantity: Cantidad planificada
+        delivered_quantity: Cantidad entregada

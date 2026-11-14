@@ -1,0 +1,13 @@
+<%= form_with model: driver, scope: :driver, url: driver.persisted? ? driver_path(driver) : drivers_path, class: "field-grid", data: { turbo_frame: "_top" } do |form| %>
+  <% if driver.errors.any? %>
+    <div class="validation-errors field full" role="alert"><strong>Revisá los datos del repartidor</strong><ul><% driver.errors.full_messages.each do |message| %><li><%= message %></li><% end %></ul></div>
+  <% end %>
+  <div class="field full"><%= form.label :name, "Nombre y apellido *" %><%= form.text_field :name, required: true, maxlength: 255, autocomplete: "name", autofocus: true %></div>
+  <div class="field"><%= form.label :email_address, "Email de acceso *" %><%= form.email_field :email_address, required: true, maxlength: 255, autocomplete: "off" %></div>
+  <div class="field"><%= form.label :phone, "Teléfono" %><%= form.telephone_field :phone, maxlength: 255, placeholder: "+54 11...", autocomplete: "tel" %></div>
+  <div class="field"><%= form.label :password, driver.persisted? ? "Nueva contraseña" : "Contraseña *" %><%= form.password_field :password, required: driver.new_record?, minlength: 12, maxlength: 72, autocomplete: "new-password" %></div>
+  <div class="field"><%= form.label :password_confirmation, "Confirmar contraseña" %><%= form.password_field :password_confirmation, required: driver.new_record?, minlength: 12, maxlength: 72, autocomplete: "new-password" %></div>
+  <p class="hint full">Usá al menos 12 caracteres.<%= " Dejá ambos campos vacíos para conservar la contraseña actual." if driver.persisted? %></p>
+  <div class="field full"><%= form.label :status, "Estado" %><%= form.select :status, [["Activo", "active"], ["Inactivo", "inactive"]] %><span class="hint">Un repartidor inactivo conserva su historial, pero no puede ingresar ni recibir nuevos repartos.</span></div>
+  <div class="field full"><div class="form-actions"><%= link_to "Cancelar", drivers_path, class: "btn btn-white", data: { action: "modal#close" } %><%= form.button class: "btn btn-dark", data: { turbo_submits_with: "Guardando..." } do %><%= icon("check") %><%= driver.persisted? ? "Guardar cambios" : "Guardar repartidor" %><% end %></div></div>
+<% end %>

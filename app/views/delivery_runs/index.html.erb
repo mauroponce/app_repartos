@@ -1,0 +1,7 @@
+<% content_for :title, "Repartos · App Repartos" %>
+<div class="heading"><div><div class="eyebrow">Operación diaria</div><h1>Repartos</h1><p>Planificá las visitas y registrá la mercadería entregada.</p></div><%= link_to "Nuevo reparto", new_delivery_run_path, class: "btn btn-dark" %></div>
+<div class="entity-grid">
+  <% @delivery_runs.each do |run| %><article class="entity-card"><span class="chip <%= run.status %>"><%= operation_status(run.status) %></span><h2><%= link_to run.name, delivery_run_path(run), class: "text-action" %></h2><p><%= l(run.scheduled_date) %> · <%= run.driver&.name || "Sin repartidor" %></p><div class="entity-footer"><%= link_to "Ver visitas y productos", delivery_run_path(run), class: "text-action" %></div></article><% end %>
+  <% if @delivery_runs.empty? %><div class="empty"><h2>Todavía no hay repartos</h2><p>Creá uno para generar las visitas de tus programaciones.</p></div><% end %>
+</div>
+<nav class="table-footer" aria-label="Paginación de repartos"><span>Página <%= @page %> de <%= @pages %></span><div class="pagination"><% if @page > 1 %><%= link_to "← Anterior", delivery_runs_path(page: @page - 1), class: "btn btn-white btn-sm" %><% end %><% if @page < @pages %><%= link_to "Siguiente →", delivery_runs_path(page: @page + 1), class: "btn btn-white btn-sm" %><% end %></div></nav>

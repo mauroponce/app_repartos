@@ -1,0 +1,14 @@
+<%= form_with model: [@delivery_run, @visit], class: "management-form", data: { controller: "nested-items" } do |form| %>
+  <%= render "shared/validation_errors", record: @visit %>
+  <div class="field-grid">
+    <% if @visit.new_record? %><div class="field full"><%= form.label :customer_id, "Cliente *" %><%= form.collection_select :customer_id, @customers, :id, :name, { prompt: "Elegí un cliente" }, required: true %></div><% else %><p class="full"><strong><%= @visit.customer_name %></strong> · <%= @visit.customer_address %></p><% end %>
+    <div class="field"><%= form.label :position, "Orden de visita" %><%= form.number_field :position, min: 0 %></div>
+    <div class="field"><%= form.label :status, "Resultado de la visita" %><%= form.select :status, Visit.statuses.keys.map { |status| [operation_status(status), status] } %></div>
+    <div class="field full"><%= form.label :notes, "Observaciones" %><%= form.text_area :notes, rows: 2 %></div>
+  </div>
+  <h2 class="section-title">Mercadería de esta visita</h2><p class="hint">Los cambios se guardan solamente en esta visita. Las programaciones futuras conservan sus cantidades.</p>
+  <div data-nested-items-target="list"><%= form.fields_for :delivery_items do |fields| %><%= render "shared/merchandise_row", fields: fields, delivery: true %><% end %></div>
+  <template data-nested-items-target="template"><%= form.fields_for :delivery_items, DeliveryItem.new, child_index: "NEW_RECORD" do |fields| %><%= render "shared/merchandise_row", fields: fields, delivery: true %><% end %></template>
+  <button type="button" class="btn btn-white" data-action="nested-items#add">+ Agregar producto o ítem manual</button>
+  <div class="form-actions"><%= link_to "Cancelar", delivery_run_path(@delivery_run), class: "btn btn-white" %><%= form.submit "Guardar visita y entrega", class: "btn btn-dark", data: { turbo_submits_with: "Guardando..." } %></div>
+<% end %>

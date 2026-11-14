@@ -1,0 +1,17 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "geometry": { "type": "Point", "coordinates": [-58.401075, -34.8081247] },
+      "properties": { "osm_type": "W", "osm_id": 181157280, "osm_key": "shop", "osm_value": "mall", "name": "Boulevard Shopping", "street": "General José María Paz", "city": "Adrogué", "state": "Buenos Aires", "country": "Argentina", "countrycode": "AR" }
+    },
+    {
+      "geometry": { "type": "Point", "coordinates": [-58.4004524, -34.8087601] },
+      "properties": { "osm_type": "W", "osm_id": 168801662, "osm_key": "amenity", "osm_value": "parking", "name": "Boulevard Shopping", "street": "General José María Paz", "city": "Adrogué", "state": "Buenos Aires", "country": "Argentina", "countrycode": "AR" }
+    },
+    {
+      "geometry": { "type": "Point", "coordinates": [-58.4022365, -34.8078896] },
+      "properties": { "osm_type": "W", "osm_id": 636172968, "osm_key": "amenity", "osm_value": "parking", "name": "Boulevard Shopping", "street": "Avenida Hipólito Yrigoyen", "city": "Adrogué", "state": "Buenos Aires", "country": "Argentina", "countrycode": "AR" }
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+<% password_digest = BCrypt::Password.create("Repartos-test-2026") %>
+
+one:
+  name: Lucía Pérez
+  company: one
+  role: administrator
+  email_address: one@example.com
+  password_digest: <%= password_digest %>
+
+two:
+  name: Pedro Gómez
+  company: two
+  role: administrator
+  email_address: two@example.com
+  password_digest: <%= password_digest %>
+
+supervisor:
+  name: Ana Supervisor
+  company: one
+  role: supervisor
+  email_address: supervisor@example.test
+  password_digest: <%= password_digest %>
+
+driver:
+  name: Juan Repartidor
+  company: one
+  role: driver
+  email_address: driver@example.test
+  password_digest: <%= password_digest %>
+  phone: "+54 11 5555-9876"
+
+inactive_driver:
+  name: Zoe Inactiva
+  company: one
+  role: driver
+  status: inactive
+  email_address: inactive@example.test
+  password_digest: <%= password_digest %>
+
+other_driver:
+  name: Repartidor ajeno
+  company: two
+  role: driver
+  email_address: other-driver@example.test
+  password_digest: <%= password_digest %>

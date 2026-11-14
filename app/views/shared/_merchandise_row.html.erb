@@ -1,0 +1,19 @@
+<fieldset class="merchandise-row" data-nested-items-target="row" data-controller="product-row" <%= tag.attributes(hidden: fields.object.marked_for_destruction?) %>>
+  <legend>Producto de la entrega</legend>
+  <%= fields.hidden_field :id if fields.object.persisted? %>
+  <%= fields.hidden_field :_destroy, value: fields.object.marked_for_destruction? ? "1" : "0", data: { nested_items_destroy: true } %>
+  <div class="field-grid">
+    <div class="field full"><%= fields.label :product_id, "Producto del catálogo o ítem manual" %><%= fields.select :product_id, product_options(@products), { include_blank: "Ítem manual (sin producto del catálogo)" }, data: { action: "change->product-row#select", product_row_target: "product" } %></div>
+    <div class="field full"><%= fields.label :description, "Descripción *" %><%= fields.text_field :description, required: !fields.object.marked_for_destruction?, maxlength: 255, data: { product_row_target: "description" } %></div>
+    <div class="field"><%= fields.label :unit, "Unidad *" %><%= fields.select :unit, DeliveryUnits.options, { include_blank: "Elegí una unidad" }, required: !fields.object.marked_for_destruction?, data: { product_row_target: "unit" } %></div>
+    <% quantity_field = delivery ? :planned_quantity : :quantity %>
+    <div class="field"><%= fields.label quantity_field, delivery ? "Cantidad planificada *" : "Cantidad habitual *" %><%= fields.number_field quantity_field, required: !fields.object.marked_for_destruction?, min: "0.001", step: "0.001" %></div>
+    <% if delivery %>
+      <div class="field"><%= fields.label :delivered_quantity, "Cantidad entregada" %><%= fields.number_field :delivered_quantity, min: 0, step: "0.001", placeholder: "Sin registrar" %><span class="hint">Vacío: sin registrar. Cero: no se entregó. Admite entregas parciales.</span></div>
+      <div class="field"><%= fields.label :notes, "Observaciones del producto" %><%= fields.text_area :notes, rows: 2 %></div>
+    <% else %>
+      <div class="field"><%= fields.label :position, "Orden" %><%= fields.number_field :position, min: 0, value: fields.object.position || 0 %></div>
+    <% end %>
+  </div>
+  <button type="button" class="text-action remove-item" data-action="nested-items#remove">Quitar producto</button>
+</fieldset>

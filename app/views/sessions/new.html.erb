@@ -1,0 +1,8 @@
+<div class="eyebrow">Bienvenido a tu espacio</div>
+<h1>Tu operación empieza acá.</h1>
+<p class="auth-description">Ingresá con tu cuenta para administrar los clientes de tu empresa.</p>
+<%= form_with url: session_path, class: "auth-form" do |form| %>
+  <div class="field"><%= form.label :email_address, "Email" %><%= form.email_field :email_address, required: true, autofocus: true, autocomplete: "username", placeholder: "nombre@empresa.com", value: params[:email_address] %></div>
+  <div class="field"><%= form.label :password, "Contraseña" %><%= form.password_field :password, required: true, autocomplete: "current-password", maxlength: 72 %></div>
+  <%= form.submit "Ingresar", class: "btn btn-dark", data: { turbo_submits_with: "Ingresando..." } %>
+<% end %>

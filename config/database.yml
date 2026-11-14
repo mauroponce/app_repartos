@@ -1,0 +1,36 @@
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS", 5) %>
+  host: <%= ENV.fetch("DATABASE_HOST", "localhost") %>
+  username: <%= ENV.fetch("DATABASE_USERNAME", "repartos") %>
+  password: <%= ENV["DATABASE_PASSWORD"] %>
+
+development:
+  primary:
+    <<: *default
+    database: app_repartos_development
+  queue:
+    <<: *default
+    database: app_repartos_development_queue
+    migrations_paths: db/queue_migrate
+
+test:
+  primary:
+    <<: *default
+    database: app_repartos_test
+  queue:
+    <<: *default
+    database: app_repartos_test_queue
+    migrations_paths: db/queue_migrate
+
+production:
+  primary:
+    <<: *default
+    url: <%= ENV["DATABASE_URL"] %>
+    database: app_repartos_production
+  queue:
+    <<: *default
+    url: <%= ENV["QUEUE_DATABASE_URL"] %>
+    database: app_repartos_production_queue
+    migrations_paths: db/queue_migrate

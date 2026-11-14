@@ -1,0 +1,10 @@
+<%= form_with model: @delivery_run, class: "field-grid management-form" do |form| %>
+  <%= render "shared/validation_errors", record: @delivery_run %>
+  <div class="field full"><%= form.label :name, "Nombre *" %><%= form.text_field :name, required: true, maxlength: 255 %></div>
+  <div class="field"><%= form.label :scheduled_date, "Fecha de reparto *" %><%= form.date_field :scheduled_date, required: true, readonly: @delivery_run.persisted? && @delivery_run.generation_key.present? %></div>
+  <div class="field"><%= form.label :driver_id, "Repartidor" %><%= form.collection_select :driver_id, @drivers, :id, :name, include_blank: "Sin asignar" %></div>
+  <% if @delivery_run.persisted? %><div class="field"><%= form.label :status, "Estado" %><%= form.select :status, DeliveryRun.statuses.keys.map { |status| [operation_status(status), status] } %></div><% else %><p class="hint full">El reparto se crea en borrador, o asignado si elegís un repartidor. Podés cambiar su estado desde la edición.</p><% end %>
+  <% if @delivery_run.new_record? %><label class="check-field full"><%= check_box_tag :generate_schedules, "1", params[:generate_schedules].nil? || params[:generate_schedules] == "1" %> Generar visitas desde las programaciones semanales aplicables</label><p class="hint full">Se conserva un reparto generado por empresa y fecha; reintentar abre el existente. Desmarcá para crear un reparto manual independiente.</p><% end %>
+  <p class="hint full">Fecha y horarios interpretados en <%= Current.company.time_zone %>.</p>
+  <div class="form-actions full"><%= link_to "Cancelar", delivery_runs_path, class: "btn btn-white" %><%= form.submit "Guardar reparto", class: "btn btn-dark", data: { turbo_submits_with: "Guardando..." } %></div>
+<% end %>

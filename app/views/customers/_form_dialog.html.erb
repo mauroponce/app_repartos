@@ -1,0 +1,9 @@
+<% title = customer.persisted? ? "Editar cliente" : "Nuevo cliente" %>
+<% content_for :title, "#{title} · App Repartos" %>
+<% content_for :modal_page, "true" %>
+<%= turbo_frame_tag "modal", target: "_top" do %>
+  <dialog class="customer-dialog customer-dialog-location" data-controller="modal" data-modal-return-url-value="<%= customers_path %>" data-action="click->modal#backdrop close->modal#closed" aria-labelledby="customer-form-title">
+    <div class="modal-title"><div><div class="eyebrow">Directorio de clientes</div><h1 id="customer-form-title"><%= title %></h1><p>Datos del comercio y ubicación del punto de entrega.</p></div><%= link_to customers_path, class: "icon-btn", aria: { label: "Cerrar formulario" }, data: { action: "modal#close" } do %><%= icon("close") %><% end %></div>
+    <%= render "form", customer: customer %>
+  </dialog>
+<% end %>
