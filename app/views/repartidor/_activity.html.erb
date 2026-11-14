@@ -1,0 +1,14 @@
+<div class="screen-head"><div class="eyebrow">Tus resultados</div><h2>Cada parada cuenta.</h2><p>Tu actividad registrada, en un vistazo.</p></div>
+<div class="activity-hero"><span class="eyebrow">Entregas de la semana</span><div class="amount"><%= @week_counts.values.sum %></div><p>Del <%= l(@today.beginning_of_week, format: "%d/%m") %> al <%= l(@today.end_of_week, format: "%d/%m") %></p></div>
+<div class="metric-grid"><div class="metric-box"><span class="metric-icon"><%= icon("check") %></span><strong><%= @completed_count.to_s.rjust(2, "0") %></strong><span>Entregadas en esta ruta</span></div><div class="metric-box"><span class="metric-icon"><%= icon("route") %></span><strong><%= @progress %>%</strong><span>Avance de esta ruta</span></div></div>
+<div class="chart-card"><div class="chart-title"><strong>Entregas por día</strong><span>Esta semana</span></div><div class="bars" role="img" aria-label="Entregas completadas por día de la semana">
+  <% (@today.beginning_of_week..@today.end_of_week).each do |day| %>
+    <% count = @week_counts.fetch(day, 0); height = [count * 100.0 / [@week_counts.values.max.to_i, 1].max, 3].max %>
+    <div class="bar-col" title="<%= l(day, format: '%A') %>: <%= count %> entregas"><small><%= count %></small><div class="bar <%= 'today' if day == @today %>" style="height:<%= height.round %>%"></div><small class="<%= 'today' if day == @today %>"><%= l(day, format: "%a") %></small></div>
+  <% end %>
+</div></div>
+<h3 class="history-title">Actividad reciente</h3>
+<% @history.each do |visit| %>
+  <div class="history-row"><span class="history-icon"><%= icon(visit.completed? ? "check" : "warning") %></span><div><p><%= operation_status(visit.status) %></p><small><%= visit.customer_name %></small></div><time datetime="<%= visit.updated_at.iso8601 %>"><%= l(visit.updated_at, format: "%d/%m %H:%M") %></time></div>
+<% end %>
+<% if @history.empty? %><p class="empty-state">Todavía no hay actividad registrada.</p><% end %>

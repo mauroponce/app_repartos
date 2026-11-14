@@ -1,0 +1,31 @@
+<dialog class="driver-dialog" id="visit-<%= visit.id %>" aria-labelledby="visit-title-<%= visit.id %>" data-repartidor-target="visitDialog">
+  <div class="modal-topline"></div><div class="modal-heading"><h2 id="visit-title-<%= visit.id %>">Parada <%= visit.position %></h2><button type="button" class="modal-close" data-action="repartidor#closeDialog" aria-label="Cerrar"><%= icon("close") %></button></div>
+  <div class="delivery-note"><b><%= visit.customer_name %></b><br><%= visit.customer_address %><br><%= driver_visit_time(visit) %></div>
+  <% if visit.notes.present? %><p><%= visit.notes %></p><% end %>
+  <div class="tiny-actions"><%= link_to "Navegar", driver_navigation_url(visit), target: "_blank", rel: "noopener noreferrer" %><%= link_to "Llamar al cliente", "tel:#{visit.customer.phone.gsub(/[^+\d]/, '')}" if visit.customer.phone.present? %></div>
+  <% if visit.pending? %>
+    <%= form_with scope: :visit, url: repartidor_visit_path(visit), method: :patch, data: { action: "submit->repartidor#submitVisit" } do |form| %>
+      <% if @invalid_visit_id == visit.id %><p class="validation-errors" role="alert"><%= @recording_error %></p><% end %>
+      <div class="record-fields">
+        <label>Resultado de la visita<%= form.select :status, [["Entrega realizada", "completed"], ["Cliente ausente", "not_attended"], ["Comercio cerrado", "closed"], ["Reprogramar", "rescheduled"]], { selected: @invalid_visit_id == visit.id ? @submitted&.dig(:status) : "completed" }, data: { action: "change->repartidor#resultChanged" } %></label>
+        <div data-quantities>
+          <p>Registrá lo que entregaste de cada producto. Si no entregaste un producto, ingresá 0.</p>
+          <% visit.delivery_items.each do |item| %>
+            <label class="record-item" for="quantity-<%= item.id %>"><span><strong><%= item.description %></strong><small>Previsto: <%= quantity_text(item.planned_quantity) %> <%= DeliveryUnits::LABELS.fetch(item.unit) %></small></span>
+              <%= hidden_field_tag "visit[items][][id]", item.id %>
+              <% submitted_item = Array(@submitted&.dig(:items)).find { |values| values[:id].to_s == item.id.to_s } if @invalid_visit_id == visit.id %>
+              <%= number_field_tag "visit[items][][delivered_quantity]", submitted_item ? submitted_item[:delivered_quantity] : item.delivered_quantity, id: "quantity-#{item.id}", required: true, min: 0, max: "999999999.999", step: DeliveryUnits::DISCRETE.include?(item.unit) ? 1 : "0.001", inputmode: "decimal", aria: { label: "Cantidad entregada de #{item.description}" } %>
+            </label>
+          <% end %>
+        </div>
+        <label>Observaciones / motivo de la incidencia<%= form.text_area :notes, value: @invalid_visit_id == visit.id ? @submitted&.dig(:notes) : nil, rows: 3, maxlength: 4000, placeholder: "Indicaciones o motivo de la visita sin entrega" %></label>
+        <label class="choice"><input type="checkbox" required> Confirmo que los datos de esta visita son correctos.</label>
+      </div>
+      <p class="modal-note">Al guardar se cierra la visita y se conservan las cantidades registradas. Necesitás conexión.</p>
+      <div class="modal-footer"><button type="button" class="btn btn-secondary" data-action="repartidor#closeDialog">Cancelar</button><%= form.submit "Guardar visita", class: "btn btn-primary", data: { repartidor_target: "saveButton" } %></div>
+    <% end %>
+  <% else %>
+    <p><b><%= operation_status(visit.status) %></b> · Visita finalizada</p>
+    <% visit.delivery_items.each do |item| %><div class="record-item"><span><strong><%= item.description %></strong><small><%= DeliveryUnits::LABELS.fetch(item.unit) %></small></span><strong><%= quantity_text(item.delivered_quantity) %> / <%= quantity_text(item.planned_quantity) %></strong></div><% end %>
+  <% end %>
+</dialog>

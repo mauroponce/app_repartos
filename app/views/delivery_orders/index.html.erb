@@ -1,0 +1,24 @@
+<% content_for :title, "Entregas · App Repartos" %>
+<div class="breadcrumb"><span>Operación</span><%= icon("chevron-right") %><strong>Entregas</strong></div>
+<div class="heading"><div><div class="eyebrow">De la solicitud a la calle</div><h1>Entregas</h1><p>Registrá qué recibe cada cliente y organizá los pedidos del día.</p></div><%= link_to "Nueva entrega", new_delivery_order_path, class: "btn btn-dark" %></div>
+<details class="management-panel recurrence-generator"><summary>Generar entregas desde programaciones</summary><p class="panel-sub">Crea pedidos para la fecha elegida. Conserva los ya generados y sus cambios puntuales.</p><%= form_with url: generate_delivery_orders_path, class: "filters" do |form| %><div class="field"><%= form.label :date, "Fecha a generar" %><%= form.date_field :date, value: params[:date].presence || Current.company.local_date, required: true %></div><%= form.submit "Generar entregas", class: "btn btn-white" %><% end %></details>
+<%= turbo_frame_tag "delivery_orders", data: { turbo_action: "advance" } do %>
+<section class="panel table-panel">
+  <%= form_with url: delivery_orders_path, method: :get, class: "toolbar filters delivery-filters" do |form| %>
+    <div class="field-search"><%= icon("search", "sm") %><%= form.search_field :q, value: params[:q], placeholder: "Cliente o producto", aria: { label: "Buscar cliente o producto" } %></div>
+    <%= form.date_field :date, value: params[:date], aria: { label: "Fecha" } %>
+    <%= form.collection_select :customer_id, @customers, :id, :name, { include_blank: "Todos los clientes", selected: params[:customer_id] }, class: "select-filter", aria: { label: "Cliente" } %>
+    <%= form.select :status, [["Todos los estados", ""], ["Pendiente", "pending"], ["Pendiente de planificación", "unplanned"], ["Asignada a hoja", "assigned"], ["Completada", "completed"], ["Cancelada", "cancelled"]], { selected: params[:status] }, class: "select-filter", aria: { label: "Estado" } %>
+    <%= form.collection_select :delivery_run_id, @runs, :id, :name, { include_blank: "Todas las hojas", selected: params[:delivery_run_id] }, class: "select-filter", aria: { label: "Hoja de ruta" } %>
+    <%= form.submit "Filtrar", class: "btn btn-white btn-sm" %><%= link_to "Limpiar", delivery_orders_path, class: "text-action" %>
+  <% end %>
+  <%= form_with url: new_delivery_run_path, method: :get, data: { turbo_frame: "_top", controller: "selection" } do |form| %>
+    <div class="selection-bar"><span role="status" data-selection-target="count">0 entregas seleccionadas</span><%= form.submit "Crear hoja con seleccionadas", class: "btn btn-dark btn-sm", data: { selection_target: "submit" } %></div>
+    <div class="table-scroll" tabindex="0" role="region" aria-label="Entregas, desplazamiento horizontal"><table class="data-table delivery-orders-table"><thead><tr><th><input type="checkbox" aria-label="Seleccionar pendientes de esta página" data-action="selection#all"></th><th>Cliente</th><th>Fecha / horario</th><th>Mercadería</th><th>Estado</th><th>Hoja de ruta</th><th>Acciones</th></tr></thead><tbody>
+      <% @delivery_orders.each do |order| %><tr id="<%= dom_id(order) %>"><td><% if order.pending? && order.visit_id.nil? %><%= check_box_tag "order_ids[]", order.id, false, aria: { label: "Seleccionar entrega #{order.id} de #{order.customer_name}" }, data: { selection_target: "item", action: "selection#update" } %><% end %></td><td><strong><%= link_to order.customer_name, delivery_order_path(order), data: { turbo_frame: "_top" } %></strong><span class="subline">#<%= order.id %></span></td><td><%= l(order.scheduled_date) %><span class="subline"><%= schedule_time(order) %></span></td><td><%= merchandise_summary(order) %></td><td><span class="chip <%= order.display_status %>"><%= delivery_order_status(order) %></span></td><td><% if order.visit %><%= link_to order.visit.delivery_run.name, delivery_run_path(order.visit.delivery_run), class: "text-action", data: { turbo_frame: "_top" } %><% else %>Sin asignar<% end %></td><td><%= link_to "Ver entrega", delivery_order_path(order), class: "text-action", data: { turbo_frame: "_top" } %></td></tr><% end %>
+    </tbody></table></div>
+  <% end %>
+  <% if @delivery_orders.empty? %><div class="empty"><h2>No hay entregas para mostrar</h2><p>Creá una entrega, generá las programaciones del día o ajustá los filtros.</p></div><% end %>
+  <nav class="table-footer" aria-label="Paginación de entregas"><span><%= @filtered_count %> entregas · Página <%= @page %> de <%= @pages %></span><div class="pagination"><% if @page > 1 %><%= link_to "← Anterior", delivery_orders_path(request.query_parameters.merge(page: @page - 1)), class: "btn btn-white btn-sm" %><% end %><% if @page < @pages %><%= link_to "Siguiente →", delivery_orders_path(request.query_parameters.merge(page: @page + 1)), class: "btn btn-white btn-sm" %><% end %></div></nav>
+</section>
+<% end %>

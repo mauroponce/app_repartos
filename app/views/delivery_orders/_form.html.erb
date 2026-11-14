@@ -1,0 +1,18 @@
+<%= form_with model: @delivery_order, class: "management-form", data: { controller: "nested-items" } do |form| %>
+  <%= render "shared/validation_errors", record: @delivery_order %>
+  <div class="field-grid">
+    <div class="field full"><%= form.label :customer_id, "Cliente *" %><%= form.collection_select :customer_id, @customers, :id, :name, { prompt: "Elegí un cliente" }, required: true, disabled: @delivery_order.visit_id.present? %></div>
+    <div class="field"><%= form.label :scheduled_date, "Fecha de entrega *" %><%= form.date_field :scheduled_date, required: true, readonly: @delivery_order.visit_id.present? %></div>
+    <div class="field"><%= form.label :preferred_time, "Horario puntual" %><%= form.time_field :preferred_time, readonly: @delivery_order.visit_id.present? %></div>
+    <div class="field"><%= form.label :window_start, "Franja desde" %><%= form.time_field :window_start, readonly: @delivery_order.visit_id.present? %></div>
+    <div class="field"><%= form.label :window_end, "Franja hasta" %><%= form.time_field :window_end, readonly: @delivery_order.visit_id.present? %></div>
+    <p class="hint full">Completá un horario puntual o una franja completa. También podés dejar el horario sin definir. Horarios de <%= Current.company.time_zone %>.</p>
+    <% if @delivery_order.visit_id %><p class="drawer-note full">Esta entrega está planificada. Los cambios de mercadería se reflejarán en su parada. Para cambiar fecha, cliente u horario, quitála primero de la hoja.</p><% end %>
+    <div class="field full"><%= form.label :notes, "Observaciones" %><%= form.text_area :notes, rows: 3 %></div>
+  </div>
+  <h2 class="section-title">Mercadería</h2><p class="panel-sub">Agregá uno o varios productos. Para productos manuales, completá descripción y unidad.</p>
+  <div data-nested-items-target="list"><%= form.fields_for :delivery_order_items do |fields| %><%= render "shared/merchandise_row", fields: fields, delivery: false, order: true %><% end %></div>
+  <template data-nested-items-target="template"><%= form.fields_for :delivery_order_items, DeliveryOrderItem.new, child_index: "NEW_RECORD" do |fields| %><%= render "shared/merchandise_row", fields: fields, delivery: false, order: true %><% end %></template>
+  <button type="button" class="btn btn-white" data-action="nested-items#add">+ Agregar producto o ítem manual</button>
+  <div class="form-actions"><%= link_to "Cancelar", delivery_orders_path, class: "btn btn-white" %><%= form.submit "Guardar entrega", class: "btn btn-dark", data: { turbo_submits_with: "Guardando..." } %></div>
+<% end %>

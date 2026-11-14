@@ -1,0 +1,4 @@
+<% content_for :title, "Editar entrega · App Repartos" %>
+<div class="breadcrumb"><%= link_to "Entregas", delivery_orders_path %><%= icon("chevron-right") %><%= link_to @delivery_order.customer_name, delivery_order_path(@delivery_order) %></div>
+<div class="heading"><div><h1>Editar entrega</h1><p>Los cambios aplican a este pedido. Su programación habitual se conserva.</p></div></div>
+<section class="management-panel"><%= render "form" %></section>

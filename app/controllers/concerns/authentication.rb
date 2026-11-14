@@ -35,7 +35,16 @@ module Authentication
     end
 
     def after_authentication_url
-      session.delete(:return_to_after_authenticating) || root_url
+      return_to = session.delete(:return_to_after_authenticating)
+      prefix = Current.user.driver? ? "/repartidor" : "/admin"
+      if return_to
+        uri = URI.parse(return_to)
+        return return_to if uri.host == request.host && uri.port == request.port &&
+          uri.scheme == request.scheme && (uri.path == prefix || uri.path.start_with?("#{prefix}/"))
+      end
+      Current.user.driver? ? repartidor_root_url : admin_root_url
+    rescue URI::InvalidURIError
+      Current.user.driver? ? repartidor_root_url : admin_root_url
     end
 
     def start_new_session_for(user)

@@ -1,0 +1,32 @@
+<%= form_with model: @delivery_run, class: "route-wizard", data: { controller: "route-planner", route_planner_available_url_value: available_delivery_runs_path, action: "turbo:frame-load->route-planner#selection submit->route-planner#validateSubmission" } do |form| %>
+  <%= render "shared/validation_errors", record: @delivery_run %>
+  <nav class="planning-steps" aria-label="Pasos para crear una hoja de ruta">
+    <% ["Configuración", "Seleccionar entregas", "Organizar paradas", "Confirmación"].each.with_index do |label, index| %><button type="button" data-route-planner-target="tab" data-step="<%= index %>" data-action="route-planner#go"><span><%= index + 1 %></span><%= label %></button><% end %>
+  </nav>
+  <section class="management-panel" data-route-planner-target="step">
+    <div class="panel-heading"><div><div class="eyebrow">Paso 1</div><h2>Configurá la hoja</h2><p>Una fecha puede tener varias hojas, cada una con su recorrido y repartidor.</p></div></div>
+    <div class="field-grid">
+      <div class="field full"><%= form.label :name, "Nombre de la hoja *" %><%= form.text_field :name, required: true, maxlength: 255, placeholder: "Ej. Zona Sur — Mañana", data: { route_planner_target: "name", action: "input->route-planner#summary" } %></div>
+      <div class="field"><%= form.label :scheduled_date, "Fecha *" %><%= form.date_field :scheduled_date, required: true, data: { route_planner_target: "date", action: "change->route-planner#dateChanged" } %></div>
+      <div class="field"><%= form.label :driver_id, "Repartidor (opcional)" %><%= form.collection_select :driver_id, @drivers, :id, :name, { include_blank: "Sin repartidor", selected: @delivery_run.driver_id }, data: { route_planner_target: "driver", action: "change->route-planner#summary" } %></div>
+    </div>
+  </section>
+  <section class="management-panel" data-route-planner-target="step">
+    <div class="panel-heading"><div><div class="eyebrow">Paso 2</div><h2>Elegí las entregas</h2><p>Solo se muestran entregas pendientes de planificación para la fecha elegida.</p></div><button type="button" class="btn btn-white btn-sm" data-action="route-planner#selectVisible">Seleccionar visibles</button></div>
+    <div class="field-search"><%= icon("search", "sm") %><input type="search" placeholder="Buscar cliente o producto" aria-label="Buscar entregas disponibles" data-action="input->route-planner#search"></div>
+    <%= render "available_orders" %>
+  </section>
+  <section class="management-panel" data-route-planner-target="step">
+    <div class="panel-heading"><div><div class="eyebrow">Paso 3</div><h2>Organizá las paradas</h2><p>Las entregas del mismo cliente y horario se agrupan. Usá las flechas para ordenar el recorrido.</p></div></div>
+    <ol class="planning-stops" data-route-planner-target="stops"></ol>
+    <p class="hint">Las flechas funcionan con teclado y pantallas táctiles. No se calcula un recorrido automático.</p>
+  </section>
+  <section class="management-panel" data-route-planner-target="step">
+    <div class="panel-heading"><div><div class="eyebrow">Paso 4</div><h2>Revisá y confirmá</h2><p>Comprobá el recorrido antes de guardar.</p></div></div>
+    <div class="route-summary" data-route-planner-target="summary" aria-live="polite"></div>
+    <div class="field"><%= form.label :status, "Guardar como" %><%= form.select :status, [["Borrador", "draft"], ["Asignada al repartidor", "assigned"]], { selected: @delivery_run.status }, data: { route_planner_target: "status" } %><p class="hint">Para guardar como asignada tenés que elegir un repartidor.</p></div>
+    <div class="form-actions"><%= form.submit "Guardar hoja de ruta", class: "btn btn-dark", data: { turbo_submits_with: "Guardando..." } %></div>
+  </section>
+  <div class="selection-bar"><span data-route-planner-target="count" role="status">Elegí las entregas del recorrido.</span><div class="heading-actions"><button type="button" class="btn btn-white" data-action="route-planner#previous" data-route-planner-target="previous">Anterior</button><button type="button" class="btn btn-dark" data-action="route-planner#next" data-route-planner-target="next">Continuar →</button></div></div>
+  <p role="alert" class="planning-error" data-route-planner-target="error"></p>
+<% end %>

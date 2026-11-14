@@ -7,8 +7,17 @@
     <div class="field full"><%= form.label :notes, "Observaciones" %><%= form.text_area :notes, rows: 2 %></div>
   </div>
   <h2 class="section-title">Mercadería de esta visita</h2><p class="hint">Los cambios se guardan solamente en esta visita. Las programaciones futuras conservan sus cantidades.</p>
-  <div data-nested-items-target="list"><%= form.fields_for :delivery_items do |fields| %><%= render "shared/merchandise_row", fields: fields, delivery: true %><% end %></div>
-  <template data-nested-items-target="template"><%= form.fields_for :delivery_items, DeliveryItem.new, child_index: "NEW_RECORD" do |fields| %><%= render "shared/merchandise_row", fields: fields, delivery: true %><% end %></template>
-  <button type="button" class="btn btn-white" data-action="nested-items#add">+ Agregar producto o ítem manual</button>
+  <% if @visit.delivery_orders.any? %>
+    <p class="drawer-note">La mercadería planificada se modifica desde cada entrega mientras la hoja sea editable. Aquí se registran las cantidades realmente entregadas.</p>
+    <%= form.fields_for :delivery_items do |fields| %>
+      <fieldset class="merchandise-row"><legend><%= fields.object.description %> · <%= quantity_text(fields.object.planned_quantity) %> <%= fields.object.unit %> planificados</legend>
+        <%= fields.hidden_field :id %><div class="field-grid"><div class="field"><%= fields.label :delivered_quantity, "Cantidad entregada" %><%= fields.number_field :delivered_quantity, min: 0, step: DeliveryUnits::DISCRETE.include?(fields.object.unit) ? "1" : "0.001" %><span class="hint">Cero: no se entregó. Completá todos los productos antes de marcar la visita realizada.</span></div><div class="field"><%= fields.label :notes, "Observaciones" %><%= fields.text_area :notes, rows: 2 %></div></div>
+      </fieldset>
+    <% end %>
+  <% else %>
+    <div data-nested-items-target="list"><%= form.fields_for :delivery_items do |fields| %><%= render "shared/merchandise_row", fields: fields, delivery: true %><% end %></div>
+    <template data-nested-items-target="template"><%= form.fields_for :delivery_items, DeliveryItem.new, child_index: "NEW_RECORD" do |fields| %><%= render "shared/merchandise_row", fields: fields, delivery: true %><% end %></template>
+    <button type="button" class="btn btn-white" data-action="nested-items#add">+ Agregar producto o ítem manual</button>
+  <% end %>
   <div class="form-actions"><%= link_to "Cancelar", delivery_run_path(@delivery_run), class: "btn btn-white" %><%= form.submit "Guardar visita y entrega", class: "btn btn-dark", data: { turbo_submits_with: "Guardando..." } %></div>
 <% end %>

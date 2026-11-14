@@ -1,0 +1,12 @@
+<%= turbo_frame_tag "available_orders" do %>
+  <div class="available-list" data-route-planner-target="available">
+    <% @available_orders.each do |order| %>
+      <label class="available-order" data-search="<%= [order.customer_name, merchandise_summary(order)].join(' ').downcase %>">
+        <%= check_box_tag "order_ids[]", order.id, Array(@selected_ids).include?(order.id.to_s),
+          data: { action: "route-planner#selection", route_planner_target: "order", key: order.planning_key.to_json, customer: order.customer_name, address: order.customer_address, time: schedule_time(order), merchandise: merchandise_summary(order) } %>
+        <span><strong><%= order.customer_name %> <span class="chip pending">Pendiente</span></strong><span class="subline"><%= order.customer_address %></span><span class="subline"><%= schedule_time(order) %> · #<%= order.id %></span><span class="order-products"><%= merchandise_summary(order) %></span></span>
+      </label>
+    <% end %>
+    <% if @available_orders.empty? %><div class="empty"><h2>No hay entregas pendientes para esta fecha</h2><p>Registrá nuevas entregas o generá las programaciones desde Entregas.</p></div><% end %>
+  </div>
+<% end %>

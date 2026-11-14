@@ -1,2 +1,4 @@
-<div class="heading"><div><h1>Nuevo reparto</h1><p>Elegí la fecha y, si corresponde, el repartidor.</p></div></div>
-<section class="management-panel"><%= render "form" %></section>
+<% content_for :title, "Nueva hoja de ruta · App Repartos" %>
+<div class="breadcrumb"><%= link_to "Hojas de ruta", delivery_runs_path %><%= icon("chevron-right") %><strong>Nueva hoja</strong></div>
+<div class="heading"><div><div class="eyebrow">Organizá el recorrido</div><h1>Nueva hoja de ruta</h1><p>Elegí los pedidos, ordená las paradas y asigná un repartidor.</p></div></div>
+<%= render "wizard" %>

@@ -4,9 +4,11 @@ es-AR:
       product: Producto
       delivery_schedule: Programación
       delivery_schedule_item: Producto programado
-      delivery_run: Reparto
+      delivery_run: Hoja de ruta
       visit: Visita
       delivery_item: Mercadería entregada
+      delivery_order: Entrega
+      delivery_order_item: Producto solicitado
       product_import: Importación de productos
     attributes:
       company:
@@ -45,10 +47,38 @@ es-AR:
         position: Orden
         company: Empresa
         delivery_schedule: Programación
+      delivery_order:
+        company: Empresa
+        customer: Cliente
+        scheduled_date: Fecha de entrega
+        preferred_time: Horario puntual
+        window_start: Inicio de franja
+        window_end: Fin de franja
+        customer_name: Nombre del cliente
+        customer_address: Dirección del cliente
+        delivery_schedule: Programación
+        visit: Visita
+        status: Estado
+        notes: Observaciones
+        delivery_order_items: Mercadería
+        delivery_order_items.description: Descripción del producto
+        delivery_order_items.quantity: Cantidad del producto
+        delivery_order_items.unit: Unidad del producto
+        delivery_order_items.product: Producto
+        delivery_order_items.company: Empresa del producto
+        delivery_order_items.position: Orden del producto
+      delivery_order_item:
+        company: Empresa
+        delivery_order: Entrega
+        product: Producto
+        description: Descripción
+        quantity: Cantidad solicitada
+        unit: Unidad
+        position: Orden
       delivery_run:
         company: Empresa
         driver: Repartidor
-        scheduled_date: Fecha de reparto
+        scheduled_date: Fecha de hoja de ruta
         name: Nombre
         status: Estado
       visit:
@@ -56,7 +86,7 @@ es-AR:
         customer: Cliente
         customer_name: Nombre del cliente
         customer_address: Dirección del cliente
-        delivery_run: Reparto
+        delivery_run: Hoja de ruta
         delivery_schedule: Programación
         status: Resultado
         position: Orden

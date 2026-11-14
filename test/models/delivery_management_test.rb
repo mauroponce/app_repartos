@@ -106,7 +106,7 @@ class DeliveryManagementTest < ActiveSupport::TestCase
     assert existing.update(quantity: 30)
     assert_equal "Pan lactal", existing.description
     assert_equal "pack", existing.unit
-    run = DeliveryRunGenerator.call(company: companies(:one), date: "2026-11-17")
+    run = planned_run(company: companies(:one), date: "2026-11-17")
     assert_equal "pack", run.visits.first.delivery_items.first.unit
   end
 
@@ -119,7 +119,7 @@ class DeliveryManagementTest < ActiveSupport::TestCase
   end
 
   test "partial deliveries preserve planned quantities and distinguish nil from zero" do
-    visit = DeliveryRunGenerator.call(company: companies(:one), date: "2026-11-17").visits.first
+    visit = planned_run(company: companies(:one), date: "2026-11-17").visits.first
     item = visit.delivery_items.first
     assert_nil item.delivered_quantity
     assert_nil item.difference
@@ -136,6 +136,7 @@ class DeliveryManagementTest < ActiveSupport::TestCase
     item.delivered_quantity = ""
     assert item.valid?
     assert_nil item.delivered_quantity
+    item.update!(delivered_quantity: 18)
     visit.update!(status: :completed)
     assert visit.completed_at
   end

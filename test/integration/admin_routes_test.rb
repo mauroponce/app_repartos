@@ -9,6 +9,7 @@ class AdminRoutesTest < ActionDispatch::IntegrationTest
     assert_equal "/admin/productos", products_path
     assert_equal "/admin/importaciones-productos/new", new_product_import_path
     assert_equal "/admin/clientes/#{customers(:one).id}/programaciones/new", new_customer_delivery_schedule_path(customers(:one))
+    sign_in_as users(:one)
     get root_path
     assert_redirected_to admin_root_path
     [ "/clientes", "/repartidores", "/repartos", "/productos", "/importaciones-productos/new" ].each do |path|

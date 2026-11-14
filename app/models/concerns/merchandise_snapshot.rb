@@ -21,7 +21,7 @@ module MerchandiseSnapshot
     same_company(:product)
     return unless product && (new_record? || will_save_change_to_product_id? || will_save_change_to_unit?)
     # Generated delivery items may copy an older unit or an inactive product.
-    return if is_a?(DeliveryItem) && copying_schedule_snapshot
+    return if respond_to?(:copying_schedule_snapshot) && copying_schedule_snapshot
     errors.add(:product, "está inactivo; elegí otro producto o un ítem manual") unless product.active?
     errors.add(:unit, "debe coincidir con la del producto seleccionado") unless unit == product.unit
   end

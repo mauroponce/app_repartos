@@ -4,6 +4,8 @@ class Company < ApplicationRecord
 
   has_many :products, dependent: :restrict_with_error
   has_many :delivery_schedules, dependent: :restrict_with_error
+  has_many :delivery_orders, dependent: :restrict_with_error
+  has_many :delivery_order_items, dependent: :restrict_with_error
   has_many :delivery_runs, dependent: :restrict_with_error
   has_many :visits, dependent: :restrict_with_error
   has_many :product_imports, dependent: :destroy

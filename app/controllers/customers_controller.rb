@@ -70,7 +70,7 @@ class CustomersController < ApplicationController
   end
 
   def require_customer_management
-    render "errors/forbidden", status: :forbidden unless Current.user.manages_customers?
+    render "errors/forbidden", layout: "authentication", status: :forbidden unless Current.user.manages_customers?
   end
 
   def customer_params

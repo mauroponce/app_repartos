@@ -7,7 +7,7 @@
     <div class="field full"><%= fields.label :description, "Descripción *" %><%= fields.text_field :description, required: !fields.object.marked_for_destruction?, maxlength: 255, data: { product_row_target: "description" } %></div>
     <div class="field"><%= fields.label :unit, "Unidad *" %><%= fields.select :unit, DeliveryUnits.options, { include_blank: "Elegí una unidad" }, required: !fields.object.marked_for_destruction?, data: { product_row_target: "unit" } %></div>
     <% quantity_field = delivery ? :planned_quantity : :quantity %>
-    <div class="field"><%= fields.label quantity_field, delivery ? "Cantidad planificada *" : "Cantidad habitual *" %><%= fields.number_field quantity_field, required: !fields.object.marked_for_destruction?, min: "0.001", step: "0.001" %></div>
+    <div class="field"><%= fields.label quantity_field, delivery ? "Cantidad planificada *" : (local_assigns[:order] ? "Cantidad solicitada *" : "Cantidad habitual *") %><%= fields.number_field quantity_field, required: !fields.object.marked_for_destruction?, min: "0.001", step: "0.001" %></div>
     <% if delivery %>
       <div class="field"><%= fields.label :delivered_quantity, "Cantidad entregada" %><%= fields.number_field :delivered_quantity, min: 0, step: "0.001", placeholder: "Sin registrar" %><span class="hint">Vacío: sin registrar. Cero: no se entregó. Admite entregas parciales.</span></div>
       <div class="field"><%= fields.label :notes, "Observaciones del producto" %><%= fields.text_area :notes, rows: 2 %></div>

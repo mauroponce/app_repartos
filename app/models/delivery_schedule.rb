@@ -5,6 +5,7 @@ class DeliverySchedule < ApplicationRecord
   WEEKDAYS = { 1 => "Lunes", 2 => "Martes", 3 => "Miércoles", 4 => "Jueves", 5 => "Viernes", 6 => "Sábado", 7 => "Domingo" }.freeze
   belongs_to :customer
   has_many :delivery_schedule_items, -> { order(:position, :id) }, inverse_of: :delivery_schedule, dependent: :destroy
+  has_many :delivery_orders, dependent: :restrict_with_error
   has_many :visits, dependent: :restrict_with_error
   accepts_nested_attributes_for :delivery_schedule_items, allow_destroy: true
 

@@ -1,6 +1,7 @@
 class Product < ApplicationRecord
   include TenantIntegrity
   has_many :delivery_schedule_items, dependent: :restrict_with_error
+  has_many :delivery_order_items, dependent: :restrict_with_error
   has_many :delivery_items, dependent: :restrict_with_error
 
   normalizes :sku, :package_content_unit, with: ->(value) { value.strip.presence }

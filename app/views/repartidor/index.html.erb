@@ -1,0 +1,90 @@
+<div class="app" data-controller="repartidor" data-repartidor-markers-value="<%= @markers.to_json %>"
+     data-repartidor-tiles-url-value="<%= ENV['OSM_TILES_URL'].presence || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png' %>"
+     data-repartidor-invalid-visit-value="<%= @invalid_visit_id %>"
+     data-action="online@window->repartidor#connection offline@window->repartidor#connection beforeinstallprompt@window->repartidor#prepareInstall">
+  <header class="header">
+    <div class="header-left"><span class="app-brand-mark"><%= icon("route") %></span><span class="app-logo">reparto<i>.</i></span></div>
+    <div class="header-right">
+      <button class="header-status" type="button" data-action="repartidor#pause" data-repartidor-target="pauseStatus" aria-pressed="false">EN RUTA</button>
+      <button class="icon-button" type="button" data-action="repartidor#notifications" aria-label="Avisos de la jornada"><%= icon("bell") %></button>
+    </div>
+  </header>
+  <div class="low-connectivity" data-repartidor-target="connection" role="status">Sin conexión. Reconectate para registrar entregas. Los cambios sin guardar se conservan mientras esta pantalla siga abierta.</div>
+  <main class="content" data-repartidor-target="content">
+    <%= render "shared/flash" %>
+    <% if @recording_error %><div class="validation-errors" role="alert"><%= @recording_error %></div><% end %>
+    <section class="screen" id="screen-route" data-repartidor-target="screen" aria-label="Mi ruta">
+      <div class="greeting"><div class="eyebrow"><%= l(@today, format: "%A %-d de %B") %></div><h2>¡Buen día, <%= Current.user.name.split.first %>!</h2><p>Tu próxima parada, siempre a mano.</p></div>
+      <% if @runs.size > 1 %>
+        <%= form_with url: repartidor_root_path, method: :get, class: "route-picker" do |form| %>
+          <%= form.label :run_id, "Reparto" %><%= form.select :run_id, @runs.map { |run| [run.name, run.id] }, { selected: @run.id }, data: { action: "change->repartidor#chooseRun" } %>
+          <noscript><button type="submit">Ver</button></noscript>
+        <% end %>
+      <% end %>
+      <div class="summary-card">
+        <div class="summary-top"><span class="eyebrow">Tu jornada de hoy</span><span class="route-code"><%= @run ? "Ruta ##{@run.id}" : "Sin ruta asignada" %></span></div>
+        <div class="summary-stats">
+          <div class="sum-stat"><strong><%= @visits.size.to_s.rjust(2, "0") %></strong><small>Paradas</small></div>
+          <div class="sum-stat"><strong><%= @visits.count(&:pending?).to_s.rjust(2, "0") %></strong><small>Pendientes</small></div>
+          <div class="sum-stat"><strong><%= @completed_count.to_s.rjust(2, "0") %></strong><small>Entregadas</small></div>
+        </div>
+        <div class="progress-meta"><span>Progreso del recorrido</span><strong><%= @resolved_count %> de <%= @visits.size %> resueltas</strong></div>
+        <div class="progress-track" role="progressbar" aria-label="Avance del recorrido" aria-valuenow="<%= @progress %>" aria-valuemin="0" aria-valuemax="100"><div class="progress-fill" style="width:<%= @progress %>%"></div></div>
+      </div>
+      <% if @visits.any? %>
+        <div class="section-heading"><h3>Tu recorrido</h3><button class="text-link" type="button" data-action="repartidor#tab" data-tab="deliveries">Ver paradas <%= icon("right") %></button></div>
+        <div class="map-card">
+          <div id="routeMap" data-repartidor-target="map" aria-label="Mapa de las paradas asignadas"></div>
+          <div class="map-top-overlay"><div class="map-tabs" role="group" aria-label="Vista del mapa">
+            <button type="button" class="active" data-action="repartidor#fitRoute" data-repartidor-target="fullMap">Ruta completa</button>
+            <button type="button" data-action="repartidor#nextStop" data-repartidor-target="nextMap">Siguiente</button>
+          </div><div class="map-tools"><button type="button" class="map-tool" data-action="repartidor#locate" aria-label="Mostrar mi ubicación"><%= icon("locate") %></button></div></div>
+          <div class="map-message" data-repartidor-target="mapMessage"></div>
+          <div class="map-bottom-caption"><span class="caption-dot"></span><span><%= @markers.size %> de <%= @visits.size %> paradas ubicadas · orden de visita</span></div>
+        </div>
+        <% if @next_visit %>
+          <%= render "next_visit", visit: @next_visit %>
+        <% else %>
+          <div class="empty-route"><%= icon("check") %><h3>¡Recorrido finalizado!</h3><p>Resolviste todas las paradas. Podés revisar las entregas y sus incidencias.</p></div>
+        <% end %>
+        <div class="upcoming"><div class="section-heading"><h3>Después de esta parada</h3><button class="text-link" type="button" data-action="repartidor#tab" data-tab="deliveries">Ver todas <%= icon("right") %></button></div>
+          <% @visits.select(&:pending?).drop(1).first(3).each do |visit| %>
+            <button class="mini-stop" type="button" data-action="repartidor#openVisit" data-visit-id="<%= visit.id %>"><span class="mini-stop-n"><%= visit.position.to_s.rjust(2, "0") %></span><span class="mini-stop-info"><strong><%= visit.customer_name %></strong><small><%= visit.customer_address %></small></span><time class="mini-time"><%= driver_visit_time(visit) %></time><%= icon("right") %></button>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="empty-route"><h3><%= @run ? "Tu ruta todavía no tiene paradas" : "Todavía no tenés una ruta para hoy" %></h3><p>Cuando administración te asigne un reparto con paradas, lo vas a encontrar acá.</p><%= link_to "Actualizar mi ruta", repartidor_root_path, class: "btn btn-secondary" %></div>
+      <% end %>
+      <div class="install-tip">Tu ruta, a un toque. <button type="button" data-action="repartidor#install">Instalar Repartos</button></div>
+    </section>
+    <section class="screen" id="screen-deliveries" data-repartidor-target="screen" aria-label="Entregas" hidden>
+      <div class="screen-head"><div class="eyebrow"><%= @run&.name || "Tu jornada" %></div><h2>Tus entregas</h2><p>Todas las paradas y su mercadería en un solo lugar.</p></div>
+      <div class="segmented" role="group" aria-label="Filtrar entregas">
+        <% [["pending", "Pendientes"], ["completed", "Entregadas"], ["all", "Todas"]].each do |filter, label| %>
+          <button type="button" class="<%= 'active' if filter == 'pending' %>" aria-pressed="<%= filter == 'pending' %>" data-action="repartidor#filter" data-filter="<%= filter %>"><%= label %></button>
+        <% end %>
+      </div>
+      <label class="search-field"><%= icon("search") %><input type="search" placeholder="Buscar cliente o dirección" aria-label="Buscar entrega" data-action="input->repartidor#search"></label>
+      <div class="delivery-list">
+        <% @visits.each do |visit| %>
+          <button class="delivery-item" type="button" data-repartidor-target="delivery" data-status="<%= visit.status %>" data-search="<%= "#{visit.customer_name} #{visit.customer_address} #{visit.id}".downcase %>" data-action="repartidor#openVisit" data-visit-id="<%= visit.id %>">
+            <span class="delivery-item-head"><span class="delivery-id">PARADA #<%= visit.id %></span><span class="delivery-state <%= visit.completed? ? 'state-done' : visit.pending? ? 'state-pending' : 'state-issue' %>"><%= operation_status(visit.status) %></span></span>
+            <span class="delivery-item-main"><span class="delivery-pin <%= 'done' if visit.completed? %>"><%= visit.position.to_s.rjust(2, "0") %></span><span class="delivery-info"><strong><%= visit.customer_name %></strong><span><%= visit.customer_address %></span></span><%= icon("right") %></span>
+            <span class="delivery-item-foot"><span><%= driver_visit_time(visit) %></span><span><%= pluralize(visit.delivery_items.size, "producto", "productos") %></span></span>
+          </button>
+        <% end %>
+      </div>
+      <p class="empty-state" data-repartidor-target="emptyList">No hay entregas para este filtro.</p>
+    </section>
+    <section class="screen" id="screen-activity" data-repartidor-target="screen" aria-label="Actividad" hidden><%= render "activity" %></section>
+    <section class="screen" id="screen-profile" data-repartidor-target="screen" aria-label="Perfil" hidden><%= render "profile" %></section>
+  </main>
+  <nav class="bottom-nav" aria-label="Navegación principal">
+    <% [["route", "route", "Ruta"], ["deliveries", "box", "Entregas"], ["activity", "chart", "Actividad"], ["profile", "user", "Perfil"]].each do |tab, glyph, label| %>
+      <button type="button" class="nav-item <%= 'active' if tab == 'route' %>" data-repartidor-target="nav" data-action="repartidor#tab" data-tab="<%= tab %>" aria-current="<%= tab == 'route' ? 'page' : 'false' %>"><%= icon(glyph) %><%= label %></button>
+    <% end %>
+  </nav>
+  <% @visits.each do |visit| %><%= render "visit_dialog", visit: visit %><% end %>
+  <dialog class="driver-dialog" data-repartidor-target="notice"><div class="modal-heading"><h2 data-repartidor-target="noticeTitle"></h2><button class="modal-close" type="button" data-action="repartidor#closeDialog" aria-label="Cerrar"><%= icon("close") %></button></div><p data-repartidor-target="noticeBody"></p></dialog>
+  <div class="toast" role="status" aria-live="polite" data-repartidor-target="toast"></div>
+</div>

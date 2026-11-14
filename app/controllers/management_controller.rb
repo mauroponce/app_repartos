@@ -5,7 +5,7 @@ class ManagementController < ApplicationController
   private
 
   def require_management
-    render "errors/forbidden", status: :forbidden unless Current.user.administrator? || Current.user.supervisor?
+    render "errors/forbidden", layout: "authentication", status: :forbidden unless Current.user.manages_customers?
   end
 
   def use_company_time_zone(&action)

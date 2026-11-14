@@ -1,1 +1,1 @@
-<section class="empty"><span class="illustration"><%= icon("info", "lg") %></span><h1>Acceso restringido</h1><p>Tu rol no tiene permiso para administrar clientes.</p></section>
+<section class="empty"><span class="illustration"><%= icon("info", "lg") %></span><h1>Acceso restringido</h1><p>Tu rol no tiene permiso para acceder al panel de administración.</p><%= link_to "Ir a mi ruta", repartidor_root_path, class: "btn btn-dark" if Current.user.driver? %></section>

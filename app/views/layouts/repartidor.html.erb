@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+  <head>
+    <title>Mi ruta · Repartos</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+    <meta name="theme-color" content="#f7f9fd">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Repartos">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="turbo-cache-control" content="no-cache">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= tag.link rel: "manifest", href: repartidor_manifest_path %>
+    <link rel="icon" href="/repartidor/icon-192.png" type="image/png">
+    <link rel="apple-touch-icon" href="/repartidor/icon-192.png">
+    <%= stylesheet_link_tag "leaflet", "repartidor", "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+  <body data-turbo="false">
+    <%= render "repartidor/icons" %>
+    <%= yield %>
+  </body>
+</html>

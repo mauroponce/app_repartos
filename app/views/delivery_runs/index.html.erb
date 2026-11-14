@@ -1,7 +1,15 @@
-<% content_for :title, "Repartos · App Repartos" %>
-<div class="heading"><div><div class="eyebrow">Operación diaria</div><h1>Repartos</h1><p>Planificá las visitas y registrá la mercadería entregada.</p></div><%= link_to "Nuevo reparto", new_delivery_run_path, class: "btn btn-dark" %></div>
-<div class="entity-grid">
-  <% @delivery_runs.each do |run| %><article class="entity-card"><span class="chip <%= run.status %>"><%= operation_status(run.status) %></span><h2><%= link_to run.name, delivery_run_path(run), class: "text-action" %></h2><p><%= l(run.scheduled_date) %> · <%= run.driver&.name || "Sin repartidor" %></p><div class="entity-footer"><%= link_to "Ver visitas y productos", delivery_run_path(run), class: "text-action" %></div></article><% end %>
-  <% if @delivery_runs.empty? %><div class="empty"><h2>Todavía no hay repartos</h2><p>Creá uno para generar las visitas de tus programaciones.</p></div><% end %>
-</div>
-<nav class="table-footer" aria-label="Paginación de repartos"><span>Página <%= @page %> de <%= @pages %></span><div class="pagination"><% if @page > 1 %><%= link_to "← Anterior", delivery_runs_path(page: @page - 1), class: "btn btn-white btn-sm" %><% end %><% if @page < @pages %><%= link_to "Siguiente →", delivery_runs_path(page: @page + 1), class: "btn btn-white btn-sm" %><% end %></div></nav>
+<% content_for :title, "Hojas de ruta · App Repartos" %>
+<div class="heading"><div><div class="eyebrow">Operación diaria</div><h1>Hojas de ruta</h1><p>Cada recorrido con sus entregas, paradas y repartidor.</p></div><%= link_to "Nueva hoja de ruta", new_delivery_run_path, class: "btn btn-dark" %></div>
+<%= turbo_frame_tag "delivery_runs", data: { turbo_action: "advance" } do %>
+  <%= form_with url: delivery_runs_path, method: :get, class: "toolbar filters" do |form| %>
+    <%= form.date_field :date, value: params[:date], aria: { label: "Fecha de las hojas" } %>
+    <%= form.collection_select :driver_id, @drivers, :id, :name, { include_blank: "Todos los repartidores", selected: params[:driver_id] }, class: "select-filter", aria: { label: "Repartidor" } %>
+    <%= form.select :status, [["Todos los estados", ""]] + DeliveryRun.statuses.keys.map { |status| [operation_status(status), status] }, { selected: params[:status] }, class: "select-filter", aria: { label: "Estado de hoja" } %>
+    <%= form.submit "Filtrar", class: "btn btn-white btn-sm" %><%= link_to "Limpiar", delivery_runs_path, class: "text-action" %>
+  <% end %>
+  <div class="entity-grid">
+    <% @delivery_runs.each do |run| %><% total = run.visits.size; completed = run.visits.count(&:completed?) %><article class="entity-card"><span class="chip <%= run.status %>"><%= operation_status(run.status) %></span><h2><%= link_to run.name, delivery_run_path(run), class: "text-action", data: { turbo_frame: "_top" } %></h2><p><%= l(run.scheduled_date) %> · <%= run.driver&.name || "Sin repartidor" %></p><p><%= total %> paradas · <%= run.visits.sum { |visit| visit.delivery_orders.size } %> entregas</p><label class="route-progress"><span><%= completed %> de <%= total %> visitas realizadas</span><progress max="<%= [total, 1].max %>" value="<%= completed %>" aria-label="Progreso de <%= run.name %>"></progress></label><div class="entity-footer"><%= link_to "Ver recorrido", delivery_run_path(run), class: "text-action", data: { turbo_frame: "_top" } %></div></article><% end %>
+    <% if @delivery_runs.empty? %><div class="empty"><h2>No hay hojas para mostrar</h2><p>Creá una hoja con las entregas pendientes o ajustá los filtros.</p></div><% end %>
+  </div>
+  <nav class="table-footer" aria-label="Paginación de hojas"><span>Página <%= @page %> de <%= @pages %></span><div class="pagination"><% if @page > 1 %><%= link_to "← Anterior", delivery_runs_path(request.query_parameters.merge(page: @page - 1)), class: "btn btn-white btn-sm" %><% end %><% if @page < @pages %><%= link_to "Siguiente →", delivery_runs_path(request.query_parameters.merge(page: @page + 1)), class: "btn btn-white btn-sm" %><% end %></div></nav>
+<% end %>

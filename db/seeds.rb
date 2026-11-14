@@ -155,9 +155,26 @@ Company.transaction do
 
         driver = status == :draft ? nil : drivers.fetch(company)[index % drivers.fetch(company).size]
         run = company.delivery_runs.create!(generation_key: key, scheduled_date: date, name: "Demo · Reparto #{date.strftime('%d/%m/%Y')}", driver: driver)
-        DeliveryRunGenerator.call(company: company, date: date, delivery_run: run)
+        orders = DeliveryOrderGenerator.call(company: company, date: date)
+        DeliveryRunPlanner.call(company: company, delivery_run: run, order_ids: status == :cancelled ? [] : orders.select { |order| order.pending? && order.visit_id.nil? }.map(&:id))
 
-        run.visits.each_with_index do |visit, visit_index|
+        generated_visits = run.visits.to_a
+
+        # Manual visits demonstrate products outside the recurring catalog and
+        # unsuccessful visits. Only newly created demo runs are populated.
+        customer = company.customers.find_by!(name: company == south ? "Mercado Central Sur" : "Cafetería El Roble")
+        position = run.visits.maximum(:position).to_i
+        manual = run.visits.create!(company: company, customer: customer, position: position + 1,
+          status: :pending,
+          notes: status == :completed ? "Demo: visita cerrada o reprogramada por pedido del cliente." : "Demo: pedido manual adicional.")
+        manual.delivery_items.create!(description: "Mezcla especial a pedido", unit: "kg", planned_quantity: "1.250")
+
+        if status == :completed
+          missed = run.visits.create!(company: company, customer: customer, position: position + 2,
+            status: :pending, notes: "Demo: el cliente no atendió; no se entregó mercadería.")
+          missed.delivery_items.create!(description: "Bulto adicional solicitado por teléfono", unit: "box", planned_quantity: 1, delivered_quantity: 0)
+        end
+        generated_visits.each_with_index do |visit, visit_index|
           next unless status == :completed || (status == :in_progress && visit_index.zero?)
 
           visit.delivery_items.each_with_index do |item, item_index|
@@ -175,19 +192,9 @@ Company.transaction do
           visit.update!(status: :completed, completed_at: date.in_time_zone.change(hour: 12))
         end
 
-        # Manual visits demonstrate products outside the recurring catalog and
-        # unsuccessful visits. Only newly created demo runs are populated.
-        customer = company.customers.find_by!(name: company == south ? "Mercado Central Sur" : "Cafetería El Roble")
-        position = run.visits.maximum(:position).to_i
-        manual = run.visits.create!(company: company, customer: customer, position: position + 1,
-          status: status == :completed ? (offset == -2 ? :closed : :rescheduled) : :pending,
-          notes: status == :completed ? "Demo: visita cerrada o reprogramada por pedido del cliente." : "Demo: pedido manual adicional.")
-        manual.delivery_items.create!(description: "Mezcla especial a pedido", unit: "kg", planned_quantity: "1.250")
-
         if status == :completed
-          missed = run.visits.create!(company: company, customer: customer, position: position + 2,
-            status: :not_attended, notes: "Demo: el cliente no atendió; no se entregó mercadería.")
-          missed.delivery_items.create!(description: "Bulto adicional solicitado por teléfono", unit: "box", planned_quantity: 1, delivered_quantity: 0)
+          manual.update!(status: offset == -2 ? :closed : :rescheduled)
+          missed.update!(status: :not_attended)
         end
         run.update!(status: status)
       end

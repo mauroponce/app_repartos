@@ -1,5 +1,6 @@
 class Customer < ApplicationRecord
   belongs_to :company
+  has_many :delivery_orders, dependent: :restrict_with_error
   has_many :delivery_schedules, dependent: :restrict_with_error
   has_many :visits, dependent: :restrict_with_error
   attr_accessor :location_confirmed

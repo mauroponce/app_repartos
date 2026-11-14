@@ -1,0 +1,8 @@
+<div class="next-card expanded">
+  <div class="drag-handle"></div><div class="next-header"><span class="status-kicker">Próxima entrega</span><span class="next-index"><%= visit.position.to_s.rjust(2, "0") %> / <%= @visits.size.to_s.rjust(2, "0") %></span></div>
+  <div class="next-address-row"><span class="stop-number"><%= visit.position.to_s.rjust(2, "0") %></span><div class="next-address-content"><h4><%= visit.customer_name %></h4><p><%= icon("pin") %><%= visit.customer_address %></p></div></div>
+  <div class="eta-line"><span class="eta-pill"><%= icon("clock") %><%= driver_visit_time(visit) %></span><span class="eta-chip">Pendiente</span></div>
+  <div class="primary-actions"><%= link_to driver_navigation_url(visit), class: "btn btn-secondary", target: "_blank", rel: "noopener noreferrer" do %><%= icon("nav") %>Navegar<% end %><button type="button" class="btn btn-primary" data-repartidor-target="recordButton" data-action="repartidor#openVisit" data-visit-id="<%= visit.id %>"><%= icon("check") %>Registrar visita</button></div>
+  <% if visit.notes.present? %><details><summary>Ver indicaciones</summary><div class="delivery-note"><%= visit.notes %></div></details><% end %>
+  <div class="tiny-actions"><%= link_to "Contactar cliente", "tel:#{visit.customer.phone.gsub(/[^+\d]/, '')}" if visit.customer.phone.present? %><button type="button" data-action="repartidor#openVisit" data-visit-id="<%= visit.id %>">Reportar problema</button></div>
+</div>

@@ -11,7 +11,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
   test "create with valid credentials" do
     post session_path, params: { email_address: @user.email_address, password: "Repartos-test-2026" }
 
-    assert_redirected_to root_path
+    assert_redirected_to admin_root_path
     assert cookies[:session_id]
   end
 
@@ -57,5 +57,28 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_session_path
     post session_path, params: { email_address: @user.email_address, password: "Repartos-test-2026" }
     assert_redirected_to new_customer_path
+  end
+
+  test "drivers sign in to their app even after requesting an admin page" do
+    get new_customer_path
+    post session_path, params: { email_address: users(:driver).email_address, password: "Repartos-test-2026" }
+    assert_redirected_to repartidor_root_path
+    get root_path
+    assert_redirected_to repartidor_root_path
+  end
+
+  test "administrators and supervisors never return to the driver area after login" do
+    [ users(:one), users(:supervisor) ].each do |user|
+      sign_out
+      get repartidor_root_path
+      post session_path, params: { email_address: user.email_address, password: "Repartos-test-2026" }
+      assert_redirected_to admin_root_path
+    end
+  end
+
+  test "drivers can return to a requested route in their own area" do
+    get repartidor_root_path(run_id: 123)
+    post session_path, params: { email_address: users(:driver).email_address, password: "Repartos-test-2026" }
+    assert_redirected_to repartidor_root_path(run_id: 123)
   end
 end

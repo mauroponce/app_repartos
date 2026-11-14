@@ -17,6 +17,14 @@ module ApplicationHelper
     end
   end
 
+  def delivery_order_status(order)
+    { "pending" => "Pendiente", "assigned" => "Asignada a hoja", "completed" => "Completada", "cancelled" => "Cancelada" }.fetch(order.display_status)
+  end
+
+  def merchandise_summary(order)
+    order.delivery_order_items.map { |item| "#{quantity_text(item.quantity)} #{item.unit} · #{item.description}" }.join("; ")
+  end
+
   def operation_status(status)
     { "draft" => "Borrador", "assigned" => "Asignado", "in_progress" => "En curso", "completed" => "Completado", "cancelled" => "Cancelado", "pending" => "Pendiente", "not_attended" => "No atendido", "closed" => "Cerrado", "rescheduled" => "Reprogramado" }.fetch(status)
   end

@@ -6,19 +6,19 @@ class DeliveryManagementControllerTest < ActionDispatch::IntegrationTest
   test "catalog list search filter and pagination stay inside the tenant" do
     get products_path
     assert_response :success
-    assert_select ".entity-card", count: 3
-    assert_select "h2", text: "Almendras", count: 0
+    assert_select ".products-table tbody tr", count: 3
+    assert_select ".products-table td", text: "Almendras", count: 0
     get products_path, params: { q: "PAN-01", active: "true" }
-    assert_select ".entity-card", count: 1
+    assert_select ".products-table tbody tr", count: 1
     get products_path, params: { active: "false" }
-    assert_select ".entity-card", count: 1
+    assert_select ".products-table tbody tr", count: 1
     get products_path, params: { q: "%" }
-    assert_select ".entity-card", count: 0
+    assert_select ".products-table tbody tr", count: 0
     13.times { |i| companies(:one).products.create!(name: "Nuevo #{i}", unit: "kg") }
     get products_path, params: { q: "Nuevo" }
-    assert_select ".entity-card", count: 12
+    assert_select ".products-table tbody tr", count: 12
     get products_path, params: { q: "Nuevo", page: 2 }
-    assert_select ".entity-card", count: 1
+    assert_select ".products-table tbody tr", count: 1
   end
 
   test "product create update toggle and errors preserve tenant and history" do
@@ -84,20 +84,18 @@ class DeliveryManagementControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
-  test "create generated run show partial delivery edit assignment and retry" do
-    get new_delivery_run_path
+  test "planned run detail edit assignment and partial execution" do
+    order = DeliveryOrderGenerator.call(company: companies(:one), date: "2026-11-17").first
+    get new_delivery_run_path, params: { order_ids: [ order.id ] }
     assert_response :success
     assert_difference "DeliveryRun.count" do
-      post delivery_runs_path, params: run_parameters
+      post delivery_runs_path, params: { delivery_run: { name: "Martes", scheduled_date: "2026-11-17" }, order_ids: [ order.id ] }
     end
     run = companies(:one).delivery_runs.last
     assert_redirected_to delivery_run_path(run)
     follow_redirect!
     assert_select "h2", text: /Almacén San Martín/
     assert_select "td", text: "Sin registrar"
-    assert_no_difference [ "DeliveryRun.count", "Visit.count", "DeliveryItem.count" ] do
-      post delivery_runs_path, params: run_parameters
-    end
     get delivery_runs_path
     assert_response :success
     get edit_delivery_run_path(run)
@@ -116,6 +114,7 @@ class DeliveryManagementControllerTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_select "td", text: "-2"
     assert visit.reload.completed_at
+    assert order.reload.completed?
   end
 
   test "manual runs and visits support manual products and invalid delivery feedback" do
@@ -132,26 +131,27 @@ class DeliveryManagementControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_select "[role=alert]"
     assert_nil visit.delivery_items.first.reload.delivered_quantity
-    post generate_delivery_run_path(run)
+    orders = DeliveryOrderGenerator.call(company: companies(:one), date: run.scheduled_date)
+    post add_orders_delivery_run_path(run), params: { order_ids: orders.map(&:id) }
     assert_redirected_to delivery_run_path(run)
     assert_equal 2, run.visits.count
   end
 
   test "run and visit paths cannot access another tenant or assign its users or products" do
-    foreign_run = DeliveryRunGenerator.call(company: companies(:two), date: "2026-11-16")
+    foreign_run = planned_run(company: companies(:two), date: "2026-11-16")
     [ delivery_run_path(foreign_run), edit_delivery_run_path(foreign_run), new_delivery_run_visit_path(foreign_run) ].each do |path|
       get path
       assert_response :not_found
     end
-    post generate_delivery_run_path(foreign_run)
+    post add_orders_delivery_run_path(foreign_run)
     assert_response :not_found
     post delivery_runs_path, params: { delivery_run: { name: "R", scheduled_date: "2026-11-17", driver_id: users(:two).id } }
     assert_response :not_found
-    run = DeliveryRunGenerator.call(company: companies(:one), date: "2026-11-17")
+    run = planned_run(company: companies(:one), date: "2026-11-17")
     get edit_delivery_run_visit_path(run, foreign_run.visits.first)
     assert_response :not_found
     patch delivery_run_visit_path(run, run.visits.first), params: { visit: { delivery_items_attributes: [ { description: "Robado", product_id: products(:almonds).id, planned_quantity: 2, unit: "kg" } ] } }
-    assert_response :unprocessable_entity
+    assert_response :not_found
     assert_equal 1, run.visits.first.delivery_items.count
   end
 
@@ -163,7 +163,7 @@ class DeliveryManagementControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     get new_customer_delivery_schedule_path(customers(:one))
     assert_response :success
-    run = DeliveryRunGenerator.call(company: companies(:one), date: "2026-11-17")
+    run = planned_run(company: companies(:one), date: "2026-11-17")
     sign_in_as users(:driver)
     [ products_path, new_product_path, delivery_runs_path, new_delivery_run_path, new_product_import_path, template_product_imports_path, new_customer_delivery_schedule_path(customers(:one)), edit_delivery_run_visit_path(run, run.visits.first) ].each do |path|
       get path

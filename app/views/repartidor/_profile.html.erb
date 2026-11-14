@@ -1,0 +1,12 @@
+<div class="screen-head"><div class="eyebrow">Tu cuenta</div><h2>Mi perfil</h2><p>Información del repartidor y preferencias.</p></div>
+<div class="profile-card"><div class="avatar"><%= initials(Current.user.name) %></div><div><strong><%= Current.user.name %></strong><p>Repartidor · ID #<%= Current.user.id.to_s.rjust(5, "0") %></p><span class="profile-verified"><%= Current.company.name %></span></div></div>
+<div class="setting-section">Tus datos</div><div class="setting-card">
+  <div class="setting-row"><span class="setting-row-icon"><%= icon("user") %></span><span class="setting-row-text"><strong>Email de acceso</strong><span><%= Current.user.email_address %></span></span></div>
+  <div class="setting-row"><span class="setting-row-icon"><%= icon("phone") %></span><span class="setting-row-text"><strong>Teléfono</strong><span><%= Current.user.phone.presence || "Sin teléfono registrado" %></span></span></div>
+</div>
+<div class="setting-section">Tu jornada</div><div class="setting-card">
+  <button type="button" class="setting-row" data-action="repartidor#pause"><span class="setting-row-icon"><%= icon("pause") %></span><span class="setting-row-text"><strong data-repartidor-target="pauseLabel">Pausar jornada</strong><span>Pausa en este dispositivo mientras la app está abierta</span></span><%= icon("right") %></button>
+  <button type="button" class="setting-row" data-action="repartidor#locate" data-repartidor-target="locationButton" aria-pressed="false"><span class="setting-row-icon"><%= icon("locate") %></span><span class="setting-row-text"><strong>Usar mi ubicación</strong><span>GPS mientras la app está abierta</span></span><span class="switch" data-repartidor-target="locationSwitch" aria-hidden="true"></span></button>
+  <button type="button" class="setting-row" data-action="repartidor#install"><span class="setting-row-icon"><%= icon("share") %></span><span class="setting-row-text"><strong>Instalar Repartos</strong><span>Acceso directo desde la pantalla de inicio</span></span><%= icon("right") %></button>
+</div>
+<%= button_to "Cerrar sesión", session_path, method: :delete, class: "signoff-btn" %>
