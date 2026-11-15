@@ -8,6 +8,7 @@ Rails.application.routes.draw do
   post "/repartidor/api/v1/operations", to: "driver_api/v1/sync#create"
   post "/repartidor/api/v1/evidences", to: "driver_api/v1/evidences#create"
   post "/repartidor/api/v1/location", to: "driver_api/v1/locations#create"
+  get "/repartidor/api/v1/location", to: "driver_api/v1/locations#show"
   get "/repartidor/avisos", to: "driver_api/v1/workflows#inbox", as: :driver_workflow_inbox
   get "/repartidor/incidencias/:id", to: "driver_api/v1/workflows#incident", as: :driver_incident
   post "/repartidor/api/v1/workflow-operations", to: "driver_api/v1/workflows#create"

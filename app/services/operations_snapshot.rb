@@ -8,7 +8,8 @@ class OperationsSnapshot
     @orders = company.delivery_orders.where(scheduled_date: company.local_date).where.not(status: :cancelled)
       .includes({ delivery_order_items: :delivery_item }, visit: [ :delivery_run, :delivery_items, :delivery_orders ]).order(:id).to_a
     active_driver_ids = runs.select { |run| run.status.in?(%w[assigned in_progress]) && run.driver&.active? }.map(&:driver_id)
-    @locations = company.driver_locations.where(user_id: active_driver_ids, captured_at: 24.hours.ago..).index_by(&:user_id)
+    @locations = company.driver_locations.joins(:user).includes(:user).where(users: { location_sharing_enabled: true })
+      .where(sharing: true, user_id: active_driver_ids, captured_at: DriverLocation.retention.ago..).index_by(&:user_id)
     partial = orders.count { |order| order.needs_attention? && order.fulfillment_result == "partial" }
     @counts = { pending: orders.count(&:pending?), completed: orders.count(&:completed?),
       partial: partial, failed: orders.count(&:needs_attention?) - partial }
@@ -36,6 +37,7 @@ class OperationsSnapshot
     locations.values.map do |location|
       { id: location.user_id, name: runs.find { |run| run.driver_id == location.user_id }&.driver&.name,
         latitude: location.latitude.to_f, longitude: location.longitude.to_f, fresh: location.fresh?,
+        fresh_for_ms: [ ((location.captured_at + DriverLocation::FRESH_FOR - now) * 1000).ceil, 0 ].max,
         captured_at: location.captured_at.in_time_zone(company.time_zone).strftime("%H:%M:%S"), accuracy: location.accuracy.to_f }
     end
   end

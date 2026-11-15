@@ -10,8 +10,9 @@
 </div>
 <%= button_to "Cerrar sesión", session_path, method: :delete, authenticity_token: false, class: "signoff-btn", form: { data: { action: "submit->repartidor#logout" } } %>
 <div class="setting-section">Ubicación durante la jornada</div>
-<div class="setting-card tracking-panel" data-controller="driver-tracking" data-driver-tracking-account-value="<%= Current.company.id %>:<%= Current.user.id %>" data-action="visibilitychange@document->driver-tracking#tick online@window->driver-tracking#tick">
-  <p>Compartí tu ubicación con administración cada 30 segundos mientras la app esté visible. El envío puede interrumpirse al bloquear el teléfono o cerrar la app. Solo se conserva la última posición y deja de mostrarse después de 24 horas.</p>
-  <button type="button" class="btn btn-secondary" data-driver-tracking-target="button" data-action="driver-tracking#toggle" aria-pressed="false">Compartir ubicación</button>
+<div class="setting-card tracking-panel" data-controller="driver-tracking" data-driver-tracking-account-value="<%= Current.company.id %>:<%= Current.user.id %>" data-action="visibilitychange@document->driver-tracking#tick online@window->driver-tracking#tick repartos:stop-location@document->driver-tracking#stop">
+  <p>Si lo activás, administración y supervisión de tu empresa podrán ver tu última ubicación, precisión y hora para coordinar entregas. Se actualiza cada 30 segundos, únicamente con conexión, una jornada activa y la PWA visible. No funciona en segundo plano ni guarda recorridos históricos. Una posición sin actualizar por dos minutos se indica como desactualizada.</p>
+  <p>Podés detener el envío con «Detener ubicación». Se elimina la última posición al confirmar la desactivación. Si estás sin conexión, se detiene aquí inmediatamente y queda pendiente avisar al servidor. Al cerrar y volver a abrir la app deberás activarlo nuevamente. El permiso del navegador por sí solo no activa esta función.</p>
+  <button type="button" class="btn btn-secondary" data-driver-tracking-target="button" data-action="driver-tracking#toggle" aria-pressed="false">Compartir mi ubicación con la empresa</button>
   <p role="status" data-driver-tracking-target="status">Ubicación desactivada.</p>
 </div>

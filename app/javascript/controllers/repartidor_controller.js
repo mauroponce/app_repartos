@@ -196,6 +196,7 @@ export default class extends Controller {
   }
 
   lockAccount(message = "La cuenta está bloqueada o cambió. Volvé a iniciar sesión para recuperar sus registros.") {
+    document.dispatchEvent(new CustomEvent("repartos:stop-location"))
     clearTimeout(this.syncTimer)
     this.locked = true
     this.element.replaceChildren()
@@ -406,6 +407,7 @@ export default class extends Controller {
     const rows = await this.store.operations(this.accountValue)
     const count = rows.filter(unresolved).length
     if (count && !window.confirm(`Hay ${count} registros sin sincronizar o para revisar. Se conservarán en este dispositivo y solamente se recuperarán al ingresar con esta misma cuenta. Podés cancelar para revisarlos o exportarlos. ¿Cerrar sesión conservándolos?`)) return
+    document.dispatchEvent(new CustomEvent("repartos:stop-location"))
     try {
       const response = await fetch("/session", { method: "DELETE", credentials: "same-origin", headers: { "X-CSRF-Token": this.engine?.csrf || document.querySelector('meta[name="csrf-token"]')?.content || "" }, signal: AbortSignal.timeout(12000) })
       if (!response.ok) throw new Error("No se pudo cerrar la sesión. Conservá los registros y reintentá con conexión.")

@@ -16,11 +16,25 @@ export default class extends Controller {
     this.connected = false
     clearInterval(this.timer)
     clearTimeout(this.debounce)
+    clearTimeout(this.locationExpiry)
     this.request?.abort()
     this.map?.remove()
   }
 
-  boardTargetConnected() { this.updateMap(); if (this.connected) this.renderStatus() }
+  boardTargetConnected() { this.boardSeenAt = performance.now(); this.expireLocations(); if (this.connected) this.renderStatus() }
+  expireLocations() {
+    if (!this.hasBoardTarget) return
+    clearTimeout(this.locationExpiry)
+    const elapsed = performance.now() - this.boardSeenAt
+    const remaining = []
+    this.boardTarget.querySelectorAll("[data-location-fresh-ms]").forEach(label => {
+      const left = Number(label.dataset.locationFreshMs) - elapsed
+      if (left <= 0) label.textContent = label.textContent.replace("Ubicación reciente", "Ubicación sin actualizar")
+      else remaining.push(left)
+    })
+    this.updateMap()
+    if (remaining.length) this.locationExpiry = setTimeout(() => this.expireLocations(), Math.min(...remaining) + 10)
+  }
   renderStatus() { this.statusTarget.textContent = `Actualizado ${this.boardTarget.dataset.updatedAt}. Consulta de respaldo cada 15 segundos.` }
   schedule() { clearTimeout(this.debounce); this.debounce = setTimeout(() => this.refresh(), 250) }
 
@@ -75,6 +89,7 @@ export default class extends Controller {
     const markers = JSON.parse(this.boardTarget.dataset.markers || "[]")
     this.pins.clearLayers()
     markers.forEach(point => {
+      point.fresh = point.fresh && performance.now() - this.boardSeenAt < point.fresh_for_ms
       const label = document.createElement("span")
       label.textContent = `${point.name} · ${point.captured_at} · ±${Math.round(point.accuracy)} m · ${point.fresh ? "reciente" : "sin actualizar"}`
       this.L.circleMarker([point.latitude, point.longitude], { color: point.fresh ? "#7552b4" : "#777", fillOpacity: .8, radius: 10 }).bindTooltip(label).addTo(this.pins)

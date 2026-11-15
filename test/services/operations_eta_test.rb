@@ -15,6 +15,7 @@ class OperationsEtaTest < ActiveSupport::TestCase
   end
 
   def location
+    users(:driver).update!(location_sharing_enabled: true, location_consent_id: SecureRandom.uuid, location_activated_at: Time.current)
     @company.driver_locations.create!(user: users(:driver), latitude: -34.79, longitude: -58.33, accuracy: 10, captured_at: Time.current)
   end
 

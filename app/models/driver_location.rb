@@ -2,6 +2,9 @@ class DriverLocation < ApplicationRecord
   include TenantIntegrity
   include OperationsUpdates
   FRESH_FOR = 2.minutes
+  def self.retention
+    Integer(ENV.fetch("DRIVER_LOCATION_RETENTION_HOURS", "24")).clamp(1, 168).hours
+  end
   belongs_to :user
   validates :user_id, uniqueness: true
   validates :captured_at, presence: true
@@ -11,6 +14,6 @@ class DriverLocation < ApplicationRecord
   validate -> { same_company(:user); errors.add(:user, "debe ser repartidor") unless user&.driver? }
 
   def fresh?
-    sharing? && captured_at >= FRESH_FOR.ago && captured_at <= 2.minutes.from_now
+    sharing? && user.location_sharing_enabled? && captured_at >= FRESH_FOR.ago && captured_at <= 2.minutes.from_now
   end
 end

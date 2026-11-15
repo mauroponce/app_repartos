@@ -30,6 +30,7 @@ class OperationsSnapshotTest < ActiveSupport::TestCase
   test "locations of inactive foreign and finished drivers never enter map" do
     company = companies(:one)
     driver = users(:driver)
+    [ driver, users(:other_driver) ].each { |user| user.update!(location_sharing_enabled: true, location_consent_id: SecureRandom.uuid, location_activated_at: Time.current) }
     run = company.delivery_runs.create!(name: "Activa", scheduled_date: company.local_date, driver: driver, status: :assigned)
     location = company.driver_locations.create!(user: driver, latitude: -34, longitude: -58, accuracy: 10, captured_at: Time.current)
     companies(:two).driver_locations.create!(user: users(:other_driver), latitude: -33, longitude: -57, accuracy: 10, captured_at: Time.current)

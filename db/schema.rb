@@ -711,10 +711,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_021100) do
     t.datetime "updated_at", null: false
     t.string "phone"
     t.string "status", default: "active", null: false
+    t.boolean "location_sharing_enabled", default: false, null: false
+    t.uuid "location_consent_id"
+    t.bigint "location_consent_version", default: 0, null: false
+    t.datetime "location_activated_at"
+    t.datetime "location_deactivated_at"
     t.index ["company_id", "id"], name: "index_users_on_company_id_and_id", unique: true
     t.index ["company_id", "role", "status"], name: "index_users_on_company_id_and_role_and_status"
     t.index ["company_id"], name: "index_users_on_company_id"
     t.index ["email_address"], name: "index_users_on_email_address", unique: true
+    t.check_constraint "location_consent_version >= 0 AND (NOT location_sharing_enabled OR location_consent_id IS NOT NULL AND location_activated_at IS NOT NULL)", name: "users_location_consent"
     t.check_constraint "role::text = ANY (ARRAY['administrator'::character varying::text, 'supervisor'::character varying::text, 'driver'::character varying::text])", name: "users_valid_role"
     t.check_constraint "status::text = ANY (ARRAY['active'::character varying::text, 'inactive'::character varying::text])", name: "users_valid_status"
   end
