@@ -11,7 +11,16 @@ module DriverApi
       rescue_from ArgumentError, KeyError, with: ->(error) { render json: { error: error.message }, status: :unprocessable_entity }
 
       def work
-        Current.company.with_lock do
+        DriverWorkSnapshot.consistent_read do
+          etag = %Q("#{Current.driver_work_revision}")
+          response.headers["ETag"] = etag
+          response.headers["X-Driver-Account"] = "#{Current.company.id}:#{Current.user.id}"
+          response.headers["X-Driver-Work-Version"] = "4"
+          response.headers["X-CSRF-Token"] = form_authenticity_token
+          if request.headers["If-None-Match"].to_s.split(",").map(&:strip).include?(etag)
+            head :not_modified
+            next
+          end
           load_dashboard(run_id: nil)
           runs = @runs.presence || [ nil ]
           packages = runs.map do |run|

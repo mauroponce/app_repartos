@@ -1,0 +1,137 @@
+{
+  "measured_at": "2026-11-15T14:11:38-03:00",
+  "revision": "ca8f021",
+  "mode": "in-process Rack sessions, PostgreSQL, shared host, no network or compression",
+  "lock_sample_interval_ms": 20,
+  "max_connections_waiting_for_locks": 49,
+  "lock_wait_samples": 3137,
+  "rows": [
+    {
+      "drivers": 5,
+      "stops": 30,
+      "scenario": "initial",
+      "p50_ms": 2890.38,
+      "p95_ms": 5665.99,
+      "queries_per_request": 79.0,
+      "sql_ms_per_request": 2176.16,
+      "total_bytes": 1782038,
+      "statuses": {
+        "200": 5
+      },
+      "rss_kib": 202500
+    },
+    {
+      "drivers": 5,
+      "stops": 30,
+      "scenario": "unchanged",
+      "p50_ms": 2682.28,
+      "p95_ms": 4328.49,
+      "queries_per_request": 79.0,
+      "sql_ms_per_request": 2089.76,
+      "total_bytes": 1782038,
+      "statuses": {
+        "200": 5
+      },
+      "rss_kib": 208016
+    },
+    {
+      "drivers": 5,
+      "stops": 30,
+      "scenario": "sync",
+      "p50_ms": 1809.23,
+      "p95_ms": 1873.54,
+      "queries_per_request": 44.0,
+      "sql_ms_per_request": 1726.2,
+      "total_bytes": 1195,
+      "statuses": {
+        "200": 5
+      },
+      "rss_kib": 208156
+    },
+    {
+      "drivers": 20,
+      "stops": 30,
+      "scenario": "initial",
+      "p50_ms": 8759.27,
+      "p95_ms": 16693.67,
+      "queries_per_request": 79.0,
+      "sql_ms_per_request": 8236.84,
+      "total_bytes": 7101639,
+      "statuses": {
+        "200": 20
+      },
+      "rss_kib": 306996
+    },
+    {
+      "drivers": 20,
+      "stops": 30,
+      "scenario": "unchanged",
+      "p50_ms": 6427.14,
+      "p95_ms": 11880.56,
+      "queries_per_request": 79.0,
+      "sql_ms_per_request": 6146.12,
+      "total_bytes": 7101639,
+      "statuses": {
+        "200": 20
+      },
+      "rss_kib": 325588
+    },
+    {
+      "drivers": 20,
+      "stops": 30,
+      "scenario": "sync",
+      "p50_ms": 5364.39,
+      "p95_ms": 7308.08,
+      "queries_per_request": 43.0,
+      "sql_ms_per_request": 5785.42,
+      "total_bytes": 4795,
+      "statuses": {
+        "200": 20
+      },
+      "rss_kib": 326312
+    },
+    {
+      "drivers": 50,
+      "stops": 30,
+      "scenario": "initial",
+      "p50_ms": 21224.67,
+      "p95_ms": 42596.98,
+      "queries_per_request": 79.0,
+      "sql_ms_per_request": 21243.19,
+      "total_bytes": 17683147,
+      "statuses": {
+        "200": 50
+      },
+      "rss_kib": 547104
+    },
+    {
+      "drivers": 50,
+      "stops": 30,
+      "scenario": "unchanged",
+      "p50_ms": 23202.62,
+      "p95_ms": 40568.58,
+      "queries_per_request": 79.0,
+      "sql_ms_per_request": 22721.88,
+      "total_bytes": 17683147,
+      "statuses": {
+        "200": 50
+      },
+      "rss_kib": 574592
+    },
+    {
+      "drivers": 50,
+      "stops": 30,
+      "scenario": "sync",
+      "p50_ms": 14640.99,
+      "p95_ms": 15937.07,
+      "queries_per_request": 42.4,
+      "sql_ms_per_request": 14636.91,
+      "total_bytes": 12011,
+      "statuses": {
+        "200": 50
+      },
+      "rss_kib": 574772
+    }
+  ],
+  "limits": "Rack in-process; one wave per scenario, 30 stops, 50 drivers same company; shared 15 GiB Linux host; no HTTP/TLS/mobile traffic or file uploads. Not VPS sizing."
+}

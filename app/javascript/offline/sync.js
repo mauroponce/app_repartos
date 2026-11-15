@@ -17,12 +17,26 @@ export class SyncEngine {
   }
 
   async refresh() {
-    const response = await this.request("/repartidor/api/v1/work")
+    const metadata = await this.store.workMetadata(this.account)
+    let response = await this.request("/repartidor/api/v1/work", { timeout: 60000, headers: metadata?.etag ? { "If-None-Match": metadata.etag } : {} })
+    if (response.status === 304) {
+      const packages = await this.store.packages(this.account)
+      if (metadata?.version === 4 && packages.length) {
+        if (response.headers.get("X-Driver-Account") !== this.account || response.headers.get("X-Driver-Work-Version") !== "4" || await this.store.active() !== this.account) throw new SessionUnavailable("La cuenta cambió en este navegador")
+        this.csrf = response.headers.get("X-CSRF-Token")
+        if (!this.csrf) throw new SessionUnavailable("No se pudo verificar la sesión")
+        return { version: 4, account: Object.fromEntries(["company_id", "user_id"].map((key, index) => [key, Number(this.account.split(":")[index])])), packages, downloaded_at: metadata.downloaded_at }
+      }
+      // An interrupted/manual storage cleanup must not turn a validator into
+      // missing offline work. A single unconditional request repairs it.
+      response = await this.request("/repartidor/api/v1/work", { timeout: 60000 })
+    }
     if (!response.ok) throw new Error(`Servidor temporalmente no disponible (${response.status})`)
     const work = await response.json()
     if (work.version !== 4) throw new SessionUnavailable("La versión requiere actualizar la aplicación; los registros se conservan")
     if (`${work.account.company_id}:${work.account.user_id}` !== this.account || await this.store.active() !== this.account) throw new SessionUnavailable("La cuenta cambió en este navegador")
     this.csrf = work.csrf_token
+    work.etag = response.headers.get("ETag")
     await this.store.saveWork(this.account, work)
     return work
   }

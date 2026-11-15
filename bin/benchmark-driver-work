@@ -1,0 +1,108 @@
+#!/usr/bin/env ruby
+ENV["RAILS_ENV"] ||= "test"
+require_relative "../config/environment"
+require "json"
+require "securerandom"
+begin
+  abort "Only RAILS_ENV=test is supported" unless Rails.env.test?
+  config = ApplicationRecord.connection_db_config.configuration_hash.merge(database: "app_repartos_benchmark", pool: 55)
+  begin
+    ActiveRecord::Tasks::DatabaseTasks.create(config)
+  rescue ActiveRecord::DatabaseAlreadyExists
+  end
+  ActiveRecord::Base.establish_connection(config)
+  ActiveRecord::Schema.verbose = false
+  load Rails.root.join("db/schema.rb") # Only the dedicated benchmark database is recreated.
+  ApplicationRecord.descendants.each(&:reset_column_information)
+  ActiveJob::Base.queue_adapter = :test
+  Rails.logger.level = Logger::ERROR
+  stops = Integer(ENV.fetch("BENCHMARK_STOPS", "30"))
+  abort "stops must be between 30 and 100" unless stops.between?(30, 100)
+  company = Company.create!(name: "Load test", slug: "benchmark-#{SecureRandom.hex(6)}")
+  now = Time.current
+  customer = company.customers.create!(name: "Benchmark", phone: "123456", address: "Prueba 123", city: "CABA", latitude: -34.6037, longitude: -58.3816)
+  password = "Benchmark-local-2026"
+  digest = BCrypt::Password.create(password, cost: 4)
+  users = 50.times.map { |i| { company_id: company.id, name: "Driver #{i}", email_address: "load-#{company.id}-#{i}@example.test", password_digest: digest, role: "driver", status: "active", created_at: now, updated_at: now } }
+  ids = User.insert_all!(users, returning: %w[id]).rows.flatten
+  ids.each do |id|
+    run = company.delivery_runs.create!(driver_id: id, name: "Benchmark", scheduled_date: company.local_date, status: :assigned)
+    rows = stops.times.map { |i| { company_id: company.id, delivery_run_id: run.id, customer_id: customer.id, customer_name: customer.name, customer_address: "Prueba 123, CABA", position: i + 1, status: "pending", created_at: now, updated_at: now } }
+    visits = Visit.insert_all!(rows, returning: %w[id]).rows.flatten
+    DeliveryItem.insert_all!(visits.map { |id| { company_id: company.id, visit_id: id, description: "Product", unit: "unit", planned_quantity: 20, created_at: now, updated_at: now } })
+  end
+  sessions = ids.each_with_index.map do |id, i|
+    session = ActionDispatch::Integration::Session.new(Rails.application)
+    session.post("/session", params: { email_address: users[i][:email_address], password: password })
+    raise "login failed #{session.response.status}" unless session.response.redirect?
+    session
+  end
+  samples = []
+  subscription = ActiveSupport::Notifications.subscribe("sql.active_record") do |*args|
+    event = ActiveSupport::Notifications::Event.new(*args)
+    if (sample = Thread.current[:driver_benchmark]) && !event.payload[:cached] && event.payload[:name] != "SCHEMA"
+      sample[:queries] += 1
+      sample[:sql_ms] += event.duration
+    end
+  end
+  mutex = Mutex.new
+  lock_samples = []
+  stop_monitor = false
+  monitor = Thread.new do
+    ActiveRecord::Base.connection_pool.with_connection do |connection|
+      until stop_monitor
+        lock_samples << connection.select_value("SELECT count(*) FROM pg_stat_activity WHERE datname = 'app_repartos_benchmark' AND wait_event_type = 'Lock'").to_i
+        sleep 0.02
+      end
+    end
+  end
+  results = []
+  [ 5, 20, 50 ].each_with_index do |count, wave|
+    work = []
+    %w[initial unchanged sync].each do |scenario|
+      gate = Queue.new
+      measurements = []
+      lock_start = lock_samples.size
+      threads = sessions.first(count).each_with_index.map do |session, index|
+        Thread.new do
+          gate.pop
+          sample = { queries: 0, sql_ms: 0 }
+          Thread.current[:driver_benchmark] = sample
+          start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+          if scenario == "sync"
+            visit = work[index].fetch("packages").first.fetch("visits")[wave]
+            session.post("/repartidor/api/v1/operations", params: { operation: { operation_id: SecureRandom.uuid, visit_id: visit.fetch("id"), status: "completed", proof: visit.fetch("proof"), items: visit.fetch("items").map { |item| { id: item.fetch("id"), delivered_quantity: item.fetch("planned_quantity") } } } }, as: :json)
+            raise "sync rejected #{session.response.body.first(200)}" unless session.response.parsed_body["status"] == "synced"
+          else
+            headers = scenario == "unchanged" && (etag = work[index]["etag"]) ? { "If-None-Match" => etag } : {}
+            session.get("/repartidor/api/v1/work", headers: headers)
+            if scenario == "initial"
+              work[index] = session.response.parsed_body.merge("etag" => session.response.headers["ETag"])
+            end
+          end
+          sample[:ms] = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - start) * 1000
+          sample[:bytes] = session.response.body.bytesize
+          sample[:status] = session.response.status
+          raise "request failed #{sample[:status]}" unless [ 200, 304 ].include?(sample[:status])
+          mutex.synchronize { measurements << sample }
+        ensure
+          Thread.current[:driver_benchmark] = nil
+          ActiveRecord::Base.connection_handler.clear_active_connections!
+        end
+      end
+      count.times { gate << true }
+      threads.each(&:value)
+      times = measurements.map { |s| s[:ms] }.sort
+      row = { drivers: count, stops: stops, scenario: scenario, p50_ms: times[(times.size * 0.5).ceil - 1].round(2), p95_ms: times[(times.size * 0.95).ceil - 1].round(2), queries_per_request: (measurements.sum { |s| s[:queries] }.to_f / count).round(2), sql_ms_per_request: (measurements.sum { |s| s[:sql_ms] } / count).round(2), total_bytes: measurements.sum { |s| s[:bytes] }, statuses: measurements.map { |s| s[:status] }.tally, max_connections_waiting_for_locks: lock_samples.drop(lock_start).max, rss_kib: File.read("/proc/self/status")[/^VmRSS:\s+(\d+)/, 1].to_i }
+      results << row
+      puts "BENCHMARK #{row.to_json}"
+      STDOUT.flush
+    end
+  end
+  puts "RESULT #{ { measured_at: Time.current.iso8601, revision: ENV.fetch("BENCHMARK_REVISION", "unknown"), mode: "in-process Rack sessions, PostgreSQL, shared host, no network or compression", lock_sample_interval_ms: 20, max_connections_waiting_for_locks: lock_samples.max, lock_wait_samples: lock_samples.count(&:positive?), rows: results }.to_json }"
+ensure
+  stop_monitor = true
+  monitor&.join
+  ActiveSupport::Notifications.unsubscribe(subscription) if subscription
+
+end

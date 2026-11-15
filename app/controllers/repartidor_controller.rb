@@ -4,9 +4,10 @@ class RepartidorController < ApplicationController
   before_action :require_driver
   around_action :use_company_time_zone
   before_action :prevent_caching
+  rescue_from DriverOperationSync::Unauthorized, with: :request_authentication
 
   def index
-    Current.company.with_lock do
+    DriverWorkSnapshot.consistent_read do
       load_dashboard
       render :index
     end
@@ -19,7 +20,7 @@ class RepartidorController < ApplicationController
   rescue ArgumentError, ActiveRecord::RecordInvalid, DriverVisitRecorder::Conflict => error
     @recording_error = error.message
     @invalid_visit_id = params[:id].to_i
-    Current.company.with_lock do
+    DriverWorkSnapshot.consistent_read do
       run = assigned_runs.joins(:visits).find_by!(visits: { id: params[:id] })
       visible = run.scheduled_date == Current.company.local_date && run.status.in?(%w[assigned in_progress completed])
       load_dashboard(run_id: visible ? run.id : nil)

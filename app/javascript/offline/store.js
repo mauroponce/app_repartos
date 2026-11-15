@@ -76,6 +76,11 @@ export class OfflineStore {
   }
 
   async packages(account) { return this.list("packages", account) }
+  async workMetadata(account) {
+    return this.transaction(["meta"], "readonly", (tx, done) => {
+      tx.objectStore("meta").get(`work:${account}`).onsuccess = event => done(event.target.result?.value || null)
+    })
+  }
   async operations(account) { return (await this.list("operations", account)).sort((a, b) => (a.sequence || 0) - (b.sequence || 0)) }
   async list(name, account) {
     return this.transaction([name], "readonly", (tx, done) => {
@@ -93,6 +98,7 @@ export class OfflineStore {
       }
       for (const pack of response.packages) tx.objectStore("packages").put({ ...pack, account, key: `${account}:${pack.id}`, downloaded_at: response.downloaded_at })
       tx.objectStore("meta").put({ key: `download:${account}`, value: response.downloaded_at })
+      tx.objectStore("meta").put({ key: `work:${account}`, value: { version: response.version, etag: response.etag, downloaded_at: response.downloaded_at } })
     })
   }
 

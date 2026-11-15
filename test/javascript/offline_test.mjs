@@ -319,3 +319,39 @@ test("offline notice reads never become server confirmed and inbox caches remain
   const reopened = new OfflineStore(factory)
   assert.equal((await reopened.inbox(account)).html, "instrucción privada")
 })
+
+test("conditional refresh persists only a validator and reuses packages after reopening with fresh in-memory CSRF", async () => {
+  const { factory, store } = await fixture()
+  const pending = operation()
+  await store.enqueue(account, pending)
+  const first = new SyncEngine({ store, account, fetcher: async () => new Response(JSON.stringify(work()), { status: 200, headers: { "content-type": "application/json", ETag: '"revision-1"' } }) })
+  await first.refresh()
+  store.db.close()
+  const reopened = new OfflineStore(factory)
+  const second = new SyncEngine({ store: reopened, account, fetcher: async (_url, options) => {
+    assert.equal(options.headers["If-None-Match"], '"revision-1"')
+    return new Response(null, { status: 304, headers: { "X-Driver-Account": account, "X-Driver-Work-Version": "4", "X-CSRF-Token": "fresh-memory-only" } })
+  } })
+  const cached = await second.refresh()
+  assert.equal(cached.packages[0].html, "private template")
+  assert.equal(second.csrf, "fresh-memory-only")
+  assert.equal((await reopened.operations(account))[0].operation_id, pending.operation_id)
+  assert.ok(!JSON.stringify(await reopened.workMetadata(account)).includes("memory-only"))
+})
+
+test("a 304 for another account cannot expose cached work and missing packages force a full download", async () => {
+  const { store } = await fixture()
+  await store.saveWork(account, { ...work(), etag: '"x"' })
+  const wrong = new SyncEngine({ store, account, fetcher: async () => new Response(null, { status: 304, headers: { "X-Driver-Account": "2:3", "X-Driver-Work-Version": "4", "X-CSRF-Token": "csrf" } }) })
+  await assert.rejects(wrong.refresh(), /cuenta cambió/)
+  await store.transaction(["packages"], "readwrite", tx => tx.objectStore("packages").clear())
+  let count = 0
+  const recover = new SyncEngine({ store, account, fetcher: async (_url, options) => {
+    count++
+    if (count === 1) return new Response(null, { status: 304 })
+    assert.equal(options.headers["If-None-Match"], undefined)
+    return json(work())
+  } })
+  assert.equal((await recover.refresh()).packages.length, 1)
+  assert.equal(count, 2)
+})

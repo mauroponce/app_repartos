@@ -48,6 +48,66 @@ class DriverSyncControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "conditional work revalidates authentication and returns no HTML with a fresh CSRF header" do
+    get "/repartidor/api/v1/work"
+    etag = response.headers.fetch("ETag")
+    rendered = []
+    listener = ActiveSupport::Notifications.subscribe("render_template.action_view") { |*event| rendered << event }
+    get "/repartidor/api/v1/work", headers: { "If-None-Match" => etag }
+    assert_response :not_modified
+    assert_empty response.body
+    assert_empty rendered
+    assert response.headers["X-CSRF-Token"].present?
+    assert_equal "#{@company.id}:#{@driver.id}", response.headers["X-Driver-Account"]
+    assert_equal "no-store", response.headers["Cache-Control"]
+    @driver.sessions.destroy_all
+    get "/repartidor/api/v1/work", headers: { "If-None-Match" => etag }
+    assert_response :unauthorized
+  ensure
+    ActiveSupport::Notifications.unsubscribe(listener) if listener
+  end
+
+  test "work validator reflects quantities customer data publication and reassignment even when timestamps are unchanged" do
+    get "/repartidor/api/v1/work"
+    etag = response.headers.fetch("ETag")
+    item = @visit.delivery_items.first
+    item.update_columns(planned_quantity: 21)
+    get "/repartidor/api/v1/work", headers: { "If-None-Match" => etag }
+    assert_response :success
+    assert_not_equal etag, response.headers["ETag"]
+    etag = response.headers["ETag"]
+    @visit.customer.update_columns(phone: "1234")
+    get "/repartidor/api/v1/work", headers: { "If-None-Match" => etag }
+    assert_response :success
+    assert_includes response.body, "1234"
+    etag = response.headers["ETag"]
+    publication = @company.route_publications.create!(delivery_run: @run, requested_by: users(:one), state: "failed")
+    get "/repartidor/api/v1/work", headers: { "If-None-Match" => etag }
+    assert_response :success
+    assert_equal [ "empty" ], response.parsed_body["packages"].pluck("id")
+    publication.update!(state: "manual")
+    get "/repartidor/api/v1/work"
+    etag = response.headers["ETag"]
+    @run.update!(driver: nil, status: :draft)
+    get "/repartidor/api/v1/work", headers: { "If-None-Match" => etag }
+    assert_response :success
+    assert_equal [ "empty" ], response.parsed_body["packages"].pluck("id")
+  end
+
+  test "hourly renewal replaces expiring grants and account validators cannot authorize another user" do
+    get "/repartidor/api/v1/work"
+    etag = response.headers["ETag"]
+    travel 1.hour do
+      get "/repartidor/api/v1/work", headers: { "If-None-Match" => etag }
+      assert_response :success
+    end
+    sign_in_as users(:other_driver)
+    get "/repartidor/api/v1/work", headers: { "If-None-Match" => etag }
+    assert_response :success
+    assert_not_equal etag, response.headers["ETag"]
+    assert_no_match @visit.customer_name, response.body
+  end
+
   test "failed visit is synced with zero quantities and an immutable incident" do
     submit(attributes.merge(status: "not_attended", notes: "No atendió"))
     assert_response :success
