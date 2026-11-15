@@ -1,5 +1,10 @@
 class Customer < ApplicationRecord
+  include RoutingChangeHooks
   belongs_to :company
+  after_create_commit -> { OpportunityRefreshRequest.call(company_id) }
+  after_update_commit -> { OpportunityRefreshRequest.call(company_id) }, if: :saved_change_to_status?
+  has_many :communication_consents, dependent: :restrict_with_error
+  has_many :customer_notifications, dependent: :restrict_with_error
   has_many :delivery_orders, dependent: :restrict_with_error
   has_many :delivery_schedules, dependent: :restrict_with_error
   has_many :visits, dependent: :restrict_with_error

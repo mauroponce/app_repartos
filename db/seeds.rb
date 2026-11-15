@@ -189,12 +189,12 @@ Company.transaction do
             end
             item.update!(delivered_quantity: quantity)
           end
-          visit.update!(status: :completed, completed_at: date.in_time_zone.change(hour: 12))
+          visit.update!(status: :completed, confirmed_by: driver, confirmed_at: date.in_time_zone.change(hour: 12), completed_at: date.in_time_zone.change(hour: 12))
         end
 
         if status == :completed
-          manual.update!(status: offset == -2 ? :closed : :rescheduled)
-          missed.update!(status: :not_attended)
+          manual.update!(status: offset == -2 ? :closed : :rescheduled, confirmed_by: driver, confirmed_at: date.in_time_zone.change(hour: 12))
+          missed.update!(status: :not_attended, confirmed_by: driver, confirmed_at: date.in_time_zone.change(hour: 12))
         end
         run.update!(status: status)
       end
@@ -205,3 +205,5 @@ Company.transaction do
     puts "#{company.name}: #{company.customers.count} clientes, #{company.products.count} productos, #{company.delivery_schedules.count} programaciones, #{company.delivery_runs.count} repartos, #{company.visits.count} visitas."
   end
 end
+
+RoutingDemoSeeds.call

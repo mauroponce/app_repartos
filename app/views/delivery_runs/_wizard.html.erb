@@ -1,4 +1,5 @@
-<%= form_with model: @delivery_run, class: "route-wizard", data: { controller: "route-planner", route_planner_available_url_value: available_delivery_runs_path, action: "turbo:frame-load->route-planner#selection submit->route-planner#validateSubmission" } do |form| %>
+<%= form_with model: @delivery_run, class: "route-wizard", data: { controller: "route-planner", route_planner_available_url_value: available_delivery_runs_path, route_planner_optimize_url_value: route_optimizations_path, route_planner_optimized_url_value: create_optimized_delivery_runs_path, route_planner_tiles_url_value: ENV["OSM_TILES_URL"].presence, action: "turbo:frame-load->route-planner#selection submit->route-planner#validateSubmission" } do |form| %>
+  <%= hidden_field_tag :proposal_token, "", data: { route_planner_target: "proposalToken" } %>
   <%= render "shared/validation_errors", record: @delivery_run %>
   <nav class="planning-steps" aria-label="Pasos para crear una hoja de ruta">
     <% ["Configuración", "Seleccionar entregas", "Organizar paradas", "Confirmación"].each.with_index do |label, index| %><button type="button" data-route-planner-target="tab" data-step="<%= index %>" data-action="route-planner#go"><span><%= index + 1 %></span><%= label %></button><% end %>
@@ -18,14 +19,16 @@
   </section>
   <section class="management-panel" data-route-planner-target="step">
     <div class="panel-heading"><div><div class="eyebrow">Paso 3</div><h2>Organizá las paradas</h2><p>Las entregas del mismo cliente y horario se agrupan. Usá las flechas para ordenar el recorrido.</p></div></div>
-    <ol class="planning-stops" data-route-planner-target="stops"></ol>
-    <p class="hint">Las flechas funcionan con teclado y pantallas táctiles. No se calcula un recorrido automático.</p>
+    <%= render "optimization_options" %>
+    <div data-route-planner-target="manualStops"><ol class="planning-stops" data-route-planner-target="stops"></ol><p class="hint">Las flechas funcionan con teclado y pantallas táctiles.</p></div>
+    <div data-route-planner-target="proposal" aria-live="polite"></div>
   </section>
   <section class="management-panel" data-route-planner-target="step">
     <div class="panel-heading"><div><div class="eyebrow">Paso 4</div><h2>Revisá y confirmá</h2><p>Comprobá el recorrido antes de guardar.</p></div></div>
     <div class="route-summary" data-route-planner-target="summary" aria-live="polite"></div>
-    <div class="field"><%= form.label :status, "Guardar como" %><%= form.select :status, [["Borrador", "draft"], ["Asignada al repartidor", "assigned"]], { selected: @delivery_run.status }, data: { route_planner_target: "status" } %><p class="hint">Para guardar como asignada tenés que elegir un repartidor.</p></div>
-    <div class="form-actions"><%= form.submit "Guardar hoja de ruta", class: "btn btn-dark", data: { turbo_submits_with: "Guardando..." } %></div>
+    <div class="field"><%= form.label :status, "Guardar como" %><%= form.select :status, [["Borrador", "draft"], ["Asignada al repartidor", "assigned"]], { selected: @delivery_run.status }, data: { route_planner_target: "status" } %><p class="hint">La propuesta optimizada crea una hoja por vehículo utilizado. En planificación manual, elegí un repartidor para guardar como asignada.</p></div>
+    <p class="hint">Confirmar y optimizar prepara una hoja para el repartidor elegido en segundo plano. Se publicará cuando esté lista. Guardar conserva el flujo manual y el estado seleccionado.</p>
+    <div class="form-actions route-proposal-actions"><%= form.button "Confirmar y optimizar", name: :confirm_and_optimize, value: "1", class: "btn btn-dark", data: { route_planner_target: "confirmButton", turbo_submits_with: "Confirmando…" } %><%= form.submit "Guardar hoja de ruta", class: "btn btn-white", data: { turbo_submits_with: "Guardando..." } %></div>
   </section>
   <div class="selection-bar"><span data-route-planner-target="count" role="status">Elegí las entregas del recorrido.</span><div class="heading-actions"><button type="button" class="btn btn-white" data-action="route-planner#previous" data-route-planner-target="previous">Anterior</button><button type="button" class="btn btn-dark" data-action="route-planner#next" data-route-planner-target="next">Continuar →</button></div></div>
   <p role="alert" class="planning-error" data-route-planner-target="error"></p>

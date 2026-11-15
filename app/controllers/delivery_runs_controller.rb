@@ -3,7 +3,7 @@ class DeliveryRunsController < ManagementController
   before_action :load_drivers, only: [ :new, :create, :edit, :update, :index ]
 
   def index
-    runs = Current.company.delivery_runs.includes(:driver, visits: [ :delivery_orders, :delivery_items ])
+    runs = Current.company.delivery_runs.includes(:driver, :route_publication, visits: [ :delivery_orders, :delivery_items ])
     runs = runs.where(scheduled_date: params[:date]) if params[:date].present?
     runs = runs.where(driver_id: params[:driver_id]) if params[:driver_id].present?
     runs = runs.where(status: params[:status]) if params[:status].present?
@@ -26,8 +26,14 @@ class DeliveryRunsController < ManagementController
     @delivery_run.driver = selected_driver
     @delivery_run.status = :draft unless @delivery_run.status.in?(%w[draft assigned])
     @selected_ids = selected_order_ids
-    DeliveryRunPlanner.call(company: Current.company, delivery_run: @delivery_run, order_ids: @selected_ids)
-    redirect_to delivery_run_path(@delivery_run), notice: "Hoja de ruta creada correctamente.", status: :see_other
+    automatic = params[:confirm_and_optimize] == "1"
+    Current.company.with_lock do
+      @delivery_run.status = :draft if automatic
+      DeliveryRunPlanner.call(company: Current.company, delivery_run: @delivery_run, order_ids: @selected_ids)
+      RoutePublication.request!(user: Current.user, run: @delivery_run) if automatic
+    end
+    message = automatic ? "Confirmación recibida. Preparando el recorrido en segundo plano antes de publicarlo." : "Hoja de ruta creada correctamente."
+    redirect_to delivery_run_path(@delivery_run), notice: message, status: :see_other
   rescue ActiveRecord::RecordInvalid, ArgumentError => error
     @delivery_run.errors.add(:base, error.message)
     load_available_orders
@@ -41,8 +47,15 @@ class DeliveryRunsController < ManagementController
     render partial: "available_orders"
   end
 
+  def create_optimized
+    runs = OptimizedDeliveryRunPlanner.call(company: Current.company, token: params[:proposal_token], name: run_params[:name].to_s, status: run_params[:status].to_s)
+    redirect_to delivery_runs_path(date: runs.first.scheduled_date), notice: "Se guardaron #{runs.size} hojas de ruta.", status: :see_other
+  rescue ActiveRecord::RecordInvalid, ArgumentError => error
+    redirect_to new_delivery_run_path, alert: error.message, status: :see_other
+  end
+
   def show
-    @visits = @delivery_run.visits.includes(:delivery_items, delivery_orders: :delivery_order_items)
+    @visits = @delivery_run.visits.includes(:delivery_items, :confirmed_by, delivery_orders: [ :delivery_order_items, :rescheduled_order ])
     load_available_orders if @delivery_run.editable?
   end
 
@@ -113,6 +126,6 @@ class DeliveryRunsController < ManagementController
   end
 
   def run_params
-    params.expect(delivery_run: [ :name, :scheduled_date, :driver_id, :status ])
+    params.expect(delivery_run: [ :name, :scheduled_date, :driver_id, :status, :vehicle_label ])
   end
 end

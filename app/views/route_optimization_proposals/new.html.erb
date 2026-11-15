@@ -1,0 +1,15 @@
+<% content_for :title, "Optimizar ruta · App Repartos" %>
+<% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
+<div class="heading"><div><div class="eyebrow">Planificación por calles</div><h1>Optimizar ruta</h1><p><%= @run.name %> · <%= @problem.visits.size %> paradas. La vista previa conserva la hoja actual.</p></div><%= link_to "Volver a la hoja", delivery_run_path(@run), class: "btn btn-white" %></div>
+<section class="management-panel">
+<%= form_with url: delivery_run_optimization_proposals_path(@run), scope: :optimization, data: { controller: "route-optimization" } do |f| %>
+<div class="workflow-filters">
+<div class="field"><%= f.label :origin, "Inicio del recorrido" %><%= f.select :origin, [["Recorrido abierto, sin traslado hasta el primer cliente", "open"], ["Depósito configurado", "depot"]], selected: @problem.settings["origin"] %></div>
+<div class="field"><%= f.label :departure, "Salida / inicio de atención (hora local de la empresa)" %><%= f.time_field :departure, value: @problem.settings["departure"], required: true %></div>
+<div class="field"><label><%= f.check_box :return_to_depot, checked: @problem.settings["return_to_depot"] %> Regresar al depósito al terminar</label></div>
+</div>
+<p>Las franjas horarias son obligatorias: una llegada anticipada espera hasta su inicio. El horario puntual es una preferencia, con <%= Current.company.routing_preferred_tolerance %> minutos de tolerancia y penalización fuera de ella.</p>
+<p class="hint">Sin depósito, el cálculo comienza en el primer cliente a la hora indicada y no estima el traslado hasta allí. La heurística compara duración total y preferencias; no garantiza un óptimo global para hojas grandes. Se conserva el orden actual si no encuentra una mejora válida.</p>
+<div class="form-actions"><%= f.submit "Calcular propuesta", class: "btn btn-dark", data: { turbo_submits_with: "Solicitando cálculo…" } %><%= link_to "Configurar depósito y criterios", edit_routing_settings_path, class: "text-action" %></div>
+<% end %>
+</section>

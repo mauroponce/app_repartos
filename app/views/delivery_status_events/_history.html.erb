@@ -1,0 +1,3 @@
+<% events.each do |event| %>
+  <p><strong><%= event.source == "baseline" ? "Estado histórico observado (fecha del cambio desconocida)" : l(event.occurred_at, format: :short) %></strong> · <%= event.user&.name || "Sistema / autor desconocido" %> · <%= event.delivery_order_id ? "Pedido ##{event.delivery_order_id}" : event.visit_id ? "Visita ##{event.visit_id}" : "Hoja ##{event.delivery_run_id}" %> · <%= event.from_status || "Inicio del registro" %> → <%= event.to_status %> · <%= event.source %></p>
+<% end %>

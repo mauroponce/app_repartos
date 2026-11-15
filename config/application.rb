@@ -26,6 +26,8 @@ module AppRepartos
     config.i18n.default_locale = :"es-AR"
     config.i18n.available_locales = [ :"es-AR", :en ]
     config.active_job.queue_adapter = :solid_queue
+    # Evidence is served only through our tenant-scoped authenticated controller.
+    config.active_storage.draw_routes = false
     config.solid_queue.connects_to = { database: { writing: :queue } }
 
     # Please, add to the `ignore` list any other `lib` subdirectories that do

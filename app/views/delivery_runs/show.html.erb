@@ -1,8 +1,11 @@
 <% content_for :title, "#{@delivery_run.name} · App Repartos" %>
+<% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
 <% editable = @delivery_run.editable? %>
 <div class="breadcrumb"><%= link_to "Hojas de ruta", delivery_runs_path %><%= icon("chevron-right") %><strong><%= l(@delivery_run.scheduled_date) %></strong></div>
 <div class="heading"><div><h1><%= @delivery_run.name %></h1><p><%= l(@delivery_run.scheduled_date) %> · <%= @delivery_run.driver&.name || "Sin repartidor asignado" %> · <%= operation_status(@delivery_run.status) %></p></div><div class="heading-actions"><% unless @delivery_run.completed? || @delivery_run.cancelled? %><%= link_to "Editar hoja", edit_delivery_run_path(@delivery_run), class: "btn btn-white" %><% end %><% if editable %><%= link_to "Agregar parada manual", new_delivery_run_visit_path(@delivery_run), class: "btn btn-dark" %><% end %></div></div>
 <% if editable %>
+  <%= render "publication", editable: editable %>
+  <section class="management-panel"><div class="panel-heading"><div><h2>Optimización de esta hoja</h2><p>Compará el orden actual con una propuesta calculada sobre calles, horarios y tiempos de atención.</p></div><%= link_to "Optimizar ruta", new_delivery_run_optimization_proposal_path(@delivery_run), class: "btn btn-dark" %></div><%= link_to "Configurar depósito y criterios", edit_routing_settings_path, class: "text-action" %></section>
   <details class="management-panel"><summary>Agregar entregas pendientes de esta fecha</summary><%= form_with url: add_orders_delivery_run_path(@delivery_run) do |form| %><%= render "available_orders" %><div class="form-actions"><%= form.submit "Agregar seleccionadas", class: "btn btn-dark" %></div><% end %></details>
   <% if @visits.size > 1 %>
     <details class="management-panel"><summary>Organizar orden de paradas</summary><%= form_with url: reorder_delivery_run_path(@delivery_run), method: :patch, data: { controller: "stop-order" } do |form| %>
@@ -10,14 +13,28 @@
     <% end %></details>
   <% end %>
 <% end %>
+<% unless editable %><section class="management-panel"><button type="button" class="btn btn-white" disabled>Optimizar ruta</button><p>La hoja tiene ejecución registrada o está finalizada; su orden histórico se conserva.</p></section><% end %>
+<% if @delivery_run.route_optimization_proposals.exists? %><details class="management-panel"><summary>Propuestas de optimización</summary><ul><% @delivery_run.route_optimization_proposals.order(id: :desc).limit(10).each do |proposal| %><li><%= link_to "Propuesta ##{proposal.id} · #{l(proposal.created_at, format: :short)}", delivery_run_optimization_proposal_path(@delivery_run, proposal) %><%= " · Aplicada" if proposal.status == "applied" %></li><% end %></ul></details><% end %>
 <div class="visit-list">
+  <% if @delivery_run.optimization_data.present? %>
+    <% estimate = @delivery_run.optimization_data %>
+    <details class="management-panel"><summary>Recorrido calculado al crear la hoja</summary>
+      <p><%= number_with_precision(estimate["distance"].to_f / 1000, precision: 1) %> km · <%= ((estimate["finish"].to_i - estimate["start"].to_i) / 60.0).ceil %> min con descargas y esperas · <%= estimate["load_units"] %>/<%= estimate["capacity"] %> unidades de carga.</p>
+      <p class="hint">Propuesta inicial para <%= estimate["driver_name"] %>. Los cambios posteriores en pedidos, paradas o repartidor no recalculan esta estimación.</p>
+      <div class="optimization-map" aria-label="Recorrido inicial sobre calles" data-controller="route-geometry" data-route-geometry-routes-value="<%= [estimate.slice('driver_name', 'geometry')].to_json %>" data-route-geometry-tiles-url-value="<%= ENV['OSM_TILES_URL'].presence %>"></div>
+    </details>
+  <% end %>
   <% @visits.each do |visit| %>
     <article class="management-panel visit-card"><div class="panel-heading"><div><h2><%= visit.position %>. <%= visit.customer_name %></h2><p><%= visit.customer_address %></p></div><span class="chip <%= visit.status %>"><%= operation_status(visit.status) %></span></div>
       <% if visit.delivery_orders.any? %><ul class="stop-deliveries"><% visit.delivery_orders.each do |order| %><li><div><%= link_to "Entrega ##{order.id}", delivery_order_path(order), class: "text-action" %> · <%= schedule_time(order) %> · <%= delivery_order_status(order) %><p><%= merchandise_summary(order) %></p><% if order.notes.present? %><p><%= order.notes %></p><% end %></div><% if editable && order.editable? %><%= button_to "Quitar de la hoja", remove_order_delivery_run_path(@delivery_run, order_id: order.id), method: :delete, class: "text-action", data: { turbo_confirm: "¿Quitar esta entrega? Volverá a estar pendiente de planificación." } %><% end %></li><% end %></ul><% else %><p class="hint"><%= visit.delivery_schedule_id ? "Visita histórica de programación" : "Parada manual" %></p><% end %>
       <div class="table-scroll" tabindex="0" role="region" aria-label="Productos de la visita, desplazamiento horizontal"><table class="data-table"><thead><tr><th>Producto</th><th>Unidad</th><th>Planificado</th><th>Entregado</th><th>Diferencia</th></tr></thead><tbody><% visit.delivery_items.each do |item| %><tr><td><strong><%= item.description %></strong><% if item.notes.present? %><span class="subline"><%= item.notes %></span><% end %></td><td><%= DeliveryUnits::LABELS[item.unit] %></td><td><%= quantity_text(item.planned_quantity) %></td><td><%= quantity_text(item.delivered_quantity) %></td><td><%= item.difference.nil? ? "—" : quantity_text(item.difference) %></td></tr><% end %></tbody></table></div>
       <% if visit.notes.present? %><p class="drawer-note"><%= visit.notes %></p><% end %><% if visit.completed_at %><p class="hint">Realizada: <%= l(visit.completed_at, format: :short) %></p><% end %>
+      <% unless visit.pending? %><p class="hint">Confirmada por: <%= visit.confirmed_by&.name || "Autoría desconocida" %><% if visit.confirmed_at %> · <%= l(visit.confirmed_at, format: :short) %><% end %></p><% end %>
+      <% unless visit.pending? %><p><%= link_to "Ver comprobante digital", delivery_receipt_path(visit), class: "text-action" %></p><% end %>
       <% if visit.pending? && !@delivery_run.completed? && !@delivery_run.cancelled? %><div class="drawer-actions"><%= link_to "Registrar entrega / editar visita", edit_delivery_run_visit_path(@delivery_run, visit), class: "text-action" %></div><% end %>
     </article>
   <% end %>
   <% if @visits.empty? %><div class="empty"><h2>Esta hoja todavía no tiene paradas</h2><p>Agregá entregas pendientes de la fecha o una parada manual.</p></div><% end %>
 </div>
+
+<p><%= link_to "Datos, costos y liquidación", delivery_run_data_path(@delivery_run), class: "btn btn-white" %></p>

@@ -8,6 +8,10 @@
     <div class="field"><%= fields.label :unit, "Unidad *" %><%= fields.select :unit, DeliveryUnits.options, { include_blank: "Elegí una unidad" }, required: !fields.object.marked_for_destruction?, data: { product_row_target: "unit" } %></div>
     <% quantity_field = delivery ? :planned_quantity : :quantity %>
     <div class="field"><%= fields.label quantity_field, delivery ? "Cantidad planificada *" : (local_assigns[:order] ? "Cantidad solicitada *" : "Cantidad habitual *") %><%= fields.number_field quantity_field, required: !fields.object.marked_for_destruction?, min: "0.001", step: "0.001" %></div>
+    <% if local_assigns[:order] %>
+      <div class="field"><%= fields.label :unit_price, "Precio unitario (#{Current.company.currency})" %><%= fields.number_field :unit_price, step: "0.0001", min: 0, placeholder: fields.object.new_record? ? "Usar catálogo si está informado" : "Sin informar" %></div>
+      <div class="field"><%= fields.label :unit_cost, "Costo unitario (#{Current.company.currency})" %><%= fields.number_field :unit_cost, step: "0.0001", min: 0, placeholder: fields.object.new_record? ? "Usar catálogo si está informado" : "Sin informar" %></div>
+    <% end %>
     <% if delivery %>
       <div class="field"><%= fields.label :delivered_quantity, "Cantidad entregada" %><%= fields.number_field :delivered_quantity, min: 0, step: "0.001", placeholder: "Sin registrar" %><span class="hint">Vacío: sin registrar. Cero: no se entregó. Admite entregas parciales.</span></div>
       <div class="field"><%= fields.label :notes, "Observaciones del producto" %><%= fields.text_area :notes, rows: 2 %></div>

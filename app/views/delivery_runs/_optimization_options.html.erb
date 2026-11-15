@@ -1,0 +1,30 @@
+<details class="optimization-options">
+  <summary>Optimización automática entre varios vehículos</summary>
+  <p>Todos salen del depósito y regresan a él. Seleccioná un vehículo por repartidor. La carga de los pedidos y las capacidades deben usar la misma unidad.</p>
+  <p class="hint">Se respetan las franjas y los horarios puntuales (inicio de descarga a esa hora exacta). Los tiempos de descarga se suman por pedido. Jornada y horarios de <%= Current.company.time_zone %>. Podés editar carga y descarga en cada entrega; los valores iniciales son 1 unidad y 10 minutos.</p>
+  <div data-action="input->route-planner#optimizationSettingsChanged change->route-planner#optimizationSettingsChanged">
+    <div class="field-grid">
+      <div class="field"><label for="depot-latitude">Latitud del depósito</label><input id="depot-latitude" type="number" step="any" min="-90" max="90" data-route-planner-target="depotLatitude"></div>
+      <div class="field"><label for="depot-longitude">Longitud del depósito</label><input id="depot-longitude" type="number" step="any" min="-180" max="180" data-route-planner-target="depotLongitude"></div>
+    </div>
+    <div class="optimization-fleet">
+      <% @drivers.each do |driver| %>
+        <fieldset data-route-planner-target="vehicle" data-driver-id="<%= driver.id %>" class="optimization-vehicle">
+          <legend><label><input type="checkbox" data-fleet-enabled> Vehículo de <%= driver.name %></label></legend>
+          <div class="field-grid">
+            <div class="field"><label for="capacity-<%= driver.id %>">Capacidad (unidades de carga)</label><input id="capacity-<%= driver.id %>" type="number" min="1" max="1000000" step="1" value="100" data-fleet-capacity></div>
+            <div class="field"><label for="start-<%= driver.id %>">Salida desde</label><input id="start-<%= driver.id %>" type="time" value="08:00" data-fleet-start></div>
+            <div class="field"><label for="finish-<%= driver.id %>">Regreso hasta</label><input id="finish-<%= driver.id %>" type="time" value="18:00" data-fleet-finish></div>
+          </div>
+        </fieldset>
+      <% end %>
+    </div>
+  </div>
+  <div class="heading-actions optimization-actions">
+    <button type="button" class="btn btn-dark" data-action="route-planner#optimize" data-route-planner-target="optimizeButton">Optimizar rutas</button>
+    <button type="button" class="btn btn-white" data-action="route-planner#evaluate" data-route-planner-target="evaluateButton" hidden>Validar cambios manuales</button>
+    <button type="button" class="btn btn-white" data-action="route-planner#releaseAssignments" data-route-planner-target="releaseButton" hidden>Liberar asignaciones y optimizar</button>
+    <button type="button" class="text-action" data-action="route-planner#useManual">Volver a planificación manual</button>
+  </div>
+  <p role="status" data-route-planner-target="optimizationStatus"></p>
+</details>

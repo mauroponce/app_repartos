@@ -11,6 +11,9 @@ x-app: &app
     RAILS_MAX_THREADS: 5
     PHOTON_URL: ${PHOTON_URL:-https://photon.komoot.io/api/}
     OSM_TILES_URL: ${OSM_TILES_URL:-}
+    VROOM_URL: ${VROOM_URL:-}
+    OSRM_URL: ${OSRM_URL:-http://osrm:5000}
+    OSRM_MAP_VERSION: ${OSRM_MAP_VERSION:-}
   volumes:
     - .:/rails
     - bundle:/usr/local/bundle
@@ -19,6 +22,24 @@ x-app: &app
       condition: service_healthy
 
 services:
+  osrm:
+    image: ghcr.io/project-osrm/osrm-backend:v6.0.0
+    profiles: [routing]
+    command: ["osrm-routed", "--algorithm", "mld", "--threads", "2", "--mmap=true", "--max-table-size", "101", "/data/current/region.osrm"]
+    volumes:
+      - ./storage/routing:/data:ro
+    restart: unless-stopped
+    mem_limit: ${OSRM_SERVE_MEMORY:-2g}
+    cpus: 2
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-T", "4", "-O", "/dev/null", "http://127.0.0.1:5000/nearest/v1/driving/-58.3816,-34.6037"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
   db:
     image: postgres:18-alpine
     environment:

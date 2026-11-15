@@ -2,6 +2,7 @@
 
 pin "application"
 pin "photon_places"
+pin_all_from "app/javascript/offline", under: "offline"
 pin "leaflet", to: "leaflet.js", preload: false
 pin "@hotwired/turbo-rails", to: "turbo.min.js"
 pin "@hotwired/stimulus", to: "stimulus.min.js"

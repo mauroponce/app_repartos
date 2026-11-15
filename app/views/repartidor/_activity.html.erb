@@ -9,6 +9,6 @@
 </div></div>
 <h3 class="history-title">Actividad reciente</h3>
 <% @history.each do |visit| %>
-  <div class="history-row"><span class="history-icon"><%= icon(visit.completed? ? "check" : "warning") %></span><div><p><%= operation_status(visit.status) %></p><small><%= visit.customer_name %></small></div><time datetime="<%= visit.updated_at.iso8601 %>"><%= l(visit.updated_at, format: "%d/%m %H:%M") %></time></div>
+  <div class="history-row"><span class="history-icon"><%= icon(visit.completed? ? "check" : "warning") %></span><div><p><%= operation_status(visit.status) %></p><small><%= visit.customer_name %></small></div><time datetime="<%= visit.confirmed_at.iso8601 %>"><%= l(visit.confirmed_at, format: "%d/%m %H:%M") %></time></div>
 <% end %>
 <% if @history.empty? %><p class="empty-state">Todavía no hay actividad registrada.</p><% end %>

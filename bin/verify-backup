@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# A disposable PostgreSQL 18 restore. Never connects to an existing database.
+set -euo pipefail
+backup_source="$(realpath "${1:?Uso: bin/verify-backup DIRECTORIO_BACKUP}")"
+(cd "$backup_source" && sha256sum --check SHA256SUMS)
+verify_container="repartos-restore-check-$$"
+trap 'timeout 15s docker rm -f "$verify_container" >/dev/null 2>&1 || true' EXIT
+docker run -d --name "$verify_container" --network none --memory 1g --cpus 2 --tmpfs /var/lib/postgresql -e POSTGRES_HOST_AUTH_METHOD=trust postgres:18-alpine >/dev/null
+ready=0
+for attempt in {1..30}; do
+  # The image starts a temporary Unix-only server during initdb. Wait for TCP
+  # so a successful probe cannot race that server's shutdown.
+  if docker exec "$verify_container" pg_isready -h 127.0.0.1 -U postgres >/dev/null 2>&1; then ready=1; break; fi
+  sleep 1
+done
+[[ "$ready" == 1 ]] || { echo 'La base temporal no inició' >&2; exit 1; }
+for name in primary queue; do
+  docker exec "$verify_container" createdb -U postgres "$name"
+  docker exec -i "$verify_container" pg_restore -U postgres --no-owner --no-acl --exit-on-error --dbname "$name" < "$backup_source/$name.dump"
+done
+docker exec "$verify_container" psql -U postgres -d primary -v ON_ERROR_STOP=1 -c 'SELECT count(*) AS empresas_restauradas FROM companies'
+docker exec "$verify_container" psql -U postgres -d queue -v ON_ERROR_STOP=1 -c 'SELECT count(*) AS trabajos_restaurados FROM solid_queue_jobs'
+tar -tzf "$backup_source/files.tar.gz" >/dev/null
+echo 'Ambas bases y el archivo de adjuntos se verificaron en un entorno temporal sin puertos ni conexión de red.'

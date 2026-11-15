@@ -28,6 +28,8 @@ class DeliveryRunPlanner
     order.delivery_order_items.each do |item|
       execution = order.visit.delivery_items.find_or_initialize_by(delivery_order_item_id: item.id)
       execution.assign_attributes(company: order.company, product_id: item.product_id, description: item.description, unit: item.unit, planned_quantity: item.quantity)
+      execution.assign_attributes(item.attributes.slice(*CommercialSnapshot::FIELDS))
+      execution.preserve_commercial_snapshot = true
       execution.copying_schedule_snapshot = true
       execution.save!
     end

@@ -1,0 +1,105 @@
+<% deploy_host = ENV.fetch("DEPLOY_HOST") %>
+service: app-repartos
+image: app-repartos
+minimum_version: 2.12.0
+servers:
+  web:
+    hosts: [<%= deploy_host %>]
+    env:
+      clear:
+        RUN_DB_PREPARE: "1"
+    options:
+      memory: 1536m
+      cpus: 2
+  jobs:
+    hosts: [<%= deploy_host %>]
+    cmd: bin/jobs
+    proxy: false
+    options:
+      memory: 1536m
+      cpus: 2
+      health-cmd: "bin/jobs-healthy"
+      health-interval: 30s
+      health-timeout: 10s
+      health-start-period: 60s
+proxy:
+  ssl: true
+  host: <%= ENV.fetch("APP_HOST") %>
+  app_port: 3000
+  healthcheck:
+    path: /up
+    interval: 3
+    timeout: 5
+registry:
+  server: localhost:5555
+builder:
+  arch: <%= ENV.fetch("DEPLOY_ARCH", "amd64") %>
+  target: production
+ssh:
+  user: <%= ENV.fetch("DEPLOY_SSH_USER") %>
+  keys_only: true
+  config: true
+env:
+  clear:
+    RAILS_ENV: production
+    APP_HOST: <%= ENV.fetch("APP_HOST") %>
+    DATABASE_HOST: app-repartos-db
+    DATABASE_USERNAME: repartos
+    OSRM_URL: http://app-repartos-osrm:5000
+    ACTIVE_STORAGE_SERVICE: persistent
+    RAILS_MAX_THREADS: 5
+    WEB_CONCURRENCY: 1
+    JOB_CONCURRENCY: 1
+  secret:
+    - SECRET_KEY_BASE
+    - DATABASE_PASSWORD
+volumes:
+  - /var/lib/app-repartos/storage:/rails/storage
+  - /var/lib/app-repartos/routing:/rails/storage/routing:ro
+asset_path: /rails/public/assets
+logging:
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+retain_containers: 3
+deploy_timeout: 180
+drain_timeout: 30
+accessories:
+  db:
+    image: postgres:18-alpine
+    host: <%= deploy_host %>
+    env:
+      clear:
+        POSTGRES_USER: postgres
+        POSTGRES_DB: postgres
+      secret:
+        - POSTGRES_PASSWORD
+        - DATABASE_PASSWORD
+    directories:
+      - /var/lib/app-repartos/postgres:/var/lib/postgresql
+    files:
+      - config/deploy/init-databases.sh:/docker-entrypoint-initdb.d/10-app-databases.sh:ro
+    options:
+      memory: 1536m
+      cpus: 2
+      health-cmd: pg_isready -U postgres -d postgres
+      health-interval: 10s
+      health-timeout: 5s
+      health-retries: 10
+  osrm:
+    image: ghcr.io/project-osrm/osrm-backend:v6.0.0
+    host: <%= deploy_host %>
+    cmd: osrm-routed --algorithm mld --threads 2 --mmap=true --max-table-size 101 /data/current/region.osrm
+    directories:
+      - /var/lib/app-repartos/routing:/data:ro
+    options:
+      memory: <%= ENV.fetch("OSRM_SERVE_MEMORY", "2g") %>
+      cpus: 2
+      health-cmd: "wget -q -T 4 -O /dev/null http://127.0.0.1:5000/nearest/v1/driving/-58.3816,-34.6037"
+      health-interval: 30s
+      health-timeout: 5s
+aliases:
+  console: app exec --interactive --reuse "bin/rails console"
+  migrate: app exec --primary "bin/rails db:prepare"
+  logs: app logs -f

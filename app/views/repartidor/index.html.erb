@@ -1,15 +1,19 @@
-<div class="app" data-controller="repartidor" data-repartidor-markers-value="<%= @markers.to_json %>"
+<div class="app" data-controller="repartidor driver-workflow" data-repartidor-markers-value="<%= @markers.to_json %>"
+     data-repartidor-account-value="<%= Current.company.id %>:<%= Current.user.id %>" data-repartidor-run-id-value="<%= @run&.id || 'empty' %>"
+     data-repartidor-work-revision-value="<%= DriverWorkSnapshot.package_revision(run: @run, runs: @runs, visits: @visits, date: @today) %>"
      data-repartidor-tiles-url-value="<%= ENV['OSM_TILES_URL'].presence || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png' %>"
      data-repartidor-invalid-visit-value="<%= @invalid_visit_id %>"
-     data-action="online@window->repartidor#connection offline@window->repartidor#connection beforeinstallprompt@window->repartidor#prepareInstall">
+     data-action="online@window->repartidor#connection offline@window->repartidor#connection focus@window->repartidor#resume visibilitychange@document->repartidor#resume workflow:changed@document->driver-workflow#schedule online@window->driver-workflow#schedule beforeinstallprompt@window->repartidor#prepareInstall input->repartidor#markDraft change->repartidor#markDraft pointerdown->repartidor#markDraft">
   <header class="header">
     <div class="header-left"><span class="app-brand-mark"><%= icon("route") %></span><span class="app-logo">reparto<i>.</i></span></div>
     <div class="header-right">
       <button class="header-status" type="button" data-action="repartidor#pause" data-repartidor-target="pauseStatus" aria-pressed="false">EN RUTA</button>
-      <button class="icon-button" type="button" data-action="repartidor#notifications" aria-label="Avisos de la jornada"><%= icon("bell") %></button>
+      <button class="icon-button" type="button" data-action="repartidor#notifications" aria-label="Avisos de la jornada"><%= icon("bell") %><small class="driver-inbox-count" data-driver-workflow-target="count"><%= @driver_inbox.pending_count %></small></button>
     </div>
   </header>
-  <div class="low-connectivity" data-repartidor-target="connection" role="status">Sin conexión. Reconectate para registrar entregas. Los cambios sin guardar se conservan mientras esta pantalla siga abierta.</div>
+  <div class="low-connectivity" data-repartidor-target="connection" role="status">Sin conexión. Las visitas se guardan en este dispositivo hasta sincronizar.</div>
+  <div class="sync-panel" aria-live="polite"><span data-repartidor-target="syncStatus">Preparando datos del dispositivo…</span><button type="button" data-action="repartidor#syncNow">Sincronizar ahora</button><button type="button" data-action="repartidor#showQueue">Ver registros</button><select aria-label="Rutas descargadas" data-repartidor-target="downloadedRoutes" data-action="change->repartidor#chooseRun"></select></div>
+  <div class="plan-update" data-repartidor-target="planUpdate" hidden><p>La ruta tiene actualizaciones. Se conserva la visita que estás editando.</p><button type="button" data-action="repartidor#discardDraftsAndUpdate">Aplicar ruta actualizada</button></div>
   <main class="content" data-repartidor-target="content">
     <%= render "shared/flash" %>
     <% if @recording_error %><div class="validation-errors" role="alert"><%= @recording_error %></div><% end %>
@@ -38,12 +42,12 @@
           <div class="map-top-overlay"><div class="map-tabs" role="group" aria-label="Vista del mapa">
             <button type="button" class="active" data-action="repartidor#fitRoute" data-repartidor-target="fullMap">Ruta completa</button>
             <button type="button" data-action="repartidor#nextStop" data-repartidor-target="nextMap">Siguiente</button>
-          </div><div class="map-tools"><button type="button" class="map-tool" data-action="repartidor#locate" aria-label="Mostrar mi ubicación"><%= icon("locate") %></button></div></div>
+          </div></div>
           <div class="map-message" data-repartidor-target="mapMessage"></div>
           <div class="map-bottom-caption"><span class="caption-dot"></span><span><%= @markers.size %> de <%= @visits.size %> paradas ubicadas · orden de visita</span></div>
         </div>
         <% if @next_visit %>
-          <%= render "next_visit", visit: @next_visit %>
+          <%= render "repartidor/next_visit", visit: @next_visit %>
         <% else %>
           <div class="empty-route"><%= icon("check") %><h3>¡Recorrido finalizado!</h3><p>Resolviste todas las paradas. Podés revisar las entregas y sus incidencias.</p></div>
         <% end %>
@@ -76,15 +80,19 @@
       </div>
       <p class="empty-state" data-repartidor-target="emptyList">No hay entregas para este filtro.</p>
     </section>
-    <section class="screen" id="screen-activity" data-repartidor-target="screen" aria-label="Actividad" hidden><%= render "activity" %></section>
-    <section class="screen" id="screen-profile" data-repartidor-target="screen" aria-label="Perfil" hidden><%= render "profile" %></section>
+    <section class="screen" id="screen-activity" data-repartidor-target="screen" aria-label="Actividad" hidden><%= render "repartidor/activity" %></section>
+    <section class="screen" id="screen-inbox" data-repartidor-target="screen" aria-label="Avisos y tareas" hidden><div class="screen-head"><div class="eyebrow">Comunicación interna</div><h2>Avisos y tareas</h2><p role="status" data-driver-workflow-target="status">Últimos datos recibidos del servidor.</p></div><%= render "driver_workflows/report_form" %><div data-driver-workflow-target="inbox"><%= render "driver_workflows/inbox", inbox: @driver_inbox, page: 1 %></div></section>
+    <section class="screen" id="screen-profile" data-repartidor-target="screen" aria-label="Perfil" hidden><%= render "repartidor/profile" %></section>
   </main>
   <nav class="bottom-nav" aria-label="Navegación principal">
-    <% [["route", "route", "Ruta"], ["deliveries", "box", "Entregas"], ["activity", "chart", "Actividad"], ["profile", "user", "Perfil"]].each do |tab, glyph, label| %>
-      <button type="button" class="nav-item <%= 'active' if tab == 'route' %>" data-repartidor-target="nav" data-action="repartidor#tab" data-tab="<%= tab %>" aria-current="<%= tab == 'route' ? 'page' : 'false' %>"><%= icon(glyph) %><%= label %></button>
+    <% [["route", "route", "Ruta"], ["deliveries", "box", "Entregas"], ["activity", "chart", "Actividad"], ["inbox", "bell", "Avisos y tareas"], ["profile", "user", "Perfil"]].each do |tab, glyph, label| %>
+      <button type="button" class="nav-item <%= 'active' if tab == 'route' %>" data-repartidor-target="nav" data-action="repartidor#tab" data-tab="<%= tab %>" aria-current="<%= tab == 'route' ? 'page' : 'false' %>"><%= icon(glyph) %><%= label %><% if tab == "inbox" %><small class="driver-inbox-count" data-driver-workflow-target="count"><%= @driver_inbox.pending_count %></small><% end %></button>
     <% end %>
   </nav>
-  <% @visits.each do |visit| %><%= render "visit_dialog", visit: visit %><% end %>
+  <% @visits.each do |visit| %><%= render "repartidor/visit_dialog", visit: visit %><% end %>
+  <%= turbo_stream_from Current.company, "user_#{Current.user.id}", :workflow_driver, channel: "WorkflowChannel" %>
+  <dialog class="driver-dialog" data-driver-workflow-target="detail"><button type="button" class="modal-close" data-action="driver-workflow#closeDetail" aria-label="Cerrar detalle">×</button><div data-driver-workflow-target="detailBody"></div></dialog>
   <dialog class="driver-dialog" data-repartidor-target="notice"><div class="modal-heading"><h2 data-repartidor-target="noticeTitle"></h2><button class="modal-close" type="button" data-action="repartidor#closeDialog" aria-label="Cerrar"><%= icon("close") %></button></div><p data-repartidor-target="noticeBody"></p></dialog>
+  <dialog class="driver-dialog" data-repartidor-target="queue"><div class="modal-heading"><h2>Registros de este dispositivo</h2><button type="button" class="modal-close" data-action="repartidor#closeDialog" aria-label="Cerrar">×</button></div><div data-repartidor-target="queueRows"></div><button type="button" class="btn btn-secondary" data-action="repartidor#exportQueue">Exportar respaldo de registros</button></dialog>
   <div class="toast" role="status" aria-live="polite" data-repartidor-target="toast"></div>
 </div>

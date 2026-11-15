@@ -19,7 +19,7 @@ class DeliveryOrderBackfill
           notes: visit.notes)
         visit.delivery_items.each.with_index do |item, index|
           order.delivery_order_items.build(company: company, product_id: item.product_id, description: item.description, unit: item.unit,
-            quantity: item.planned_quantity, position: index, copying_schedule_snapshot: true)
+            quantity: item.planned_quantity, position: index, copying_schedule_snapshot: true, preserve_commercial_snapshot: true, **item.attributes.slice(*CommercialSnapshot::FIELDS))
         end
         # Historical execution is imported atomically; normal editing rules apply
         # again after these new records have been created.
@@ -27,7 +27,8 @@ class DeliveryOrderBackfill
         visit.delivery_items.zip(order.delivery_order_items).each do |execution, requested|
           execution.update_columns(delivery_order_item_id: requested.id)
         end
-        order.update_columns(status: "completed") if visit.completed?
+        order.update_columns(status: order.resolved_status) unless visit.pending?
+        DeliveryStatusEvent.create!(company: company, delivery_order: order, to_status: order.status, source: "baseline", context: { visit_id: visit.id, run_id: visit.delivery_run_id })
         converted += 1
       end
       converted

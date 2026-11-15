@@ -5,7 +5,29 @@
   <div class="panel-heading"><div><h2><%= l(@delivery_order.scheduled_date) %> · <%= schedule_time(@delivery_order) %></h2><p><%= @delivery_order.delivery_schedule_id ? "Generada desde programación recurrente" : "Entrega puntual" %></p></div><span class="chip <%= @delivery_order.display_status %>"><%= delivery_order_status(@delivery_order) %></span></div>
   <% if @delivery_order.visit %><p class="drawer-note">Hoja de ruta: <%= link_to @delivery_order.visit.delivery_run.name, delivery_run_path(@delivery_order.visit.delivery_run), class: "text-action" %> · Parada <%= @delivery_order.visit.position %> · <%= operation_status(@delivery_order.visit.status) %></p><% elsif @delivery_order.pending? %><p class="drawer-note">Pendiente de planificación. <%= link_to "Crear hoja con esta entrega", new_delivery_run_path(order_ids: [@delivery_order.id]), class: "text-action" %></p><% end %>
   <% if @delivery_order.notes.present? %><p class="drawer-note"><%= @delivery_order.notes %></p><% end %>
-  <div class="table-scroll" tabindex="0" role="region" aria-label="Productos solicitados y entregados"><table class="data-table"><thead><tr><th>Producto</th><th>Unidad</th><th>Solicitado</th><th>Entregado</th><th>Diferencia</th></tr></thead><tbody>
-    <% @items.each do |item| %><tr><td><strong><%= item.description %></strong></td><td><%= DeliveryUnits::LABELS[item.unit] %></td><td><%= quantity_text(item.quantity) %></td><td><%= quantity_text(item.delivery_item&.delivered_quantity) %></td><td><%= item.delivery_item&.difference.nil? ? "—" : quantity_text(item.delivery_item.difference) %></td></tr><% end %>
+  <p class="drawer-note"><strong><%= fulfillment_label(@delivery_order) %></strong></p>
+  <% if @delivery_order.visit && !@delivery_order.visit.pending? %>
+    <p><%= link_to "Ver comprobante digital", delivery_receipt_path(@delivery_order.visit), class: "text-action" %></p>
+    <p class="hint">Confirmada por: <%= @delivery_order.visit.confirmed_by&.name || "Autoría desconocida" %><% if @delivery_order.visit.confirmed_at %> · <%= l(@delivery_order.visit.confirmed_at, format: :short) %><% end %></p>
+  <% end %>
+  <% if @delivery_order.rescheduled_from %><p class="drawer-note">Reprogramación de <%= link_to "entrega ##{@delivery_order.rescheduled_from_id}", delivery_order_path(@delivery_order.rescheduled_from), class: "text-action" %>.</p><% end %>
+  <% if @delivery_order.rescheduled_order %>
+    <p class="drawer-note">Faltantes reprogramados en <%= link_to "entrega ##{@delivery_order.rescheduled_order.id}", delivery_order_path(@delivery_order.rescheduled_order), class: "text-action" %>.</p>
+  <% elsif @delivery_order.reschedulable? %>
+    <%= form_with url: reschedule_delivery_order_path(@delivery_order), class: "management-form" do |form| %>
+      <div class="field"><%= form.label :date, "Nueva fecha para los faltantes" %><%= form.date_field :date, required: true, min: (@delivery_order.scheduled_date + 1.day).iso8601, value: [Current.company.local_date, @delivery_order.scheduled_date + 1.day].max %></div>
+      <%= form.submit "Reprogramar faltantes", class: "btn btn-dark" %>
+    <% end %>
+  <% elsif @delivery_order.needs_attention? %><p class="drawer-note">Revisá el resultado y las cantidades históricas con administración antes de generar otra entrega. No se pueden determinar faltantes reprogramables.</p><% end %>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="Productos solicitados y entregados"><table class="data-table"><thead><tr><th>Producto</th><th>Unidad</th><th>Solicitado</th><th>Entregado</th><th>Diferencia</th><th>Pendiente</th></tr></thead><tbody>
+    <% @items.each do |item| %><tr><td><strong><%= item.description %></strong></td><td><%= DeliveryUnits::LABELS[item.unit] %></td><td><%= quantity_text(item.quantity) %></td><td><%= quantity_text(item.delivery_item&.delivered_quantity) %></td><td><%= item.delivery_item&.difference.nil? ? "—" : quantity_text(item.delivery_item.difference) %></td><td><%= quantity_text(item.remaining_quantity) %></td></tr><% end %>
   </tbody></table></div>
 </section>
+
+<section class="management-panel"><h2>Valores comerciales históricos</h2>
+  <% valuation = DeliveryValuation.new(@items) %>
+  <p>Pedido cerrado: <%= @delivery_order.closed? ? "Sí" : "No" %> · Entregado al 100%: <%= @delivery_order.fully_delivered? ? "Sí" : "No" %></p>
+  <p>Solicitado: <%= historical_money(valuation.requested_value, valuation.currency) %> · Entregado: <%= historical_money(valuation.delivered_value, valuation.currency) %> · Costo estimado entregado: <%= historical_money(valuation.delivered_cost, valuation.currency) %> · Margen estimado: <%= historical_money(valuation.estimated_margin, valuation.currency) %></p>
+  <% @items.each do |item| %><p><strong><%= item.description %></strong> · Precio unitario: <%= historical_money(item.unit_price, item.currency) %> · Costo unitario: <%= historical_money(item.unit_cost, item.currency) %> · <%= item.commercial_captured_at ? "Capturado #{l(item.commercial_captured_at, format: :short)}" : "Valores históricos desconocidos" %></p><% end %>
+</section>
+<section class="management-panel"><h2>Historial de estados</h2><%= render "delivery_status_events/history", events: Current.company.delivery_status_events.where(delivery_order: @delivery_order).includes(:user).order(:id) %></section>

@@ -1,7 +1,0 @@
-#!/bin/bash
-set -euo pipefail
-: "${APP_ENV_FILE:?APP_ENV_FILE must point to the shared production environment file}"
-set -a
-source "$APP_ENV_FILE"
-set +a
-exec bundle "$@"

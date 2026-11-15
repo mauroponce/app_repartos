@@ -1,3 +1,7 @@
 // Configure your import map in config/importmap.rb. Read more: https://github.com/rails/importmap-rails
 import "@hotwired/turbo-rails"
+import { Turbo } from "@hotwired/turbo-rails"
+Turbo.StreamActions.operations_refresh = function () { document.dispatchEvent(new CustomEvent("operations:changed")) }
 import "controllers"
+import "offline/account_guard"
+Turbo.StreamActions.workflow_refresh = function () { document.dispatchEvent(new CustomEvent("workflow:changed")) }

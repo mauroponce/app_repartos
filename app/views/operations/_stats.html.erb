@@ -1,0 +1,5 @@
+<div id="operations-stats" class="operations-stats" aria-label="Entregas de hoy">
+  <% { pending: "Pendientes", completed: "Completadas", partial: "Parciales", failed: "Fallidas" }.each do |key, label| %>
+    <div class="management-panel"><strong data-count="<%= key %>"><%= snapshot.counts[key] %></strong><span><%= label %></span></div>
+  <% end %>
+</div>

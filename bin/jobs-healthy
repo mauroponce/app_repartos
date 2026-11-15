@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+set -euo pipefail
+exec bin/rails runner 'exit(SolidQueue::Process.where("last_heartbeat_at > ?", 2.minutes.ago).where(hostname: Socket.gethostname).exists? ? 0 : 1)'

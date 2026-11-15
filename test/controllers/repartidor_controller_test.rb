@@ -10,10 +10,27 @@ class RepartidorControllerTest < ActionDispatch::IntegrationTest
     sign_in_as @driver
   end
 
+  test "visit forms carry the displayed snapshot and its matching authorization" do
+    get repartidor_root_path
+    assert_response :success
+    assert_select "#visit-#{@visit.id} form[data-work-snapshot]" do |forms|
+      data = JSON.parse(forms.first["data-work-snapshot"])
+      proof = DriverWorkSnapshot.read(data.fetch("proof"))
+      assert_equal @visit.id, data.fetch("id")
+      assert_equal @visit.id, proof.fetch("visit_id")
+      assert_equal @driver.id, proof.fetch("user_id")
+      assert_equal DriverWorkSnapshot.revision(@visit.reload), proof.fetch("revision")
+      assert_equal proof.fetch("revision"), data.fetch("revision")
+      assert_equal data.except("id", "proof", "revision"), proof.fetch("snapshot")
+      assert_equal [ @item.id ], data.fetch("items").pluck("id")
+      assert_equal [ "3.0" ], data.fetch("items").pluck("planned_quantity")
+    end
+  end
+
   test "driver app requires an active driver session and admin pages hide admin navigation on denial" do
     get repartidor_root_path
     assert_response :success
-    assert_select "nav.bottom-nav button", count: 4
+    assert_select "nav.bottom-nav button", count: 5
     assert_select "a[href^='/admin']", count: 0
     assert_select "link[rel=manifest][href=?]", repartidor_manifest_path
     assert_includes response.headers["Cache-Control"], "no-store"
@@ -188,7 +205,7 @@ class RepartidorControllerTest < ActionDispatch::IntegrationTest
     item = visit.delivery_items.first
     patch repartidor_visit_path(visit), params: { visit: { status: "completed", items: [ { id: item.id, delivered_quantity: 1 } ] } }
     assert_redirected_to repartidor_root_path(run_id: @run.id)
-    assert order.reload.completed?
+    assert order.reload.needs_attention?
     assert visit.reload.completed?
     assert_equal 1, item.reload.delivered_quantity
     assert_equal order.delivery_order_items.first.id, item.delivery_order_item_id
@@ -203,7 +220,69 @@ class RepartidorControllerTest < ActionDispatch::IntegrationTest
     assert_select ".activity-hero .amount", text: "1"
   end
 
+  test "ten visits keep their actual authors and quantities after a mid route reassignment" do
+    pedro = @company.users.create!(name: "Pedro", email_address: "pedro@example.test", role: :driver, password: "Password-test-2026")
+    @visit.update!(customer_name: "Parada 1")
+    stops = [ @visit ] + 9.times.map do |index|
+      stop = @run.visits.create!(customer: customers(:one), position: index + 2, customer_name: "Parada #{index + 2}")
+      stop.delivery_items.create!(description: "Bultos", unit: "box", planned_quantity: 3)
+      stop
+    end
+    stops.first(5).each { |stop| confirm_stop(stop) }
+    snapshots = stops.first(5).map { |stop| [ stop.reload.attributes, stop.delivery_items.first.reload.attributes ] }
+    assert @run.reload.in_progress?
+
+    sign_in_as users(:one)
+    patch delivery_run_path(@run), params: { delivery_run: { driver_id: pedro.id } }
+    assert_redirected_to delivery_run_path(@run)
+    assert_equal pedro, @run.reload.driver
+
+    sign_in_as @driver
+    get repartidor_root_path
+    assert_select ".history-row small", text: /Parada/, count: 5
+    assert_select ".activity-hero .amount", text: "5"
+    patch repartidor_visit_path(stops.last), params: { visit: { status: "closed", notes: "Intento desde pantalla vieja" } }
+    assert_response :not_found
+
+    sign_in_as pedro
+    stops.last(5).each { |stop| confirm_stop(stop) }
+    assert @run.reload.completed?
+    get repartidor_root_path
+    assert_select ".history-row small", count: 5
+    assert_select ".activity-hero .amount", text: "5"
+    assert_select ".history-row small", text: "Parada 1", count: 0
+    assert_equal [ @driver.id ], stops.first(5).map { |stop| stop.reload.confirmed_by_id }.uniq
+    assert_equal [ pedro.id ], stops.last(5).map { |stop| stop.reload.confirmed_by_id }.uniq
+    assert_equal snapshots, stops.first(5).map { |stop| [ stop.reload.attributes, stop.delivery_items.first.reload.attributes ] }
+  end
+
+  test "history excludes unknown legacy authors and confirmations performed by administration" do
+    legacy = @run.visits.create!(customer: customers(:one), customer_name: "Sin autor histórico", position: 2)
+    legacy.update_columns(status: "completed", completed_at: Time.current)
+    sign_in_as users(:supervisor)
+    patch delivery_run_visit_path(@run, @visit), params: { visit: { status: "completed", confirmed_by_id: @driver.id, confirmed_at: 2.days.ago,
+      delivery_items_attributes: [ { id: @item.id, delivered_quantity: 3 } ] } }
+    assert_redirected_to delivery_run_path(@run)
+    assert_equal users(:supervisor), @visit.reload.confirmed_by
+    assert_in_delta Time.current, @visit.confirmed_at, 5
+    assert @run.reload.completed?
+    assert_nil legacy.reload.confirmed_by_id
+    assert_nil legacy.confirmed_at
+    get delivery_run_path(@run)
+    assert_select ".hint", text: /Autoría desconocida/
+    assert_select ".hint", text: /Ana Supervisor/
+    sign_in_as @driver
+    get repartidor_root_path
+    assert_select ".history-row", count: 0
+    assert_select ".activity-hero .amount", text: "0"
+  end
+
   private
+
+  def confirm_stop(stop)
+    patch repartidor_visit_path(stop), params: { visit: { status: "completed", items: [ { id: stop.delivery_items.first.id, delivered_quantity: 2 } ] } }
+    assert_redirected_to repartidor_root_path(run_id: @run.id)
+  end
 
   def completed_params
     { visit: { status: "completed", notes: "Recibió el encargado", items: [ { id: @item.id, delivered_quantity: 2 } ] } }

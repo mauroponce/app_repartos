@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Synthetic connected test graph. It is not an extract of real streets. -->
+<osm version="0.6" generator="AppRepartos-tests">
+ <node id="1" version="1" lat="-34.6037" lon="-58.3816"/>
+ <node id="2" version="1" lat="-34.609" lon="-58.435"/>
+ <node id="3" version="1" lat="-34.606" lon="-58.39"/>
+ <node id="4" version="1" lat="-34.601" lon="-58.44"/>
+ <node id="5" version="1" lat="-34.61" lon="-58.40"/>
+ <way id="1" version="1"><nd ref="1"/><nd ref="3"/><nd ref="5"/><nd ref="2"/><nd ref="4"/><nd ref="1"/><tag k="highway" v="residential"/><tag k="name" v="Synthetic test loop"/><tag k="maxspeed" v="40"/></way>
+ <way id="2" version="1"><nd ref="3"/><nd ref="2"/><tag k="highway" v="residential"/><tag k="oneway" v="yes"/></way>
+</osm>

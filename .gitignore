@@ -33,7 +33,15 @@
 
 # Ignore key files for decrypting credentials and more.
 /config/*.key
+/node_modules/
+/test-results/
+/playwright-report/
 
 
 /app/assets/builds/*
 !/app/assets/builds/.keep
+/.kamal/secrets
+/.kamal/secrets.*
+!/.kamal/secrets.example
+/.kamal/*.lock
+/backups/

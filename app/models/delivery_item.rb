@@ -2,6 +2,7 @@ class DeliveryItem < ApplicationRecord
   attr_accessor :copying_schedule_snapshot
   include TenantIntegrity
   include MerchandiseSnapshot
+  include CommercialSnapshot
   belongs_to :visit, inverse_of: :delivery_items
   belongs_to :delivery_order_item, optional: true
   before_validation -> { self.company ||= visit&.company || visit&.delivery_run&.company }
@@ -12,8 +13,8 @@ class DeliveryItem < ApplicationRecord
   before_destroy :allow_destruction
 
   def protect_execution
-    planning_fields = %w[product_id description unit planned_quantity]
-    if visit&.persisted? && !visit.delivery_run.editable? && (new_record? || (changes_to_save.keys & planning_fields).any?)
+    planning_fields = %w[product_id description unit planned_quantity unit_price unit_cost currency commercial_captured_at commercial_source]
+    if visit&.persisted? && !visit.delivery_run.editable? && !(validation_context == :dispatch && visit.plannable? && visit.delivery_run.dispatchable?) && (new_record? || (changes_to_save.keys & planning_fields).any?)
       errors.add(:base, "La hoja ya no admite cambios en la mercadería planificada")
     end
     if delivery_order_item && delivery_order_item.delivery_order.visit_id != visit_id

@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# Isolated local smoke test of the real production image. No published ports.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+check_image="${PRODUCTION_TEST_IMAGE:-app-repartos-production:verify}"
+check_prefix="repartos-production-check-$$"
+check_db="$check_prefix-db"
+check_web="$check_prefix-web"
+check_jobs="$check_prefix-jobs"
+check_data="$check_prefix-data"
+check_files="$check_prefix-files"
+check_password="$(od -An -N24 -tx1 /dev/urandom | tr -d ' \n')"
+check_admin_password="$(od -An -N24 -tx1 /dev/urandom | tr -d ' \n')"
+check_secret="$(od -An -N64 -tx1 /dev/urandom | tr -d ' \n')"
+cleanup() {
+  for container in "$check_jobs" "$check_web" "$check_db"; do timeout 20s docker rm -f "$container" >/dev/null 2>&1 || true; done
+  for volume in "$check_data" "$check_files"; do timeout 20s docker volume rm "$volume" >/dev/null 2>&1 || true; done
+  timeout 20s docker network rm "$check_prefix" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
+docker image inspect "$check_image" >/dev/null
+docker network create --label app-repartos.production-check=true "$check_prefix" >/dev/null
+docker volume create "$check_data" >/dev/null
+docker volume create "$check_files" >/dev/null
+docker run -d --name "$check_db" --network "$check_prefix" --network-alias app-repartos-db --memory 1g --cpus 2 \
+  -e POSTGRES_PASSWORD="$check_admin_password" -e DATABASE_PASSWORD="$check_password" \
+  -v "$check_data:/var/lib/postgresql" -v "$PWD/config/deploy/init-databases.sh:/docker-entrypoint-initdb.d/10-app-databases.sh:ro" postgres:18-alpine >/dev/null
+check_ready=0
+for attempt in {1..60}; do
+  if docker exec "$check_db" pg_isready -h 127.0.0.1 -U postgres >/dev/null 2>&1; then check_ready=1; break; fi
+  sleep 1
+done
+[[ "$check_ready" == 1 ]] || { docker logs "$check_db"; exit 1; }
+[[ "$(docker exec "$check_db" psql -U postgres -Atc "SELECT rolsuper OR rolcreatedb OR rolcreaterole FROM pg_roles WHERE rolname='repartos'")" == f ]]
+check_env=(-e RAILS_ENV=production -e DATABASE_HOST=app-repartos-db -e DATABASE_USERNAME=repartos -e DATABASE_PASSWORD="$check_password" -e SECRET_KEY_BASE="$check_secret" -e APP_HOST=production-test.invalid -e ACTIVE_STORAGE_SERVICE=persistent)
+docker run -d --name "$check_web" --network "$check_prefix" --memory 1536m --cpus 2 "${check_env[@]}" -e RUN_DB_PREPARE=1 -v "$check_files:/rails/storage" "$check_image" >/dev/null
+wait_web() {
+  local ready=0
+  for attempt in {1..90}; do
+    if docker exec "$check_web" curl -fsS --max-time 5 "http://$check_web:3000/up" >/dev/null 2>&1; then ready=1; break; fi
+    sleep 2
+  done
+  [[ "$ready" == 1 ]] || { docker logs "$check_web"; return 1; }
+}
+wait_web
+[[ "$(docker exec "$check_web" id -u)" == 1000 ]]
+docker exec "$check_web" bin/rails runner 'raise "Unexpected demo seeds" unless Company.count.zero?; Company.create!(name: "Production smoke marker", slug: "production-smoke-marker"); blob = ActiveStorage::Blob.create_and_upload!(io: StringIO.new("private proof"), filename: "probe.txt", content_type: "text/plain"); raise "Wrong storage" unless blob.service.is_a?(ActiveStorage::Service::DiskService) && blob.download == "private proof"; blob.purge; puts "Migraciones, ausencia de seeds y almacenamiento privado: OK"'
+docker run -d --name "$check_jobs" --network "$check_prefix" --memory 1536m --cpus 2 "${check_env[@]}" -v "$check_files:/rails/storage" "$check_image" bin/jobs >/dev/null
+jobs_ready=0
+for attempt in {1..60}; do
+  if docker exec "$check_jobs" bin/jobs-healthy >/dev/null 2>&1; then jobs_ready=1; break; fi
+  sleep 2
+done
+[[ "$jobs_ready" == 1 ]] || { docker logs "$check_jobs"; exit 1; }
+docker restart "$check_web" >/dev/null
+wait_web
+docker exec "$check_web" bin/rails runner 'raise "Data lost on restart" unless Company.exists?(slug: "production-smoke-marker"); puts "Persistencia tras reiniciar y migrar nuevamente: OK"'
+echo 'Imagen production: /up por red interna, UID 1000, PostgreSQL restringido, ambas bases, Disk y Solid Queue: OK. Sin puertos públicos.'

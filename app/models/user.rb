@@ -2,7 +2,11 @@ class User < ApplicationRecord
   has_secure_password
   belongs_to :company
   has_many :delivery_runs, foreign_key: :driver_id, inverse_of: :driver, dependent: :restrict_with_error
+  has_one :driver_location, dependent: :destroy
+  has_many :delivery_dispatch_changes, dependent: :restrict_with_error
   has_many :sessions, dependent: :destroy
+  has_many :confirmed_visits, class_name: "Visit", foreign_key: :confirmed_by_id, inverse_of: :confirmed_by, dependent: :restrict_with_error
+  has_many :driver_sync_operations, dependent: :restrict_with_error
 
   enum :role, { administrator: "administrator", supervisor: "supervisor", driver: "driver" }, validate: true
   enum :status, { active: "active", inactive: "inactive" }, validate: true

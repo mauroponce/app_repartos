@@ -8,11 +8,16 @@
   <div class="nav-group">
     <div class="nav-label">Operación</div>
     <nav class="side-nav">
+      <%= link_to incidents_path, class: "nav-link #{controller_name == 'incidents' ? 'active' : ''}" do %><%= icon("bell") %><span class="nav-text">Incidencias</span><small data-workflow-count="incidents"><%= workflow_counts[:incidents] %></small><% end %>
+      <%= link_to workflow_tasks_path, class: "nav-link #{controller_name == 'workflow_tasks' ? 'active' : ''}" do %><%= icon("check") %><span class="nav-text">Tareas</span><small data-workflow-count="tasks"><%= workflow_counts[:tasks] %></small><% end %>
+      <%= link_to reports_path, class: "nav-link #{controller_name.in?(%w[reports commercial_opportunities commercial_rule_settings]) ? 'active' : ''}" do %><%= icon("chart") %><span class="nav-text">Reportes</span><small data-workflow-count="opportunities"><%= workflow_counts[:opportunities] %></small><% end %>
+      <%= link_to operations_path, class: "nav-link #{controller_name == 'operations' ? 'active' : ''}" do %><%= icon("chart") %><span class="nav-text">Operaciones en vivo</span><% end %>
       <%= link_to drivers_path, class: "nav-link #{controller_name == 'drivers' ? 'active' : ''}", aria: { current: controller_name == "drivers" ? "page" : nil } do %><%= icon("users") %><span class="nav-text">Repartidores</span><% end %>
       <%= link_to customers_path, class: "nav-link #{controller_name.in?(["customers", "delivery_schedules"]) ? 'active' : ''}", aria: { current: controller_name.in?(["customers", "delivery_schedules"]) ? "page" : nil } do %><%= icon("store") %><span class="nav-text">Clientes</span><% end %>
       <%= link_to products_path, class: "nav-link #{controller_name.in?(["products", "product_imports"]) ? 'active' : ''}" do %><%= icon("package") %><span class="nav-text">Productos</span><% end %>
       <%= link_to delivery_orders_path, class: "nav-link #{controller_name == 'delivery_orders' ? 'active' : ''}" do %><%= icon("package") %><span class="nav-text">Entregas</span><% end %>
       <%= link_to delivery_runs_path, class: "nav-link #{controller_name.in?(["delivery_runs", "visits"]) ? 'active' : ''}" do %><%= icon("route") %><span class="nav-text">Hojas de ruta</span><% end %>
+      <%= link_to driver_sync_operations_path, class: "nav-link" do %><%= icon("route") %><span class="nav-text">Sincronizaciones</span><% end %>
     </nav>
   </div>
   <div class="side-bottom">
@@ -21,6 +26,5 @@
       <strong><%= Current.company.name %></strong>
       <p>Todos tus clientes, en un solo lugar.</p>
     </div>
-    <%= button_to session_path, method: :delete, class: "side-help" do %><%= icon("arrow", "sm") %><span>Cerrar sesión</span><% end %>
   </div>
 </aside>

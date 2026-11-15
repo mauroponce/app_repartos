@@ -137,7 +137,7 @@ class DeliveryManagementTest < ActiveSupport::TestCase
     assert item.valid?
     assert_nil item.delivered_quantity
     item.update!(delivered_quantity: 18)
-    visit.update!(status: :completed)
+    visit.update!(status: :completed, confirmed_by: users(:one))
     assert visit.completed_at
   end
 

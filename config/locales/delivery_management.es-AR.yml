@@ -60,6 +60,8 @@ es-AR:
         visit: Visita
         status: Estado
         notes: Observaciones
+        load_units: Unidades de carga
+        service_minutes: Tiempo de descarga (minutos)
         delivery_order_items: Mercadería
         delivery_order_items.description: Descripción del producto
         delivery_order_items.quantity: Cantidad del producto
@@ -82,6 +84,12 @@ es-AR:
         name: Nombre
         status: Estado
       visit:
+        recorded_at: Fecha y hora del dispositivo
+        recorded_latitude: Latitud registrada
+        recorded_longitude: Longitud registrada
+        location_accuracy: Precisión de ubicación
+        receiver_name: Nombre del receptor
+        failure_reason: Motivo de la incidencia
         company: Empresa
         customer: Cliente
         customer_name: Nombre del cliente

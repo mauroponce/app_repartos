@@ -1,0 +1,8 @@
+services:
+  osrm-test:
+    image: ghcr.io/project-osrm/osrm-backend:v6.0.0
+    command: ["osrm-routed", "--algorithm", "mld", "--mmap=true", "--max-table-size", "101", "/data/current/region.osrm"]
+    volumes:
+      - ./tmp/routing-test-map:/data:ro
+    mem_limit: 512m
+    cpus: 1

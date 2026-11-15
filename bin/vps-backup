@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Run on the VPS as its owner/root. Does not alter the live databases.
+set -euo pipefail
+umask 077
+backup_root="${BACKUP_DIR:-/var/backups/app-repartos}"
+backup_storage="${APP_STORAGE_DIR:-/var/lib/app-repartos/storage}"
+backup_db="${POSTGRES_CONTAINER:-app-repartos-db}"
+backup_user="${POSTGRES_ADMIN_USER:-postgres}"
+backup_primary="${PRIMARY_DATABASE_NAME:-app_repartos_production}"
+backup_queue="${QUEUE_DATABASE_NAME:-app_repartos_production_queue}"
+backup_keep="${BACKUP_KEEP:-14}"
+[[ "$backup_keep" =~ ^[1-9][0-9]*$ ]] || { echo 'BACKUP_KEEP debe ser un entero positivo' >&2; exit 1; }
+mkdir -p "$backup_root"
+exec 9>"$backup_root/.backup.lock"
+flock -n 9 || { echo 'Ya hay un backup en curso' >&2; exit 1; }
+backup_stage="$(mktemp -d "$backup_root/.creating-XXXXXX")"
+trap 'rm -rf "${backup_stage:-}"' EXIT
+docker exec "$backup_db" pg_dump -U "$backup_user" -Fc --no-owner "$backup_primary" > "$backup_stage/primary.dump"
+docker exec "$backup_db" pg_dump -U "$backup_user" -Fc --no-owner "$backup_queue" > "$backup_stage/queue.dump"
+tar -C "$backup_storage" -czf "$backup_stage/files.tar.gz" .
+printf 'App Repartos backup v1\nPrimary: %s\nQueue: %s\nUTC: %s\n' "$backup_primary" "$backup_queue" "$(date -u +%FT%TZ)" > "$backup_stage/manifest.txt"
+(cd "$backup_stage" && sha256sum primary.dump queue.dump files.tar.gz manifest.txt > SHA256SUMS)
+backup_target="$backup_root/backup-$(date -u +%Y%m%dT%H%M%SZ)-$$"
+mv "$backup_stage" "$backup_target"
+backup_stage=""
+# Rotation only considers complete backups created by this script.
+mapfile -t backups < <(find "$backup_root" -maxdepth 1 -mindepth 1 -type d -name 'backup-*' | sort -r)
+for ((index=backup_keep; index<${#backups[@]}; index++)); do rm -rf -- "${backups[index]}"; done
+if [[ -n "${BACKUP_REMOTE:-}" ]]; then rsync -a -- "$backup_target/" "${BACKUP_REMOTE%/}/$(basename "$backup_target")/"; fi
+echo "Backup completo: $backup_target"

@@ -1,0 +1,24 @@
+<% content_for :title, "Comprobante de entrega ##{@visit.id}" %>
+<article class="delivery-receipt management-panel">
+  <div class="heading"><div><div class="eyebrow"><%= Current.company.name %></div><h1>Comprobante de entrega #<%= @visit.id %></h1><p><%= @visit.customer_name %> · <%= @visit.customer_address %></p></div></div>
+  <dl class="receipt-details">
+    <div><dt>Resultado de la visita</dt><dd><%= @visit.completed? && @visit.delivery_items.any? { |item| item.delivered_quantity && item.delivered_quantity < item.planned_quantity } ? "Entrega parcial" : operation_status(@visit.status) %></dd></div>
+    <div><dt>Registrado por</dt><dd><%= @visit.confirmed_by&.name || "Autoría desconocida" %></dd></div>
+    <div><dt><%= @visit.recorded_at_source == "device" ? "Fecha y hora declaradas por el dispositivo" : @visit.recorded_at_source == "server" ? "Fecha y hora registradas por administración" : "Fecha y hora declaradas (origen histórico sin informar)" %></dt><dd><%= @visit.recorded_at ? l(@visit.recorded_at, format: :long) : "Sin dato histórico" %></dd></div>
+    <div><dt>Confirmado por el servidor</dt><dd><%= @visit.confirmed_at ? l(@visit.confirmed_at, format: :long) : "Sin dato histórico" %></dd></div>
+    <% if @visit.receiver_name.present? %><div><dt>Receptor declarado</dt><dd><%= @visit.receiver_name %></dd></div><% end %>
+    <% if @visit.failure_reason.present? %><div><dt>Motivo</dt><dd><%= Visit::FAILURE_REASONS.fetch(@visit.failure_reason) %></dd></div><% end %>
+    <div><dt>Ubicación del dispositivo</dt><dd><% if @visit.recorded_latitude %><%= @visit.recorded_latitude %>, <%= @visit.recorded_longitude %> · precisión aproximada <%= @visit.location_accuracy %> m · capturada <%= l(@visit.location_captured_at, format: :short) %><% else %>No disponible<% end %></dd></div>
+  </dl>
+  <p class="hint">La hora y ubicación del dispositivo son datos declarados; la confirmación del servidor registra cuándo recibió el comprobante. Horarios de <%= Current.company.time_zone %>.</p>
+  <% if @visit.notes.present? %><p class="drawer-note"><%= @visit.notes %></p><% end %>
+  <div class="table-scroll"><table class="data-table"><thead><tr><th>Producto</th><th>Unidad</th><th>Solicitado</th><th>Entregado</th><th>Diferencia</th></tr></thead><tbody>
+    <% @visit.delivery_items.each do |item| %><tr><td><%= item.description %></td><td><%= DeliveryUnits::LABELS.fetch(item.unit) %></td><td><%= quantity_text(item.planned_quantity) %></td><td><%= quantity_text(item.delivered_quantity) %></td><td><%= item.difference.nil? ? "—" : quantity_text(item.difference) %></td></tr><% end %>
+  </tbody></table></div>
+  <h2>Evidencias</h2>
+  <%= render "delivery_evidences/gallery", evidences: @evidences %>
+  <% if @evidences.empty? %><p>Sin fotografías ni firma adjuntas.</p><% end %>
+  <% if @operation %><p class="hint">Identificador del registro: <%= @operation.operation_id %></p><% end %>
+</article>
+
+<dl class="receipt-details"><% Visit::TIMING_FIELDS.each do |field| %><div><dt><%= { "arrived_at" => "Llegada declarada", "unloading_started_at" => "Inicio de descarga declarado", "unloading_finished_at" => "Fin de descarga declarado" }[field] %></dt><dd><%= @visit.public_send(field) ? l(@visit.public_send(field), format: :long) : "Sin informar" %></dd></div><% end %></dl>

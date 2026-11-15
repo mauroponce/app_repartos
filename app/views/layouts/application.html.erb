@@ -10,7 +10,18 @@
         <header class="topbar">
           <div><button type="button" class="mobile-menu" data-action="shell#mobile" aria-label="Abrir menú"><%= icon("menu", "lg") %></button><%= link_to customers_path(anchor: "customer-search"), class: "top-search" do %><%= icon("search", "sm") %><span class="placeholder">Buscar en tu directorio de clientes...</span><% end %></div>
           <div class="top-brand"><strong>App Repartos</strong><span><%= Current.company.name %></span></div>
-          <div class="top-right"><span class="avatar"><%= initials(Current.user.name) %></span><span class="profile-name"><strong><%= Current.user.name %></strong><small><%= role_name(Current.user) %></small></span></div>
+          <div class="top-right">
+            <div class="profile-wrap" data-controller="profile-menu" data-action="click@window->profile-menu#closeOutside keydown.esc@window->profile-menu#escape focusout->profile-menu#closeOnFocusOut turbo:before-cache@document->profile-menu#close">
+              <button type="button" class="profile-button" aria-label="Menú de usuario: <%= Current.user.name %>" aria-expanded="false" aria-controls="profile-menu" data-profile-menu-target="button" data-action="profile-menu#toggle">
+                <span class="avatar"><%= initials(Current.user.name) %></span>
+                <span class="profile-name"><strong><%= Current.user.name %></strong><small><%= role_name(Current.user) %></small></span>
+                <%= icon("chevron-down", "sm") %>
+              </button>
+              <div class="profile-menu" id="profile-menu" data-profile-menu-target="menu">
+                <%= button_to session_path, method: :delete do %><%= icon("arrow", "sm") %><span>Cerrar sesión</span><% end %>
+              </div>
+            </div>
+          </div>
         </header>
         <main class="content" id="main-content"><%= render "shared/flash" %><%= yield %></main>
       </div>

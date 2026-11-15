@@ -1,0 +1,9 @@
+<details class="driver-problem"><summary>Informar problema<%= " de la jornada" unless local_assigns[:visit] %></summary>
+<form data-workflow-form data-command="incident_report" data-action="submit->driver-workflow#submit" data-customer-name="<%= local_assigns[:visit]&.customer_name || 'Jornada' %>">
+<% if local_assigns[:visit] %><input type="hidden" name="visit_id" value="<%= visit.id %>"><input type="hidden" name="delivery_run_id" value="<%= visit.delivery_run_id %>"><% elsif @run %><input type="hidden" name="delivery_run_id" value="<%= @run.id %>"><% end %>
+<label>Tipo de problema<select name="kind" required><% Incident::KINDS.each do |key, label| %><option value="<%= key %>"><%= label %></option><% end %></select></label>
+<label>Prioridad<select name="priority"><% Incident::PRIORITIES.each do |key, label| %><option value="<%= key %>" <%= 'selected' if key == 'normal' %>><%= label %></option><% end %></select></label>
+<label>¿Qué pasó?<textarea name="description" required maxlength="4000" rows="3" placeholder="Describí el problema para que administración pueda decidir."></textarea></label>
+<label>Fotografías (opcionales, hasta 4)<input type="file" name="photos" accept="image/jpeg,image/png,image/webp" multiple></label><p class="hint">Las fotos se reducen antes de guardar. El reporte no cambia el resultado de la visita.</p>
+<button type="submit" class="btn btn-secondary">Guardar incidencia</button><p role="status" data-workflow-message></p>
+</form></details>

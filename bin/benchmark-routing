@@ -1,0 +1,25 @@
+#!/usr/bin/env ruby
+require "benchmark"
+require "json"
+require_relative "../app/services/route_optimization/solver"
+live = ARGV.include?("--live")
+require_relative "../config/environment" if live
+[ 10, 25, 50, 100 ].each do |size|
+  random = Random.new(42)
+  stops = size.times.map { |index| { id: index + 1, index: index, service: 300 } }
+  table_requests = 0
+  table_seconds = 0
+  if live
+    points = size.times.map { |i| [ -58.38 - (i % 10) * 0.001, -34.60 - (i / 10) * 0.001 ] }
+    table_seconds = Benchmark.realtime { @matrix = Osrm::Client.new.table(points); table_requests += 1 }
+    durations, distances = @matrix.values_at(:durations, :distances)
+  else
+    durations = Array.new(size) { |i| Array.new(size) { |j| i == j ? 0 : random.rand(30..3600) } }
+    distances = durations.map { |row| row.map { |value| value * 9 } }
+  end
+  solver = RouteOptimization::Solver.new(stops: stops, durations: durations, distances: distances)
+  seconds = Benchmark.realtime { @result = solver.call(exact: false) }
+  rss = File.read("/proc/self/status")[/^VmRSS:\s+(\d+)/, 1]&.to_i if File.exist?("/proc/self/status")
+  puts({ stops: size, algorithm_seconds: seconds.round(4), matrix_seconds: table_seconds.round(4), matrix_requests: table_requests, evaluations: solver.evaluations,
+    process_rss_kib: rss, feasible: @result[:proposed][:feasible], original_seconds: @result[:original][:driving], proposed_seconds: @result[:proposed][:driving] }.to_json)
+end

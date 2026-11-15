@@ -6,7 +6,12 @@
 </div>
 <div class="setting-section">Tu jornada</div><div class="setting-card">
   <button type="button" class="setting-row" data-action="repartidor#pause"><span class="setting-row-icon"><%= icon("pause") %></span><span class="setting-row-text"><strong data-repartidor-target="pauseLabel">Pausar jornada</strong><span>Pausa en este dispositivo mientras la app está abierta</span></span><%= icon("right") %></button>
-  <button type="button" class="setting-row" data-action="repartidor#locate" data-repartidor-target="locationButton" aria-pressed="false"><span class="setting-row-icon"><%= icon("locate") %></span><span class="setting-row-text"><strong>Usar mi ubicación</strong><span>GPS mientras la app está abierta</span></span><span class="switch" data-repartidor-target="locationSwitch" aria-hidden="true"></span></button>
   <button type="button" class="setting-row" data-action="repartidor#install"><span class="setting-row-icon"><%= icon("share") %></span><span class="setting-row-text"><strong>Instalar Repartos</strong><span>Acceso directo desde la pantalla de inicio</span></span><%= icon("right") %></button>
 </div>
-<%= button_to "Cerrar sesión", session_path, method: :delete, class: "signoff-btn" %>
+<%= button_to "Cerrar sesión", session_path, method: :delete, authenticity_token: false, class: "signoff-btn", form: { data: { action: "submit->repartidor#logout" } } %>
+<div class="setting-section">Ubicación durante la jornada</div>
+<div class="setting-card tracking-panel" data-controller="driver-tracking" data-driver-tracking-account-value="<%= Current.company.id %>:<%= Current.user.id %>" data-action="visibilitychange@document->driver-tracking#tick online@window->driver-tracking#tick">
+  <p>Compartí tu ubicación con administración cada 30 segundos mientras la app esté visible. El envío puede interrumpirse al bloquear el teléfono o cerrar la app. Solo se conserva la última posición y deja de mostrarse después de 24 horas.</p>
+  <button type="button" class="btn btn-secondary" data-driver-tracking-target="button" data-action="driver-tracking#toggle" aria-pressed="false">Compartir ubicación</button>
+  <p role="status" data-driver-tracking-target="status">Ubicación desactivada.</p>
+</div>

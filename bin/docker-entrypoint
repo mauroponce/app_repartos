@@ -5,4 +5,9 @@ if [ "${1:-}" = "bin/rails" ] && [ "${2:-}" = "server" ]; then
   rm -f /rails/tmp/pids/server.pid
 fi
 
+if [[ "${RAILS_ENV:-}" == production && "${RUN_DB_PREPARE:-0}" == 1 &&
+      ( "${1:-}" == puma || ( "${1:-}" == bundle && "${2:-}" == exec && "${3:-}" == puma ) || ( "${1:-}" == bin/rails && "${2:-}" == server ) ) ]]; then
+  bin/rails db:prepare
+fi
+
 exec "$@"

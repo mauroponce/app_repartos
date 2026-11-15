@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+backup_source="$(realpath "${1:?Uso: RESTORE_MAINTENANCE=1 bin/vps-restore DIRECTORIO_BACKUP}")"
+[[ "${RESTORE_MAINTENANCE:-}" == 1 ]] || { echo 'Detené web/jobs, activá mantenimiento y definí RESTORE_MAINTENANCE=1' >&2; exit 1; }
+for role in web jobs; do
+  [[ -z "$(docker ps --filter label=service=app-repartos --filter "label=role=$role" --format '{{.ID}}')" ]] || { echo "El rol $role sigue activo; detenelo antes de restaurar" >&2; exit 1; }
+done
+(cd "$backup_source" && sha256sum --check SHA256SUMS)
+tar -tzf "$backup_source/files.tar.gz" >/dev/null
+backup_db="${POSTGRES_CONTAINER:-app-repartos-db}"
+backup_user="${POSTGRES_ADMIN_USER:-postgres}"
+backup_primary="${PRIMARY_DATABASE_NAME:-app_repartos_production}"
+backup_queue="${QUEUE_DATABASE_NAME:-app_repartos_production_queue}"
+backup_storage="${APP_STORAGE_DIR:-/var/lib/app-repartos/storage}"
+backup_role="${APP_DATABASE_ROLE:-repartos}"
+storage_stage="$(mktemp -d "$(dirname "$backup_storage")/.restore-files-XXXXXX")"
+trap '[[ -z "${storage_stage:-}" ]] || rm -rf -- "$storage_stage"' EXIT
+tar -xzf "$backup_source/files.tar.gz" -C "$storage_stage" --no-same-owner
+chown -R 1000:1000 "$storage_stage"
+# A safety copy of both databases is retained before destructive restoration.
+safety_dir="$(mktemp -d "${BACKUP_DIR:-/var/backups/app-repartos}/before-restore-XXXXXX")"
+docker exec "$backup_db" pg_dump -U "$backup_user" -Fc --no-owner "$backup_primary" > "$safety_dir/primary.dump"
+docker exec "$backup_db" pg_dump -U "$backup_user" -Fc --no-owner "$backup_queue" > "$safety_dir/queue.dump"
+docker exec -i "$backup_db" pg_restore -U "$backup_user" --role "$backup_role" --clean --if-exists --exit-on-error --no-owner --dbname "$backup_primary" < "$backup_source/primary.dump"
+docker exec -i "$backup_db" pg_restore -U "$backup_user" --role "$backup_role" --clean --if-exists --exit-on-error --no-owner --dbname "$backup_queue" < "$backup_source/queue.dump"
+[[ ! -e "$backup_storage" ]] || mv "$backup_storage" "$backup_storage.before-restore-$(date +%s)"
+mv "$storage_stage" "$backup_storage"
+storage_stage=""
+echo "Restauración terminada. Copia previa: $safety_dir. Verificá datos, permisos y cola antes de iniciar web/jobs."

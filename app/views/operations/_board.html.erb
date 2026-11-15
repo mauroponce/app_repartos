@@ -1,0 +1,58 @@
+<div id="operations-board" data-operations-target="board" data-markers="<%= snapshot.markers.to_json %>" data-updated-at="<%= snapshot.now.in_time_zone(snapshot.company.time_zone).strftime('%H:%M:%S') %>">
+  <section class="management-panel operations-alerts" aria-label="Alertas de demora"><h2><%= snapshot.overdue.size %> entregas fuera de horario</h2>
+    <% if snapshot.overdue.empty? %><p>No hay pedidos pendientes con una ventana vencida.</p><% end %>
+    <% snapshot.overdue.each do |order| %>
+      <p><%= link_to "##{order.id} · #{order.customer_name}", delivery_order_path(order) %> · límite <%= snapshot.deadline(order).strftime("%H:%M") %> · <%= order.visit&.delivery_run&.name || "Sin asignar" %></p>
+    <% end %>
+  </section>
+  <div class="operations-runs">
+    <% snapshot.runs.each do |run| %>
+      <% pending = run.visits.select(&:pending?); estimates = snapshot.estimates(run); location = snapshot.locations[run.driver_id] %>
+      <section class="management-panel operations-run" data-run-id="<%= run.id %>">
+        <div class="operations-run-heading"><div><h2><%= link_to run.name, delivery_run_path(run) %></h2><strong><%= run.driver&.name || "Sin repartidor" %></strong></div><span class="status-pill"><%= operation_status(run.status) %></span></div>
+        <p><%= pending.size %> paradas pendientes · <%= run.visits.count(&:completed?) %> realizadas · <%= run.visits.count { |visit| !visit.pending? && !visit.completed? } %> fallidas</p>
+        <p><%= location ? "Ubicación #{location.fresh? ? 'reciente' : 'sin actualizar'}: #{location.captured_at.in_time_zone(snapshot.company.time_zone).strftime('%H:%M:%S')} · ±#{location.accuracy.round} m#{location.sharing? ? '' : ' · envío detenido'}" : "Sin ubicación compartida" %></p>
+        <% pending.first(3).each do |stop| %>
+          <% estimate = estimates.find { |row| row["visit_id"] == stop.id }; arrival = estimate && Time.iso8601(estimate["arrival_at"]).in_time_zone(snapshot.company.time_zone) %>
+          <div class="operations-stop"><strong><%= stop.position %>. <%= stop.customer_name %></strong><span><%= stop.arrived_at ? "Llegada declarada #{stop.arrived_at.in_time_zone(snapshot.company.time_zone).strftime('%H:%M')}" : arrival ? "Llegada estimada #{arrival.strftime('%H:%M')}" : "ETA no disponible" %></span>
+            <% if arrival && stop.delivery_orders.any? { |order| snapshot.deadline(order) && arrival > snapshot.deadline(order) } %><span class="operations-late">Riesgo de demora</span><% end %>
+          </div>
+        <% end %>
+        <% if estimates.any? %><small>Recorrido por calles · incluye espera de ventana y descarga · sin tráfico en vivo. ETA disponible para la primera hoja activa del repartidor.</small><% end %>
+      </section>
+    <% end %>
+  </div>
+  <% if snapshot.runs.empty? %><div class="management-panel"><p>No hay hojas de ruta para hoy.</p><%= link_to "Crear hoja de ruta", new_delivery_run_path, class: "btn btn-primary" %></div><% end %>
+  <% if snapshot.orders.any?(&:needs_attention?) %>
+    <section class="management-panel"><h2>Entregas con incidencias</h2>
+      <% snapshot.orders.select(&:needs_attention?).each do |order| %>
+        <div class="operations-order"><div><strong>#<%= order.id %> · <%= order.customer_name %></strong><p><%= order.visit&.failure_reason && Visit::FAILURE_REASONS[order.visit.failure_reason] || "Revisar cantidades y resultado de la visita" %></p></div><%= link_to "Revisar o reprogramar", delivery_order_path(order), class: "btn btn-secondary" %></div>
+      <% end %>
+    </section>
+  <% end %>
+  <section class="management-panel"><h2>Gestionar pedidos pendientes</h2><p>Al reasignar, el pedido se agrega al final de la hoja destino. Reprogramá sin hoja para dejarlo pendiente de planificación.</p>
+    <div class="operations-orders">
+      <% destinations = snapshot.destination_runs.to_a %>
+      <% snapshot.orders.select(&:pending?).each do |order| %>
+        <div class="operations-order" data-order-id="<%= order.id %>"><div><strong><%= link_to "##{order.id} · #{order.customer_name}", delivery_order_path(order) %></strong><p><%= order.visit&.delivery_run&.name || "Sin asignar" %> · <%= order.customer_address %></p></div>
+          <button class="btn btn-secondary" data-action="operations#openDispatch" data-dialog-id="dispatch-<%= order.id %>">Reasignar / reprogramar</button>
+        </div>
+        <dialog id="dispatch-<%= order.id %>" class="operations-dialog" data-action="close->operations#schedule">
+          <h2>Gestionar entrega #<%= order.id %></h2><p><%= order.customer_name %></p>
+          <%= form_with url: operations_dispatch_path(order_id: order.id), scope: :dispatch, data: { turbo: false } do |form| %>
+            <%= form.hidden_field :revision, value: OperationsDispatch.revision(order) %>
+            <div class="form-field"><%= form.label :date, "Fecha" %><%= form.date_field :date, value: order.scheduled_date, min: snapshot.company.local_date, required: true %></div>
+            <div class="form-field"><%= form.label :target_run_id, "Hoja destino" %><%= form.select :target_run_id, destinations.reject { |run| run.id == order.visit&.delivery_run_id }.map { |run| ["#{run.scheduled_date} · #{run.name} · #{run.driver.name}", run.id] }, include_blank: "Sin asignar (planificar después)" %></div>
+            <div class="form-field"><%= form.label :reason, "Motivo del cambio" %><%= form.text_area :reason, required: true, maxlength: 500 %></div>
+            <p>Los registros que un repartidor haya guardado sin conexión con la asignación anterior quedarán para revisión en Sincronizaciones.</p>
+            <div class="heading-actions"><button type="button" class="btn btn-secondary" data-action="operations#closeDispatch">Cancelar</button><%= form.submit "Guardar cambio", class: "btn btn-primary" %></div>
+          <% end %>
+        </dialog>
+      <% end %>
+    </div>
+  </section>
+  <section class="management-panel"><h2>Últimos cambios operativos</h2>
+    <% snapshot.changes.each do |change| %><p><strong><%= change.created_at.in_time_zone(snapshot.company.time_zone).strftime("%H:%M") %> · <%= change.user.name %> · #<%= change.delivery_order_id %></strong><br><%= change.before_data["date"] %> / hoja <%= change.before_data["run_id"] || "sin asignar" %> → <%= change.after_data["date"] %> / hoja <%= change.after_data["run_id"] || "sin asignar" %> · <%= change.reason %></p><% end %>
+    <% if snapshot.changes.empty? %><p>Sin cambios operativos registrados.</p><% end %>
+  </section>
+</div>

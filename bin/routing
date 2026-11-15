@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+set -a
+source config/routing/region.env
+# Overrides are explicit, local and never committed.
+[[ ! -f .env.routing ]] || source .env.routing
+set +a
+routing_root="${OSRM_DATA_DIR:-$PWD/storage/routing}"
+routing_image="${OSRM_IMAGE}"
+routing_tools=app-repartos-routing-tools:bookworm
+mkdir -p "$routing_root/releases" "$routing_root/downloads"
+routing_run() {
+  local name="repartos-routing-$$-$RANDOM" status=0
+  # Do not make successful processing wait indefinitely for Docker's auto-remove
+  # filesystem cleanup. Some daemon/storage combinations stall in removing.
+  docker run --name "$name" --label app-repartos.routing-temporary=true "$@" || status=$?
+  timeout 15s docker rm "$name" >/dev/null 2>&1 || echo "Aviso: Docker dejó pendiente la limpieza de $name" >&2
+  return "$status"
+}
+routing_tool() {
+  docker image inspect "$routing_tools" >/dev/null 2>&1 || docker build -t "$routing_tools" config/routing/tools
+  routing_run --memory "${OSRM_TOOL_MEMORY:-4g}" --cpus "${OSRM_THREADS:-2}" --user "$(id -u):$(id -g)" -e OSRM_PBF_URL -e OSRM_BBOX -v "$routing_root:/data" -v "$PWD/config/routing/map_tools.py:/tools/map_tools.py:ro" "$routing_tools" "$@"
+}
+routing_validate() {
+  local version="$1" name="repartos-osrm-check-$$" network="repartos-routing-check-$$"
+  [[ "$version" =~ ^[a-zA-Z0-9_-]+$ ]] || return 1
+  [[ -s "$routing_root/releases/$version/region.osrm.partition" && -s "$routing_root/releases/$version/region.osrm.mldgr" ]] || { echo 'Faltan archivos procesados MLD' >&2; return 1; }
+  docker network create "$network" >/dev/null
+  docker run -d --name "$name" --network "$network" --memory "${OSRM_SERVE_MEMORY:-2g}" --cpus 2 -v "$routing_root/releases/$version:/data:ro" "$routing_image" osrm-routed --algorithm mld --mmap=true /data/region.osrm >/dev/null
+  local ok=0
+  for attempt in {1..30}; do
+    if routing_run --network "$network" "$routing_tools" python3 -c 'import json,sys,urllib.request; d=json.load(urllib.request.urlopen(sys.argv[1], timeout=5)); assert d["code"]=="Ok" and d["durations"][0][1] is not None and d["distances"][0][1] is not None' "http://$name:5000/table/v1/driving/${OSRM_CHECK_COORDINATES:--58.3816,-34.6037;-58.3830,-34.6050}?annotations=duration,distance" 2>/dev/null; then ok=1; break; fi
+    sleep 1
+  done
+  docker stop -t 5 "$name" >/dev/null
+  timeout 15s docker rm "$name" >/dev/null || echo "Limpieza pendiente: $name" >&2
+  timeout 15s docker network rm "$network" >/dev/null || true
+  [[ "$ok" == 1 ]] || { echo 'El mapa no respondió correctamente; no se activó.' >&2; return 1; }
+}
+case "${1:-help}" in
+  download) routing_tool python3 /tools/map_tools.py download ;;
+  prepare|update)
+    exec 9>"$routing_root/.prepare.lock"
+    flock -n 9 || { echo 'Ya hay una preparación de mapas en curso.' >&2; exit 1; }
+    if [[ "${1}" == update ]]; then routing_tool python3 /tools/map_tools.py download --update; fi
+    if [[ -n "${2:-}" ]]; then
+      source_pbf="$(realpath "$2")"
+      [[ -s "$source_pbf" ]] || { echo 'El archivo PBF no existe o está vacío' >&2; exit 1; }
+      cp "$source_pbf" "$routing_root/downloads/input.osm.pbf"
+      source_name=input.osm.pbf
+    else
+      routing_tool python3 /tools/map_tools.py download
+      source_name=argentina.osm.pbf
+    fi
+    signature="$(sha256sum "$routing_root/downloads/$source_name" | cut -d' ' -f1)-${OSRM_BBOX}-${routing_image}"
+    version="$(printf '%s' "$signature" | sha256sum | cut -c1-20)"
+    if [[ ! -s "$routing_root/releases/$version/manifest.json" ]]; then
+      staging="$(mktemp -d "$routing_root/.build-XXXXXX")"
+      trap 'rm -rf "${staging:-}"' EXIT
+      relative="$(basename "$staging")"
+      routing_tool python3 /tools/map_tools.py extract "/data/downloads/$source_name" "/data/$relative/region.osm.pbf"
+      for step in extract partition customize; do
+        args=("osrm-$step" --threads "${OSRM_THREADS:-2}")
+        [[ "$step" != extract ]] || args+=(-p /opt/car.lua)
+        if [[ "$step" == extract ]]; then args+=(/data/region.osm.pbf); else args+=(/data/region.osrm); fi
+        routing_run --user "$(id -u):$(id -g)" --memory "${OSRM_BUILD_MEMORY:-4g}" --cpus "${OSRM_THREADS:-2}" -v "$staging:/data" "$routing_image" "${args[@]}"
+      done
+      printf '{"version":"%s","image":"%s","bbox":"%s","profile":"car","algorithm":"mld"}\n' "$version" "$routing_image" "$OSRM_BBOX" > "$staging/manifest.json"
+      mv "$staging" "$routing_root/releases/$version"
+      staging=""
+    fi
+    routing_validate "$version"
+    echo "Mapa validado: $version. Activar con: bin/routing activate $version"
+    ;;
+  validate) routing_tool true; routing_validate "${2:?Indicá la versión}" ;;
+  activate)
+    version="${2:?Indicá la versión}"; [[ "$version" =~ ^[a-zA-Z0-9_-]+$ ]] || exit 1
+    routing_tool true; routing_validate "$version"
+    if [[ -L "$routing_root/current" ]]; then readlink "$routing_root/current" > "$routing_root/previous"; fi
+    ln -s "releases/$version" "$routing_root/.current-$$"
+    mv -Tf "$routing_root/.current-$$" "$routing_root/current"
+    echo 'Mapa activo actualizado. Reiniciá OSRM para cargarlo; Rails no necesita reiniciarse.'
+    ;;
+  rollback)
+    previous="$(cat "$routing_root/previous")"
+    [[ "$previous" =~ ^releases/[a-zA-Z0-9_-]+$ ]] || exit 1
+    exec "$0" activate "${previous#releases/}"
+    ;;
+  status) readlink "$routing_root/current"; cat "$routing_root/current/manifest.json" ;;
+  *) echo 'Uso: bin/routing download | prepare [archivo.osm.pbf] | update | validate VERSION | activate VERSION | rollback | status' ;;
+esac

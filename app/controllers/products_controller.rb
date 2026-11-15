@@ -41,6 +41,6 @@ class ProductsController < ManagementController
   end
 
   def product_params
-    params.expect(product: [ :sku, :name, :unit, :package_content_quantity, :package_content_unit, :active ])
+    params.expect(product: [ :sku, :name, :unit_price, :unit_cost, :unit, :package_content_quantity, :package_content_unit, :active ])
   end
 end

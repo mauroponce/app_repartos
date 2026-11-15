@@ -3,6 +3,7 @@
   <div class="field full"><%= form.label :name, "Nombre *" %><%= form.text_field :name, required: true, maxlength: 255 %></div>
   <div class="field"><%= form.label :scheduled_date, "Fecha *" %><%= form.date_field :scheduled_date, required: true, readonly: @delivery_run.generation_key.present? || @delivery_run.visits.any? %></div>
   <div class="field"><%= form.label :driver_id, "Repartidor" %><%= form.collection_select :driver_id, @drivers, :id, :name, include_blank: "Sin asignar" %></div>
+  <div class="field"><%= form.label :vehicle_label, "Vehículo / patente" %><%= form.text_field :vehicle_label, maxlength: 255, readonly: !@delivery_run.editable? %></div>
   <div class="field"><%= form.label :status, "Estado" %><%= form.select :status, DeliveryRun.statuses.keys.map { |status| [operation_status(status), status] } %></div>
   <p class="hint full">Reasignar repartidor conserva paradas, entregas y cantidades. Una hoja finalizada conserva su historial.</p>
   <div class="form-actions full"><%= link_to "Cancelar", delivery_run_path(@delivery_run), class: "btn btn-white" %><%= form.submit "Guardar hoja de ruta", class: "btn btn-dark", data: { turbo_submits_with: "Guardando..." } %></div>

@@ -1,5 +1,7 @@
 class DeliverySchedule < ApplicationRecord
+  include RoutingChangeHooks
   include TenantIntegrity
+  after_commit -> { OpportunityRefreshRequest.call(company_id) }, on: %i[create update destroy]
   # Recurring times are local wall-clock values, independent of UTC offsets.
   self.skip_time_zone_conversion_for_attributes = %i[preferred_time window_start window_end]
   WEEKDAYS = { 1 => "Lunes", 2 => "Martes", 3 => "Miércoles", 4 => "Jueves", 5 => "Viernes", 6 => "Sábado", 7 => "Domingo" }.freeze

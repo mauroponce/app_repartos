@@ -7,6 +7,9 @@
     <div class="field"><%= form.label :window_start, "Franja desde" %><%= form.time_field :window_start, readonly: @delivery_order.visit_id.present? %></div>
     <div class="field"><%= form.label :window_end, "Franja hasta" %><%= form.time_field :window_end, readonly: @delivery_order.visit_id.present? %></div>
     <p class="hint full">Completá un horario puntual o una franja completa. También podés dejar el horario sin definir. Horarios de <%= Current.company.time_zone %>.</p>
+    <div class="field"><%= form.label :load_units, "Unidades de carga" %><%= form.number_field :load_units, required: true, min: 1, max: 1000000, step: 1 %></div>
+    <div class="field"><%= form.label :service_minutes, "Tiempo de descarga (minutos)" %><%= form.number_field :service_minutes, required: true, min: 0, max: 1440, step: 1 %></div>
+    <p class="hint full">Para optimizar, expresá la carga y la capacidad de todos los vehículos en la misma unidad (por ejemplo, cajones). La carga se ingresa por pedido y no se calcula sumando productos de distintas unidades. Valor inicial: 1 unidad y 10 minutos por pedido.</p>
     <% if @delivery_order.visit_id %><p class="drawer-note full">Esta entrega está planificada. Los cambios de mercadería se reflejarán en su parada. Para cambiar fecha, cliente u horario, quitála primero de la hoja.</p><% end %>
     <div class="field full"><%= form.label :notes, "Observaciones" %><%= form.text_area :notes, rows: 3 %></div>
   </div>

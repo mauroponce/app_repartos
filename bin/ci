@@ -1,4 +1,7 @@
 #!/usr/bin/env ruby
+ENV["RAILS_ENV"] ||= "test"
+abort "bin/ci only runs with RAILS_ENV=test" unless ENV["RAILS_ENV"] == "test"
+
 require_relative "../config/boot"
 require "active_support/continuous_integration"
 

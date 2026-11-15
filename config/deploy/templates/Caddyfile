@@ -1,5 +1,0 @@
-# Replace this domain with APP_HOST before installing on the VPS.
-repartos.example.com {
-  encode zstd gzip
-  reverse_proxy 127.0.0.1:3000
-}

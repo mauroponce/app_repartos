@@ -1,0 +1,16 @@
+<% content_for :title, "Operaciones en vivo · App Repartos" %>
+<% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
+<%= turbo_stream_from Current.company, :operations, channel: OperationsChannel %>
+<div class="operations-center" data-controller="operations" data-operations-url-value="<%= operations_snapshot_path %>"
+     data-operations-tiles-value="<%= ENV['OSM_TILES_URL'].presence || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png' %>"
+     data-action="operations:changed@document->operations#schedule visibilitychange@document->operations#refresh online@window->operations#refresh turbo:before-stream-render@document->operations#guardUpdate">
+  <div class="page-heading"><div><div class="eyebrow"><%= l(Current.company.local_date, format: :long) %></div><h1>Operaciones en vivo</h1><p>El avance de los repartos y las entregas de hoy.</p></div><button class="btn btn-secondary" data-action="operations#refresh">Actualizar</button></div>
+  <p class="operations-connection" data-operations-target="status" role="status">Conectando actualizaciones…</p>
+  <%= render "stats", snapshot: @snapshot %>
+  <section class="management-panel"><h2>Repartidores activos</h2><p>Última ubicación compartida. Los puntos grises tienen más de 2 minutos o la ubicación detenida.</p>
+    <div class="operations-map" data-operations-target="map" aria-label="Mapa de última ubicación de repartidores"></div>
+    <p data-operations-target="mapStatus">Todavía no hay ubicaciones compartidas.</p>
+    <small>La PWA comparte ubicación mientras está visible, con permiso del repartidor. El teléfono bloqueado o la app cerrada pueden interrumpir los envíos.</small>
+  </section>
+  <%= render "board", snapshot: @snapshot %>
+</div>

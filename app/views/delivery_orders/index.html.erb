@@ -8,7 +8,7 @@
     <div class="field-search"><%= icon("search", "sm") %><%= form.search_field :q, value: params[:q], placeholder: "Cliente o producto", aria: { label: "Buscar cliente o producto" } %></div>
     <%= form.date_field :date, value: params[:date], aria: { label: "Fecha" } %>
     <%= form.collection_select :customer_id, @customers, :id, :name, { include_blank: "Todos los clientes", selected: params[:customer_id] }, class: "select-filter", aria: { label: "Cliente" } %>
-    <%= form.select :status, [["Todos los estados", ""], ["Pendiente", "pending"], ["Pendiente de planificación", "unplanned"], ["Asignada a hoja", "assigned"], ["Completada", "completed"], ["Cancelada", "cancelled"]], { selected: params[:status] }, class: "select-filter", aria: { label: "Estado" } %>
+    <%= form.select :status, [["Todos los estados", ""], ["Requieren intervención", "intervention"], ["Con faltantes o incidencias (historial)", "needs_attention"], ["Pendiente", "pending"], ["Pendiente de planificación", "unplanned"], ["Asignada a hoja", "assigned"], ["Completada", "completed"], ["Cancelada", "cancelled"]], { selected: params[:status] }, class: "select-filter", aria: { label: "Estado" } %>
     <%= form.collection_select :delivery_run_id, @runs, :id, :name, { include_blank: "Todas las hojas", selected: params[:delivery_run_id] }, class: "select-filter", aria: { label: "Hoja de ruta" } %>
     <%= form.submit "Filtrar", class: "btn btn-white btn-sm" %><%= link_to "Limpiar", delivery_orders_path, class: "text-action" %>
   <% end %>

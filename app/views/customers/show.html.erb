@@ -19,6 +19,7 @@
       <p class="drawer-note">Ubicación pendiente. Editá el cliente para marcar su punto de entrega.</p>
     <% end %>
     <%= render "delivery_schedules" %>
+    <p><%= link_to "Preferencias e historial de comunicaciones", customer_communications_path(@customer), class: "btn btn-white", data: { turbo_frame: "_top" } %></p>
     <div class="form-actions"><%= link_to "Volver a clientes", customers_path, class: "btn btn-white", data: { action: "modal#close" } %><%= link_to edit_customer_path(@customer), class: "btn btn-dark", data: { turbo_frame: "modal" } do %><%= icon("edit") %>Editar cliente<% end %></div>
   </dialog>
 <% end %>

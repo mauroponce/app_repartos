@@ -1,0 +1,6 @@
+<% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
+<div class="workflow-live" data-controller="workflow-live" data-workflow-live-counts-url-value="<%= workflow_counts_path %>" data-action="workflow:changed@document->workflow-live#schedule">
+  <%= turbo_stream_from Current.company, :workflow_admin, channel: "WorkflowChannel" %>
+  <span role="status" data-workflow-live-target="status">Actualización automática activa.</span>
+  <button type="button" class="text-action" data-action="workflow-live#reload">Actualizar pantalla</button>
+</div>

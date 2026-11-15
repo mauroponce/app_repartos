@@ -26,8 +26,8 @@ Rails.application.configure do
   # Render exception templates for rescuable exceptions and raise for other exceptions.
   config.action_dispatch.show_exceptions = :rescuable
 
-  # Disable request forgery protection in test environment.
-  config.action_controller.allow_forgery_protection = false
+  # Browser tests exercise real session/CSRF behavior; Minitest manages it per test.
+  config.action_controller.allow_forgery_protection = ENV["PWA_BROWSER_TEST"] == "1"
 
   # Store uploaded files on the local file system in a temporary directory.
   config.active_storage.service = :test

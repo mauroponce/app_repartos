@@ -1,0 +1,20 @@
+<% content_for :title, "Incidencia ##{@incident.id}" %>
+<div class="heading"><div><div class="eyebrow">Incidencia #<%= @incident.id %></div><h1><%= Incident::KINDS.fetch(@incident.kind) %></h1><p>La ejecución original se conserva. Las decisiones quedan documentadas aparte.</p></div><%= link_to "Volver a incidencias", incidents_path, class: "btn btn-white" %></div>
+<%= render "workflows/live" %>
+<div id="workflow-results">
+  <%= render "workflows/incident_context", incident: @incident %>
+  <section class="management-panel"><h2>Pedidos y comprobante</h2><% Array(@incident.context["order_ids"]).each do |id| %><%= link_to "Pedido ##{id}", delivery_order_path(id), class: "btn btn-white" %><% end %><% if @incident.visit && !@incident.visit.pending? %><%= link_to "Comprobante y cantidades finales", delivery_receipt_path(@incident.visit), class: "btn btn-white" %><% end %><% if @incident.customer %><%= link_to "Ver cliente", customer_path(@incident.customer), class: "btn btn-white" %><% end %></section>
+  <% unless @incident.terminal? %><section class="management-panel"><h2>Registrar decisión</h2>
+    <%= form_with url: act_incident_path(@incident), class: "field-grid management-form" do |f| %>
+      <%= f.hidden_field :operation_id, value: SecureRandom.uuid %><%= hidden_field_tag "decision[version]", @incident.lock_version %>
+      <div class="field"><%= label_tag "decision_action", "Acción" %><%= select_tag "decision[action]", options_for_select(WorkflowActions::INCIDENT_ACTIONS.map { |key, label| [label, key] }), id: "decision_action" %></div>
+      <div class="field"><%= label_tag "decision_responsible_id", "Responsable de la incidencia" %><%= select_tag "decision[responsible_id]", options_from_collection_for_select(@staff.select(&:manages_customers?), :id, :name, @incident.assigned_to_id), include_blank: "Mantener responsable" %></div>
+      <div class="field"><%= label_tag "decision_assignee_id", "Responsable de la tarea de seguimiento" %><%= select_tag "decision[assignee_id]", options_from_collection_for_select(@staff, :id, :name), include_blank: "Repartidor de la incidencia" %></div>
+      <div class="field"><%= label_tag "decision_due_at", "Vencimiento del seguimiento" %><%= datetime_local_field_tag "decision[due_at]" %></div>
+      <div class="field"><%= label_tag "decision_date", "Nueva fecha (para reprogramar)" %><%= date_field_tag "decision[date]", nil, min: Current.company.local_date.to_s %></div>
+      <div class="field full"><%= label_tag "decision_message", "Instrucción, decisión o motivo *" %><%= text_area_tag "decision[message]", nil, required: true, maxlength: 4000, rows: 3 %></div><div class="form-actions full"><%= f.submit "Registrar decisión y avisar", class: "btn btn-dark" %></div>
+    <% end %><p class="hint">Reprogramar una entrega ejecutada crea una entrega nueva con los faltantes conocidos. Un reintento es una instrucción de seguimiento y no reabre la visita.</p>
+  </section><% else %><section class="management-panel"><h2>Cierre</h2><p><%= @incident.resolution %></p><p><%= workflow_date(@incident.resolved_at) %></p></section><% end %>
+  <section class="management-panel"><h2>Tareas de seguimiento</h2><%= render "workflow_tasks/list", tasks: @tasks %></section>
+  <section class="management-panel"><h2>Historial de acciones</h2><%= render "workflows/history", events: @events %></section>
+</div>

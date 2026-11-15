@@ -54,7 +54,11 @@ class DeliveryOrderTest < ActiveSupport::TestCase
   test "completed orders and their original quantities are immutable" do
     order = build_order
     order.save!
-    order.update!(status: :completed)
+    run = companies(:one).delivery_runs.new(name: "Completa", scheduled_date: order.scheduled_date)
+    DeliveryRunPlanner.call(company: companies(:one), delivery_run: run, order_ids: [ order.id ])
+    visit = order.reload.visit
+    visit.update!(status: :completed, confirmed_by: users(:one), delivery_items_attributes: [ { id: visit.delivery_items.first.id, delivered_quantity: 2 } ])
+    assert order.reload.completed?
     assert_not order.update(notes: "Overwrite")
     assert_not order.delivery_order_items.first.update(quantity: 4)
     assert_not order.destroy

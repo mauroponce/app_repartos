@@ -4,10 +4,17 @@
   <% if visit.notes.present? %><p><%= visit.notes %></p><% end %>
   <div class="tiny-actions"><%= link_to "Navegar", driver_navigation_url(visit), target: "_blank", rel: "noopener noreferrer" %><%= link_to "Llamar al cliente", "tel:#{visit.customer.phone.gsub(/[^+\d]/, '')}" if visit.customer.phone.present? %></div>
   <% if visit.pending? %>
-    <%= form_with scope: :visit, url: repartidor_visit_path(visit), method: :patch, data: { action: "submit->repartidor#submitVisit" } do |form| %>
+    <%= form_with scope: :visit, url: repartidor_visit_path(visit), method: :patch, authenticity_token: false, data: { controller: "delivery-proof visit-timing", visit_timing_recorded_value: visit.attributes.slice(*Visit::TIMING_FIELDS).compact.to_json, action: "submit->repartidor#submitVisit", visit_id: visit.id, work_snapshot: DriverWorkSnapshot.recording_data(user: Current.user, visit: visit) } do |form| %>
       <% if @invalid_visit_id == visit.id %><p class="validation-errors" role="alert"><%= @recording_error %></p><% end %>
+      <section class="visit-timing"><h3>Horarios reales de la visita</h3>
+        <% { "arrived_at" => "Registrar llegada", "unloading_started_at" => "Iniciar descarga", "unloading_finished_at" => "Finalizar descarga" }.each do |stage, label| %>
+          <button type="button" class="btn btn-secondary" data-visit-timing-target="step" data-checkpoint="<%= stage %>" data-label="<%= label %>" data-action="visit-timing#record"><%= label %></button>
+        <% end %>
+        <p role="status" data-visit-timing-target="status">Registrá cada etapa cuando ocurra; funciona sin conexión. Los horarios son opcionales y no se deducen del cierre.</p>
+      </section>
       <div class="record-fields">
-        <label>Resultado de la visita<%= form.select :status, [["Entrega realizada", "completed"], ["Cliente ausente", "not_attended"], ["Comercio cerrado", "closed"], ["Reprogramar", "rescheduled"]], { selected: @invalid_visit_id == visit.id ? @submitted&.dig(:status) : "completed" }, data: { action: "change->repartidor#resultChanged" } %></label>
+        <label>Resultado de la visita<%= form.select :status, [["Entrega realizada", "completed"], ["Cliente ausente", "not_attended"], ["Comercio cerrado", "closed"], ["Reprogramar", "rescheduled"], ["Entrega rechazada", "rejected"]], { selected: @invalid_visit_id == visit.id ? @submitted&.dig(:status) : "completed" }, data: { action: "change->repartidor#resultChanged" } %></label>
+        <label>Motivo (obligatorio si la entrega es parcial o fallida)<select data-delivery-proof-target="reason" data-action="change->delivery-proof#reasonChanged"><option value="">Sin incidencia</option><% Visit::FAILURE_REASONS.each do |value, label| %><option value="<%= value %>"><%= label %></option><% end %></select></label>
         <div data-quantities>
           <p>Registrá lo que entregaste de cada producto. Si no entregaste un producto, ingresá 0.</p>
           <% visit.delivery_items.each do |item| %>
@@ -19,13 +26,26 @@
           <% end %>
         </div>
         <label>Observaciones / motivo de la incidencia<%= form.text_area :notes, value: @invalid_visit_id == visit.id ? @submitted&.dig(:notes) : nil, rows: 3, maxlength: 4000, placeholder: "Indicaciones o motivo de la visita sin entrega" %></label>
+        <fieldset class="proof-fields"><legend>Comprobante digital</legend>
+          <label>Fotografías de la entrega o incidencia (opcional)<input type="file" accept="image/*" multiple data-delivery-proof-target="photos" data-action="change->delivery-proof#photosChanged"></label>
+          <small>Hasta 4 fotos. Se reducen a un máximo de 2 MB cada una y se guardan con la visita. Hasta 50 MB de archivos pendientes por cuenta en este dispositivo.</small>
+          <p role="status" data-delivery-proof-target="message"></p><div class="proof-previews" data-delivery-proof-target="previews"></div>
+          <button type="button" class="btn btn-secondary" data-delivery-proof-target="discardError" data-action="delivery-proof#discardPhotoError" hidden>Descartar selección fallida</button>
+          <label>Nombre del receptor (opcional)<input type="text" maxlength="120" autocomplete="off" data-delivery-proof-target="receiver"></label>
+          <p>Firma del receptor (opcional)</p>
+          <canvas width="600" height="200" class="signature-pad" aria-label="Firma opcional del receptor: dibujar con el dedo, lápiz o mouse" data-delivery-proof-target="signature" data-action="pointerdown->delivery-proof#signatureStart pointermove->delivery-proof#signatureMove pointerup->delivery-proof#signatureEnd pointercancel->delivery-proof#signatureEnd"></canvas>
+          <button type="button" class="btn btn-secondary" data-action="delivery-proof#clearSignature">Borrar firma</button>
+          <button type="button" class="btn btn-secondary" data-delivery-proof-target="locationButton" data-action="delivery-proof#captureLocation">Registrar ubicación actual</button>
+          <p role="status" data-delivery-proof-target="locationStatus">La ubicación es opcional y requiere tu permiso.</p>
+        </fieldset>
         <label class="choice"><input type="checkbox" required> Confirmo que los datos de esta visita son correctos.</label>
       </div>
-      <p class="modal-note">Al guardar se cierra la visita y se conservan las cantidades registradas. Necesitás conexión.</p>
+      <p class="modal-note">Primero se guarda en este dispositivo; el servidor confirma la sincronización cuando hay conexión.</p>
       <div class="modal-footer"><button type="button" class="btn btn-secondary" data-action="repartidor#closeDialog">Cancelar</button><%= form.submit "Guardar visita", class: "btn btn-primary", data: { repartidor_target: "saveButton" } %></div>
     <% end %>
   <% else %>
     <p><b><%= operation_status(visit.status) %></b> · Visita finalizada</p>
     <% visit.delivery_items.each do |item| %><div class="record-item"><span><strong><%= item.description %></strong><small><%= DeliveryUnits::LABELS.fetch(item.unit) %></small></span><strong><%= quantity_text(item.delivered_quantity) %> / <%= quantity_text(item.planned_quantity) %></strong></div><% end %>
   <% end %>
+  <%= render "driver_workflows/report_form", visit: visit %>
 </dialog>

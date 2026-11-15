@@ -1,0 +1,20 @@
+<% publication = @delivery_run.route_publication %>
+<section class="management-panel" data-controller="route-publication" data-route-publication-url-value="<%= delivery_run_route_publication_path(@delivery_run) %>" data-route-publication-state-value="<%= publication&.state || 'manual' %>">
+  <p role="status" data-route-publication-target="message"></p>
+  <% if publication&.state == "pending" %>
+    <h2 role="status">Preparando recorrido</h2><p>Podés seguir trabajando. La hoja estará disponible para el repartidor cuando termine el cálculo y se confirme el orden definitivo.</p>
+  <% elsif publication&.state == "failed" %>
+    <h2 role="status">No se pudo preparar el recorrido</h2><p class="form-error"><%= publication.error_message %></p><p>La hoja todavía no se publicó. Revisá las ubicaciones y horarios, reintentá o elegí el orden manual.</p>
+  <% elsif publication&.state == "ready" %>
+    <h2>Recorrido confirmado</h2><p>El orden definitivo está publicado. Consultar la hoja reutiliza el resultado guardado.</p>
+    <% if publication.proposal %><%= link_to "Ver recorrido y estimaciones", delivery_run_optimization_proposal_path(@delivery_run, publication.proposal), class: "text-action" %><% end %>
+  <% else %>
+    <h2>Confirmar recorrido</h2><p>Al confirmar, calculamos el orden en segundo plano y publicamos la hoja cuando esté lista. También podés conservar tu orden manual.</p>
+  <% end %>
+  <% if editable %>
+    <div class="form-actions route-proposal-actions">
+      <% unless publication&.state.in?(%w[pending ready]) %><%= button_to "Confirmar y optimizar", delivery_run_route_publication_path(@delivery_run), class: "btn btn-dark", data: { turbo_submits_with: "Confirmando…" } %><% end %>
+      <% unless publication&.state == "ready" %><%= button_to "Publicar con orden manual", manual_delivery_run_route_publication_path(@delivery_run), class: "btn btn-white", data: { turbo_confirm: "¿Publicar el orden actual sin aplicar una optimización pendiente?" } %><% end %>
+    </div>
+  <% end %>
+</section>

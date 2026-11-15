@@ -1,0 +1,21 @@
+<% content_for :title, "Comunicaciones · #{@customer.name}" %>
+<% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
+<div class="heading"><div><div class="eyebrow"><%= @customer.name %></div><h1>Preferencias de comunicación</h1><p>Registrá la autorización del cliente para cada canal y finalidad.</p></div><%= link_to "Volver al cliente", customer_path(@customer), class: "btn btn-white" %></div>
+<section class="management-panel"><h2>Autorizaciones actuales</h2>
+  <% CommunicationConsent::CHANNELS.each do |channel, label| %><% CommunicationConsent::PURPOSES.each do |purpose, title| %>
+    <p><strong><%= label %> · <%= title %></strong>: <%= CommunicationConsent.allowed?(customer: @customer, channel: channel, purpose: purpose) ? "Autorizado para el contacto actual" : "Sin autorización vigente para el contacto actual" %></p>
+  <% end %><% end %>
+  <%= form_with url: customer_communications_path(@customer), scope: :consent, class: "field-grid management-form" do |form| %>
+    <div class="field"><%= form.label :channel, "Canal" %><%= form.select :channel, CommunicationConsent::CHANNELS.map { |key, label| [label, key] } %></div>
+    <div class="field"><%= form.label :purpose, "Finalidad" %><%= form.select :purpose, CommunicationConsent::PURPOSES.map { |key, label| [label, key] } %></div>
+    <div class="field"><%= form.label :decision, "Decisión del cliente" %><%= form.select :decision, [["Autoriza", "granted"], ["Revoca autorización", "revoked"]], { prompt: "Elegí la decisión recibida" }, required: true %></div>
+    <div class="field full"><%= form.label :evidence, "Evidencia / referencia de la autorización o revocación" %><%= form.text_area :evidence, required: true, maxlength: 500 %></div>
+    <div class="form-actions full"><%= form.submit "Registrar decisión", class: "btn btn-dark" %></div>
+  <% end %>
+  <p class="hint">Un cambio de teléfono o email requiere registrar autorización para el contacto nuevo. Las decisiones anteriores se conservan.</p>
+</section>
+<section class="management-panel"><h2>Historial de decisiones</h2><% @consents.each do |consent| %><p><strong><%= l(consent.created_at, format: :short) %> · <%= consent.user.name %></strong> · <%= CommunicationConsent::CHANNELS[consent.channel] %> · <%= CommunicationConsent::PURPOSES[consent.purpose] %> · <%= consent.decision == "granted" ? "Autoriza" : "Revoca" %> · <%= consent.recipient.presence || "Contacto sin informar" %><br><%= consent.evidence %></p><% end %></section>
+<section class="management-panel"><h2>Trazabilidad de notificaciones</h2><p>Una solicitud registrada, la aceptación del proveedor y la entrega confirmada se muestran como resultados distintos.</p>
+  <% if @notifications.empty? %><p>No hay notificaciones registradas para este cliente.</p><% end %>
+  <% @notifications.each do |notification| %><article><h3><%= notification.template_key %> · <%= notification.channel %> · <%= notification.recipient.presence || "Sin destinatario" %></h3><% notification.notification_events.each do |event| %><p><%= l(event.occurred_at, format: :short) %> · <%= NotificationEvent::STATUSES[event.status] %> · <%= event.provider %> · <%= event.error_code %></p><% end %></article><% end %>
+</section>

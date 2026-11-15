@@ -114,7 +114,7 @@ class DeliveryManagementControllerTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_select "td", text: "-2"
     assert visit.reload.completed_at
-    assert order.reload.completed?
+    assert order.reload.needs_attention?
   end
 
   test "manual runs and visits support manual products and invalid delivery feedback" do

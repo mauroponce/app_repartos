@@ -36,7 +36,7 @@ class DeliveryPlanningFlowTest < ActionDispatch::IntegrationTest
     get delivery_order_path(order)
     assert_select "td", text: "18"
     assert_select "td", text: "-2"
-    assert order.reload.completed?
+    assert order.reload.needs_attention?
     assert_no_difference [ "DeliveryRun.count", "Visit.count", "DeliveryItem.count" ] do
       post delivery_runs_path, params: { delivery_run: { name: "Duplicada", scheduled_date: "2026-11-17" }, order_ids: [ order.id ] }
       assert_response :unprocessable_entity

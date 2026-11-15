@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+if [[ "${1:-}" == --fixture ]]; then
+  bin/prepare-test-routing
+  docker compose -f compose.yml -f compose.osrm-test.yml up -d osrm-test
+  docker compose exec -T -e OSRM_URL=http://osrm-test:5000 web bin/rails runner test/osrm_live/run.rb
+else
+  docker compose exec -T web bin/rails runner test/osrm_live/run.rb
+fi

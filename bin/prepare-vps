@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# Explicit bootstrap for a NEW Ubuntu 24.04 VPS. Run as root after SSH key setup.
+set -euo pipefail
+[[ "$EUID" == 0 ]] || { echo 'Ejecutá como root/sudo' >&2; exit 1; }
+source /etc/os-release
+[[ "$ID" == ubuntu && "$VERSION_ID" == 24.04 ]] || { echo 'Este script está preparado para Ubuntu 24.04 LTS' >&2; exit 1; }
+: "${DEPLOY_SSH_USER:?Indicá el usuario existente de despliegue}"
+: "${SSH_ALLOW_CIDR:?Indicá tu IP/CIDR autorizado para SSH}"
+[[ "$DEPLOY_SSH_USER" =~ ^[a-z_][a-z0-9_-]*$ ]] || exit 1
+id "$DEPLOY_SSH_USER" >/dev/null
+deploy_home="$(getent passwd "$DEPLOY_SSH_USER" | cut -d: -f6)"
+[[ -s "$deploy_home/.ssh/authorized_keys" ]] || { echo 'Instalá y verificá primero la clave SSH del usuario de despliegue' >&2; exit 1; }
+apt-get update
+apt-get install --no-install-recommends -y ca-certificates curl ufw rsync
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+chmod a+r /etc/apt/keyrings/docker.asc
+cat > /etc/apt/sources.list.d/docker.sources <<EOF
+Types: deb
+URIs: https://download.docker.com/linux/ubuntu
+Suites: noble
+Components: stable
+Architectures: $(dpkg --print-architecture)
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF
+apt-get update
+apt-get install --no-install-recommends -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+systemctl enable --now docker
+usermod -aG docker "$DEPLOY_SSH_USER"
+install -d -m 0755 /var/lib/app-repartos
+install -d -m 0750 -o 1000 -g 1000 /var/lib/app-repartos/storage
+install -d -m 0755 -o "$DEPLOY_SSH_USER" -g "$(id -gn "$DEPLOY_SSH_USER")" /var/lib/app-repartos/routing
+install -d -m 0750 /var/lib/app-repartos/postgres
+install -d -m 0700 /var/backups/app-repartos
+cat > /etc/ssh/sshd_config.d/00-app-repartos.conf <<'SSH'
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitRootLogin no
+SSH
+sshd -t
+ufw default deny incoming
+ufw default allow outgoing
+ufw allow from "$SSH_ALLOW_CIDR" to any port "${SSH_PORT:-22}" proto tcp
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw --force enable
+systemctl reload ssh
+echo 'Preparación completa. Conservá esta sesión y comprobá acceso con clave en otra terminal. Volvé a iniciar sesión para activar el grupo docker.'

@@ -8,7 +8,8 @@
     <meta name="apple-mobile-web-app-title" content="Repartos">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="turbo-cache-control" content="no-cache">
-    <%= csrf_meta_tags %>
+    <meta name="offline-account" content="<%= Current.user ? "#{Current.company.id}:#{Current.user.id}" : "shell" %>">
+    <%= csrf_meta_tags unless @public_shell %>
     <%= csp_meta_tag %>
     <%= tag.link rel: "manifest", href: repartidor_manifest_path %>
     <link rel="icon" href="/repartidor/icon-192.png" type="image/png">

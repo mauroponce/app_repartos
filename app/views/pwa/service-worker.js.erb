@@ -1,0 +1,26 @@
+const CACHE = "repartidor-offline-<%= @cache_version %>"
+const SHELL = "/repartidor/shell"
+const ASSETS = <%= raw @asset_urls.to_json %>
+const ALLOWED = new Set([...ASSETS, SHELL, "/repartidor/manifest.webmanifest", "/repartidor/icon-192.png", "/repartidor/icon-512.png"])
+self.addEventListener("install", event => {
+  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll([...ALLOWED])).then(() => self.skipWaiting()))
+})
+self.addEventListener("activate", event => {
+  // Private data/queues live in IndexedDB. Cache updates never touch them.
+  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith("repartidor-offline-") && key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim()))
+})
+self.addEventListener("message", event => {
+  if (event.data?.type === "OFFLINE_STATUS") event.waitUntil(caches.open(CACHE).then(async cache => {
+    event.ports[0]?.postMessage({ prepared: Boolean(await cache.match(SHELL)), version: CACHE })
+  }))
+})
+self.addEventListener("fetch", event => {
+  const url = new URL(event.request.url)
+  if (event.request.method !== "GET" || url.origin !== self.location.origin) return
+  if (ALLOWED.has(url.pathname)) {
+    event.respondWith(caches.open(CACHE).then(async cache => (await cache.match(event.request)) || fetch(event.request)))
+  } else if (event.request.mode === "navigate" && ["/repartidor", "/repartidor/"].includes(url.pathname)) {
+    event.respondWith(fetch(event.request, { signal: AbortSignal.timeout(5000) }).then(response => response.status >= 500 ? caches.match(SHELL) : response).catch(() => caches.match(SHELL)))
+  }
+  // No authenticated HTML, APIs, mutations, remote assets or map tiles enter Cache Storage.
+})

@@ -1,0 +1,5 @@
+<div class="heading"><div><h1>Sincronizaciones para revisar</h1><p>Intentos preservados sin sobrescribir la ejecución del servidor.</p></div></div>
+<section class="management-panel"><% @operations.each do |operation| %>
+  <p><%= link_to "Visita ##{operation.visit_id} · #{operation.user.name}", driver_sync_operation_path(operation), class: "text-action" %> · <%= operation.status == "conflict" ? "Conflicto" : "Error de validación" %> · <%= l(operation.created_at, format: :short) %></p>
+<% end %><% if @operations.empty? %><p>No hay operaciones para revisar.</p><% end %></section>
+<nav class="table-footer" aria-label="Paginación"><span>Página <%= @page %> de <%= @pages %></span><% if @page > 1 %><%= link_to "Anterior", driver_sync_operations_path(page: @page - 1) %><% end %><% if @page < @pages %><%= link_to "Siguiente", driver_sync_operations_path(page: @page + 1) %><% end %></nav>

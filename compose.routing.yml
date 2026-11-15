@@ -1,0 +1,22 @@
+# Optional existing multi-vehicle VROOM stack. Prepare/activate OSRM with
+# bin/routing, then:
+# docker compose -f compose.yml -f compose.routing.yml up -d osrm vroom web
+services:
+  web:
+    environment:
+      VROOM_URL: http://vroom:3000
+      OSRM_URL: http://osrm:5000
+  worker:
+    environment:
+      OSRM_URL: http://osrm:5000
+  osrm:
+    profiles: []
+    command: ["osrm-routed", "--algorithm", "mld", "--mmap=true", "--max-table-size", "1000", "/data/current/region.osrm"]
+  vroom:
+    image: ghcr.io/vroom-project/vroom-docker:v1.15.0
+    environment:
+      VROOM_ROUTER: osrm
+    volumes:
+      - ./config/routing/vroom.yml:/conf/config.yml:ro
+    depends_on:
+      - osrm

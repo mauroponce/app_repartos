@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+docker image inspect app-repartos-routing-tools:bookworm >/dev/null 2>&1 || docker build -t app-repartos-routing-tools:bookworm config/routing/tools
+mkdir -p tmp/routing-test-input tmp/routing-test-map
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD/test/osrm_live:/fixture:ro" -v "$PWD/tmp/routing-test-input:/output" app-repartos-routing-tools:bookworm osmium cat /fixture/fixture.osm -o /output/fixture.osm.pbf --overwrite
+OSRM_DATA_DIR="$PWD/tmp/routing-test-map" OSRM_BBOX="" OSRM_BUILD_MEMORY=512m bin/routing prepare "$PWD/tmp/routing-test-input/fixture.osm.pbf"
+version="$(find tmp/routing-test-map/releases -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort | tail -n 1)"
+OSRM_DATA_DIR="$PWD/tmp/routing-test-map" bin/routing activate "$version"

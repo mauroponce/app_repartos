@@ -1,6 +1,10 @@
 # App Repartos
 
-Monolito Rails **8.1.4.1**, Ruby **3.4.12**, PostgreSQL **18**, Hotwire (Turbo + Stimulus), Tailwind CSS y **Solid Queue**. Desarrollo con Docker Compose; producción prevista en Hetzner con Capistrano, Puma y systemd. Sin Sidekiq, Redis ni Kamal.
+Monolito Rails **8.1.4.1**, Ruby **3.4.12**, PostgreSQL **18**, Hotwire (Turbo + Stimulus), Tailwind CSS y **Solid Queue**. Desarrollo con Docker Compose; producción preparada para un único VPS Hetzner con Docker, Kamal 2, Puma y Kamal Proxy. Sin Sidekiq, Redis ni servicios de optimización comerciales.
+
+Alcance del producto, cobertura AMBA, pasos para ofrecerlo en otras provincias y condiciones de uso: [Decisiones y limitaciones funcionales](docs/decisiones_y_limitaciones_funcionales.md).
+
+Los estados, el cumplimiento por producto, la reprogramación y la autoría de las visitas están documentados en [Entregas y auditoría](docs/entregas_y_auditoria.md).
 
 ## Desarrollo local
 
@@ -39,6 +43,24 @@ docker compose down
 
 `docker compose down` conserva los datos. Agregar `--volumes` elimina las bases locales. Tras cambiar Gemfile/Gemfile.lock, reconstruir la imagen y actualizar el volumen de gems con `docker compose run --rm --no-deps setup bundle install` antes de iniciar los servicios.
 
+## Integración continua
+
+GitHub Actions ejecuta `bin/ci` en cada push y pull request: prepara ambas bases PostgreSQL 18, compila CSS y verifica Minitest, JavaScript, navegación offline con Chromium, RuboCop, Brakeman y las auditorías de gems, importmap y npm. Cualquier fallo deja el pipeline en rojo. Usa Ruby de `.ruby-version` (3.4.12), Node 24.19.0 y los lockfiles; no incluye deploy.
+
+Para ejecutar las mismas comprobaciones localmente, incluidos el navegador y sus dependencias, sólo se necesita Docker Compose:
+
+```sh
+docker compose -f compose.ci.yml up --build --abort-on-container-exit --exit-code-from ci
+```
+
+El comando devuelve el código de salida de CI. El proyecto Compose `app_repartos_ci` usa PostgreSQL temporal, sin puertos públicos ni volúmenes compartidos con desarrollo. Después de revisar el resultado:
+
+```sh
+docker compose -f compose.ci.yml down --volumes --remove-orphans
+```
+
+Detalles de las comprobaciones, diagnóstico de fallos y ejecución sin contenedor: [CI](docs/ci.md).
+
 ## Funcionalidad inicial
 
 - Inicio y cierre de sesión con el generador de autenticación de Rails.
@@ -49,38 +71,48 @@ docker compose down
 
 Las consultas y altas parten de `Current.company.customers`. La empresa se resuelve desde la sesión autenticada y no se acepta en los parámetros del formulario. Las claves foráneas y restricciones de estado/rol refuerzan la integridad en PostgreSQL. Los índices del directorio empiezan por `company_id`. Al agregar nuevas funciones, sus consultas, autorizaciones, streams y jobs también deben respetar la empresa; los jobs deben recibir un identificador explícito y no depender del contexto HTTP de `Current`.
 
-El diseño usa `docs/mockups/dashboard_admin.html`. Se revisó también `docs/mockups/pwa_repartidores.html`: la PWA offline, rutas, repartos, visitas y sincronización quedan para las siguientes etapas. Las métricas actuales muestran datos reales del directorio, sin simular repartos todavía inexistentes. La dirección corresponde al lugar de entrega del comercio, según el modelo de distribuidora del resumen técnico.
+El diseño usa `docs/mockups/dashboard_admin.html`. La interfaz del repartidor conserva `docs/mockups/pwa_repartidores.html` como referencia y ya permite trabajar offline con sincronización segura. Las métricas actuales muestran datos reales del directorio, sin simular repartos todavía inexistentes. La dirección corresponde al lugar de entrega del comercio, según el modelo de distribuidora del resumen técnico.
 
 ## Solid Queue
 
 Corre como proceso independiente (`worker`, comando `bin/jobs`). Usa una base de jobs separada (`app_repartos_development_queue`) dentro del mismo servidor PostgreSQL. La base principal guarda los datos del negocio. `db:prepare` crea ambas; `db/queue_schema.rb`, `config/queue.yml` y `config/recurring.yml` definen la infraestructura de la cola. Los tests de comportamiento usan el adaptador de Active Job `test`.
 
-## Hetzner / Capistrano
+## Producción con Kamal
 
-Esta primera etapa incluye configuración y plantillas; **no se realizó un despliegue ni se aprovisionó un VPS**. Hay que definir repositorio Git, host y dominio reales antes de preparar producción.
+El procedimiento oficial es Docker + Kamal 2.12, con PostgreSQL 18, worker Solid Queue, OSRM y Kamal Proxy en el mismo VPS. El registry local de Kamal mantiene privadas las imágenes sin contratar un registro. No se realizó un despliegue real: IP, dominio, usuario SSH y secretos deben aportarse para el servidor elegido.
 
-El contrato de las plantillas en `config/deploy/templates/` es Ubuntu LTS, usuario `deploy`, Ruby/Bundler en `/opt/ruby/bin`, aplicación en `/var/www/app_repartos`, PostgreSQL local y Caddy apuntando a Puma en `127.0.0.1:3000`. La producción ejecuta Rails y Solid Queue directamente con systemd.
+La imagen `production` escucha en `0.0.0.0:3000`, compila assets y corre sin root. PostgreSQL y OSRM no publican puertos. Los adjuntos privados se conservan en un volumen del VPS; una instalación que ya usa R2 puede seleccionar explícitamente ese servicio, sin perder la integración existente.
 
-Antes del primer despliegue:
-
-1. Preparar Ruby y dependencias del sistema (compilador, libpq, libvips), PostgreSQL y Caddy. Crear las bases `app_repartos_production` y `app_repartos_production_queue` y el usuario de la aplicación.
-2. Crear `/var/www/app_repartos/shared/.env.production` basándose en `.env.example`, con las dos URLs de base de datos y un `SECRET_KEY_BASE` generado con `bin/rails secret`. Usar permisos `600` para `deploy`. No subirlo a Git. El archivo debe ser compatible con Bash y systemd (`CLAVE=valor`, sin `export`; entrecomillar valores cuando corresponda).
-3. Ajustar e instalar las unidades systemd y el dominio en Caddy. Autorizar a `deploy` mediante sudoers únicamente a reiniciar los dos servicios. Verificar la clave SSH del servidor y el acceso de lectura al repositorio.
-4. Crear el primer usuario y empresa con credenciales propias. Los seeds de desarrollo no se ejecutan en producción. No se incluyó registro público ni recuperación de contraseña en esta etapa.
-5. Definir y probar backups y restauración de ambas bases y del almacenamiento antes de usar datos reales.
-
-Con esos requisitos resueltos, desde el equipo que despliega:
+Comprobaciones locales:
 
 ```sh
-export DEPLOY_REPO_URL=git@github.com:ORGANIZACION/REPOSITORIO.git
-export DEPLOY_HOST=HOST_REAL
-export DEPLOY_USER=deploy
-bundle exec cap production deploy:check
-bundle exec cap production deploy
+docker build --target production -t app-repartos-production:verify .
+docker compose exec web bin/validate-deploy
 ```
 
-Capistrano instala gems, compila assets, migra las bases y publica releases; después reinicia Puma y Solid Queue. `bin/bundle-production` carga el archivo compartido de entorno para los comandos remotos. `DEPLOY_BRANCH` permite elegir una rama (predeterminado: `main`). No ejecutar seeds demo en producción. La conexión y el despliegue real deben verificarse contra el VPS cuando esté definido.
+Preparación de Ubuntu, secretos, primer despliegue, migraciones, actualización, rollback y restauración: [Producción con Kamal](docs/produccion_kamal.md). No hay dos procedimientos de producción: se retiraron las dependencias y plantillas anteriores de Capistrano.
 
+## OSRM y optimización de una hoja existente
+
+La planificación manual y la distribución multivehículo existente con VROOM se conservan. Desde el detalle de una hoja editable, **Optimizar ruta** solicita una propuesta en Solid Queue. Compara conducción vial, distancia, atención, espera, horarios y restricciones. Confirmar cambia únicamente posiciones mediante `DeliveryRunReorderer`; una propuesta desactualizada no se aplica.
+
+**Confirmar y optimizar**, disponible en el cierre del asistente y en una hoja editable, prepara y publica el orden definitivo en segundo plano. La PWA espera ese resultado; las modificaciones relevantes solicitan otra preparación antes de la ejecución. Las matrices viales, soluciones y trazados se reutilizan por empresa y versión de mapa. Cambiar nombres, precios o cantidades no obliga a repetir la optimización. También se puede publicar expresamente el orden manual.
+
+Preparación explícita del mapa AMBA (primera vez):
+
+```sh
+bin/routing download
+bin/routing prepare
+# El comando anterior imprime VERSION; usar ese valor en el siguiente comando.
+bin/routing activate VERSION
+docker compose --profile routing up -d osrm web worker css
+bin/test-osrm
+docker compose exec web bin/rails db:seed
+```
+
+Los seeds agregan escenarios **Demo OSRM** sin reemplazar datos existentes. OSRM nunca descarga/procesa mapas durante `docker compose up`, ni bloquea el arranque del panel. Sin OSRM, los cálculos fallan con un mensaje recuperable y la planificación manual sigue disponible.
+
+Documentación de mapas, algoritmo, límites, configuración, tests reales y benchmarks: [OSRM y optimización](docs/osrm.md).
 
 ## Direcciones y coordenadas
 
@@ -98,4 +130,14 @@ docker compose exec web bin/rails db:migrate
 
 Leaflet y su CSS se sirven localmente desde el proyecto, con su licencia en `vendor/javascript/leaflet.LICENSE`. Photon y las imágenes del mapa requieren conexión. `PHOTON_URL` y `OSM_TILES_URL` permiten apuntar a instancias propias (reiniciar/recrear los servicios tras cambiar variables). Valores predeterminados: `https://photon.komoot.io/api/` y `https://tile.openstreetmap.org/{z}/{x}/{y}.png`.
 
-La integración usa el [API de Photon](https://github.com/komoot/photon/blob/master/docs/api-v1.md), cuyo [servidor público](https://github.com/komoot/photon#demo-server) no garantiza disponibilidad y puede limitar uso intensivo. El mapa conserva la atribución de OpenStreetMap y utiliza la caché normal del navegador, sin descargas anticipadas ni almacenamiento offline de tiles; ver la [política de tiles](https://operations.osmfoundation.org/policies/tiles/). Los datos de reparto offline de la futura PWA son una función independiente.
+La integración usa el [API de Photon](https://github.com/komoot/photon/blob/master/docs/api-v1.md), cuyo [servidor público](https://github.com/komoot/photon#demo-server) no garantiza disponibilidad y puede limitar uso intensivo. El mapa conserva la atribución de OpenStreetMap y utiliza la caché normal del navegador, sin descargas anticipadas ni almacenamiento offline de tiles; ver la [política de tiles](https://operations.osmfoundation.org/policies/tiles/). Los datos de reparto offline se gestionan de forma independiente mediante IndexedDB; los mapas públicos no se precachean.
+
+## PWA offline del repartidor
+
+En `/repartidor`, iniciar sesión con conexión y esperar **Datos descargados** y **Acceso offline preparado**. Las visitas se guardan primero en el dispositivo tanto online como offline, sobreviven al cierre y reapertura de la PWA y se sincronizan al abrir, recuperar conectividad, volver al primer plano o pulsar **Sincronizar ahora**. Requiere HTTPS o localhost.
+
+La cola usa UUID e IndexedDB separado por empresa/usuario. Rails procesa cada UUID de forma atómica e idempotente. Las descargas firmadas permiten sincronizar hasta 48 horas después, incluso al día siguiente; una reasignación, cambio de planificación, visita ya registrada o descarga vencida produce un conflicto conservado. Administración lo revisa en **Sincronizaciones**. No hay GPS ni sincronización garantizada con la app cerrada.
+
+El Service Worker sólo cachea recursos públicos y el shell. Los datos privados, presentaciones de hojas y operaciones están en IndexedDB; no se borran al actualizar ni al cerrar sesión. Con registros pendientes se avisa antes de salir. El navegador puede revocar almacenamiento: revisar/sincronizar o exportar registros antes de borrar datos del sitio.
+
+Arquitectura, API, política de conflictos, comandos de tests y pruebas manuales pendientes de Android y Safari/iPhone: [PWA offline](docs/pwa_offline.md). Se verifica automáticamente con Rails, JavaScript y Chromium; eso no valida todavía dispositivos físicos ni iOS.

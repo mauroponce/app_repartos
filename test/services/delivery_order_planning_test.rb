@@ -78,8 +78,8 @@ class DeliveryOrderPlanningTest < ActiveSupport::TestCase
     assert_equal 30, execution.reload.planned_quantity
     assert_equal execution.id, item.reload.delivery_item.id
     visit = order.reload.visit
-    visit.update!(delivery_items_attributes: [ { id: execution.id, delivered_quantity: 18 } ], status: :completed)
-    assert order.reload.completed?
+    visit.update!(delivery_items_attributes: [ { id: execution.id, delivered_quantity: 18 } ], status: :completed, confirmed_by: users(:one))
+    assert order.reload.needs_attention?
     assert_equal 30, item.reload.quantity
     assert_equal 18, execution.reload.delivered_quantity
     assert_equal(-12, execution.difference)

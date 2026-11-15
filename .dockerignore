@@ -7,9 +7,14 @@ storage/*
 config/master.key
 config/credentials*.yml.enc
 node_modules
+test-results
+playwright-report
 docs
 vendor/bundle
 
 public/assets
 app/assets/builds/*
 !app/assets/builds/.keep
+.kamal/secrets*
+backups
+.env.routing

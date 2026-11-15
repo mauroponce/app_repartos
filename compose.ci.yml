@@ -1,0 +1,33 @@
+name: app_repartos_ci
+
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: repartos_ci
+      POSTGRES_PASSWORD: repartos_ci_local
+      POSTGRES_DB: postgres
+    tmpfs:
+      - /var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U repartos_ci -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  ci:
+    build:
+      context: .
+      target: ci
+    environment:
+      RAILS_ENV: test
+      CI: "true"
+      DATABASE_HOST: db
+      DATABASE_USERNAME: repartos_ci
+      DATABASE_PASSWORD: repartos_ci_local
+      RAILS_MAX_THREADS: 5
+      PARALLEL_WORKERS: 2
+    depends_on:
+      db:
+        condition: service_healthy
+    init: true
+    shm_size: 1gb

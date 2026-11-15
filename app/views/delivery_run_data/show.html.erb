@@ -1,0 +1,46 @@
+<% content_for :title, "Datos y liquidación · #{@run.name}" %>
+<% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
+<div class="heading"><div><div class="eyebrow"><%= @run.name %></div><h1>Datos y liquidación</h1><p>Valores históricos, cierre de pedidos y movimientos del camión.</p></div><%= link_to "Volver a la hoja", delivery_run_path(@run), class: "btn btn-white" %></div>
+<section class="management-panel"><h2>Cierre y cumplimiento</h2>
+  <p><strong><%= @metrics[:closed] %> / <%= @metrics[:eligible] %> pedidos cerrados</strong> · <strong><%= @metrics[:fully_delivered] %> / <%= @metrics[:eligible] %> entregados al 100%</strong>. Los pedidos cancelados se excluyen de estas tasas.</p>
+  <p>Valor solicitado: <%= historical_money(@valuation.requested_value, @valuation.currency) %> · Valor entregado: <%= historical_money(@valuation.delivered_value, @valuation.currency) %> · Costo de productos entregados: <%= historical_money(@valuation.delivered_cost, @valuation.currency) %></p>
+  <p>Margen estimado de productos: <%= historical_money(@valuation.estimated_margin, @valuation.currency) %></p>
+  <% actual_cost = @costs.reject(&:estimated?).sum(0.to_d, &:amount) %>
+  <p>Costos reales registrados de ruta: <%= historical_money(actual_cost, @run.currency || Current.company.currency) %> · <%= @run.costs_closed_at ? "Costos cerrados" : "Costos abiertos: el total todavía puede estar incompleto" %></p>
+  <% net = @run.costs_closed_at && @valuation.estimated_margin && @valuation.currency == @run.currency ? @valuation.estimated_margin - actual_cost : nil %>
+  <p>Margen estimado de lo entregado menos costos de ruta: <%= historical_money(net, @run.currency) %></p><p class="hint">Los valores faltantes no se cuentan como cero. Se usa el precio y costo guardado en cada producto de la hoja, sin consultar precios actuales del catálogo.</p>
+</section>
+<section class="management-panel"><h2>Costos de vehículo y ruta</h2>
+  <div class="table-scroll"><table class="data-table"><thead><tr><th>Fecha / autor</th><th>Concepto</th><th>Vehículo</th><th>Importe</th><th></th></tr></thead><tbody>
+    <% @costs.each do |cost| %><tr><td><%= l(cost.created_at, format: :short) %><br><%= cost.user.name %></td><td><%= DeliveryRunCost::CATEGORIES[cost.category] %> · <%= cost.description %><%= " · Estimado" if cost.estimated? %></td><td><%= cost.vehicle_label.presence || "Sin informar" %></td><td><%= historical_money(cost.amount, cost.currency) %></td><td><% if !@run.costs_closed_at && !cost.reversal_of_id && !cost.reversal %><%= button_to "Anular", reverse_cost_delivery_run_data_path(@run, cost_id: cost.id), method: :post, class: "btn btn-white" %><% end %></td></tr><% end %>
+  </tbody></table></div>
+  <% unless @run.costs_closed_at %>
+    <%= form_with url: create_cost_delivery_run_data_path(@run), scope: :cost, class: "field-grid management-form" do |form| %>
+      <%= form.hidden_field :operation_id, value: SecureRandom.uuid %>
+      <div class="field"><%= form.label :category, "Concepto" %><%= form.select :category, DeliveryRunCost::CATEGORIES.map { |key, label| [label, key] } %></div>
+      <div class="field"><%= form.label :vehicle_label, "Vehículo / patente" %><%= form.text_field :vehicle_label, value: @run.vehicle_label, maxlength: 255 %></div>
+      <div class="field"><%= form.label :description, "Detalle" %><%= form.text_field :description, required: true, maxlength: 255 %></div>
+      <div class="field"><%= form.label :amount, "Importe (#{@run.currency || Current.company.currency})" %><%= form.number_field :amount, step: "0.0001", min: 0, required: true %></div>
+      <div class="field"><%= form.label :estimated, "Tipo de valor" %><%= form.select :estimated, [["Costo real", false], ["Estimación", true]] %></div>
+      <div class="form-actions full"><%= form.submit "Registrar costo", class: "btn btn-dark" %></div>
+    <% end %>
+    <% if @run.completed? || @run.cancelled? %><%= button_to "Cerrar costos de la hoja", close_costs_delivery_run_data_path(@run), method: :post, class: "btn btn-dark", data: { turbo_confirm: "¿Confirmar que todos los costos reales están registrados? Después del cierre se conserva esta liquidación." } %><% end %>
+  <% end %>
+</section>
+<section class="management-panel"><h2>Carga y devolución</h2><p>Las cantidades de unidades diferentes se muestran por separado. Las entregas se obtienen de las cantidades realmente registradas en cada visita.</p>
+  <div class="table-scroll"><table class="data-table"><thead><tr><th>Producto</th><th>Unidad</th><th>Carga</th><th>Entregado</th><th>Devuelto</th><th>Merma</th><th>Saldo en camión</th></tr></thead><tbody>
+    <% @stock.each do |row| %><tr><td><%= row[:description] %></td><td><%= DeliveryUnits::LABELS[row[:unit]] %></td><td><%= row[:load_recorded] ? quantity_text(row[:totals]["load"]) : "Sin registrar" %></td><td><%= quantity_text(row[:totals]["delivery"]) %></td><td><%= quantity_text(row[:totals]["return"]) %></td><td><%= quantity_text(row[:totals]["waste"]) %></td><td><%= quantity_text(row[:balance]) %><%= " · Revisar saldo negativo" if row[:balance]&.negative? %></td></tr><% end %>
+  </tbody></table></div>
+  <%= form_with url: create_stock_delivery_run_data_path(@run), scope: :movement, class: "field-grid management-form" do |form| %>
+    <%= form.hidden_field :operation_id, value: SecureRandom.uuid %>
+    <div class="field"><%= form.label :kind, "Movimiento" %><%= form.select :kind, RunStockMovement::KINDS.reject { |key, _| key == "delivery" }.map { |key, label| [label, key] } %></div>
+    <div class="field"><%= form.label :product_id, "Producto" %><%= form.collection_select :product_id, @products, :id, :name, include_blank: "Ítem manual" %></div>
+    <div class="field"><%= form.label :description, "Descripción (opcional para catálogo)" %><%= form.text_field :description, maxlength: 255 %></div>
+    <div class="field"><%= form.label :unit, "Unidad" %><%= form.select :unit, DeliveryUnits.options, include_blank: "Usar unidad del catálogo" %></div>
+    <div class="field"><%= form.label :quantity, "Cantidad real" %><%= form.number_field :quantity, min: "0.001", step: "0.001", required: true %></div>
+    <div class="field"><%= form.label :reason, "Motivo (obligatorio para ajustes y mermas)" %><%= form.text_field :reason, maxlength: 500 %></div>
+    <div class="form-actions full"><%= form.submit "Registrar movimiento", class: "btn btn-dark" %></div>
+  <% end %>
+  <details><summary>Historial de movimientos</summary><% @movements.each do |row| %><p><%= l(row.created_at, format: :short) %> · <%= RunStockMovement::KINDS[row.kind] %> · <%= row.description %> · <%= quantity_text(row.quantity) %> <%= row.unit %> · <%= row.user&.name || "Sistema" %> · <%= row.reason %></p><% end %></details>
+</section>
+<section class="management-panel"><h2>Historial de estados</h2><%= render "delivery_status_events/history", events: @events %></section>

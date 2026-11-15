@@ -54,7 +54,7 @@ class DeliveryRunGeneratorTest < ActiveSupport::TestCase
     run = company.delivery_runs.create!(name: "Histórica", scheduled_date: "2026-11-17", generation_key: "schedules:2026-11-17")
     visit = run.visits.create!(customer: customers(:one), delivery_schedule: delivery_schedules(:tuesday), position: 1, customer_name: "Nombre histórico", customer_address: "Dirección histórica")
     item = visit.delivery_items.create!(description: "Pan histórico", unit: "pack", planned_quantity: 25, delivered_quantity: 18)
-    visit.update!(status: :completed)
+    visit.update_columns(status: "completed", completed_at: Time.current)
     run.update!(status: :completed)
     delivery_schedule_items(:bread).update!(quantity: 30)
     assert_difference "DeliveryOrder.count", 1 do
@@ -63,7 +63,7 @@ class DeliveryRunGeneratorTest < ActiveSupport::TestCase
       end
     end
     order = company.delivery_orders.last
-    assert order.completed?
+    assert order.needs_attention?
     assert_nil order.preferred_time
     assert_equal visit, order.visit
     assert_equal "Nombre histórico", order.customer_name
@@ -89,5 +89,25 @@ class DeliveryRunGeneratorTest < ActiveSupport::TestCase
     run = company.delivery_runs.create!(name: "Vacía", scheduled_date: "2026-11-24")
     run.visits.create!(customer: customers(:one), delivery_schedule: delivery_schedules(:tuesday), position: 1)
     assert_empty DeliveryOrderGenerator.call(company: company, date: "2026-11-24")
+  end
+
+  test "backfill preserves failed and unknown historical execution without inventing authors or quantities" do
+    company = companies(:one)
+    [ [ "closed", nil ], [ "not_attended", 0 ], [ "rescheduled", nil ], [ "completed", nil ] ].each_with_index do |(status, quantity), index|
+      date = Date.new(2026, 11, 17) + index.weeks
+      run = company.delivery_runs.create!(name: "Legado #{status}", scheduled_date: date)
+      visit = run.visits.create!(customer: customers(:one), delivery_schedule: delivery_schedules(:tuesday), position: 1)
+      item = visit.delivery_items.create!(description: "Histórico", unit: "pack", planned_quantity: 20, delivered_quantity: quantity)
+      visit.update_columns(status: status)
+      original_visit = visit.attributes
+      original_item = item.attributes.except("delivery_order_item_id")
+      assert_equal 1, DeliveryOrderBackfill.call(company: company, visit_ids: [ visit.id ])
+      order = visit.delivery_orders.first
+      assert order.needs_attention?
+      assert_equal quantity.nil? ? "unknown" : "none", order.fulfillment_result
+      assert_equal original_visit, visit.reload.attributes
+      assert_equal original_item, item.reload.attributes.except("delivery_order_item_id")
+      assert_equal 0, DeliveryOrderBackfill.call(company: company, visit_ids: [ visit.id ])
+    end
   end
 end

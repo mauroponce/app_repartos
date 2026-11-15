@@ -1,0 +1,5 @@
+<div class="evidence-gallery">
+  <% evidences.each do |evidence| %>
+    <figure><% if evidence.purged_at || !evidence.file.attached? %><p>Archivo eliminado según la política de conservación.</p><% else %><%= link_to delivery_evidence_path(evidence), target: "_blank", rel: "noopener" do %><%= image_tag delivery_evidence_path(evidence), alt: evidence.kind == "signature" ? "Firma del receptor" : "Foto de la entrega o incidencia", loading: "lazy" %><% end %><% end %><figcaption><%= evidence.kind == "signature" ? "Firma opcional del receptor" : "Fotografía" %></figcaption></figure>
+  <% end %>
+</div>

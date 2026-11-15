@@ -1,16 +1,17 @@
 class DeliveryOrdersController < ManagementController
-  before_action :set_order, only: [ :show, :edit, :update, :cancel ]
+  before_action :set_order, only: [ :show, :edit, :update, :cancel, :reschedule ]
   before_action :load_options, only: [ :new, :create, :edit, :update ]
 
   def index
-    orders = Current.company.delivery_orders.includes(:delivery_order_items, visit: :delivery_run)
+    orders = Current.company.delivery_orders.includes(:delivery_order_items, :rescheduled_order, visit: :delivery_run)
     orders = orders.where(scheduled_date: params[:date]) if params[:date].present?
     orders = orders.where(customer_id: params[:customer_id]) if params[:customer_id].present?
     orders = orders.where(visit_id: Current.company.visits.where(delivery_run_id: params[:delivery_run_id]).select(:id)) if params[:delivery_run_id].present?
     orders = case params[:status]
     when "unplanned" then orders.unplanned
     when "assigned" then orders.pending.where.not(visit_id: nil)
-    when "pending", "completed", "cancelled" then orders.where(status: params[:status])
+    when "intervention" then orders.requiring_intervention
+    when "pending", "completed", "needs_attention", "cancelled" then orders.where(status: params[:status])
     else orders
     end
     if params[:q].present?
@@ -66,6 +67,13 @@ class DeliveryOrdersController < ManagementController
     redirect_to delivery_orders_path, alert: "No se pudieron generar las entregas: #{error.message}", status: :see_other
   end
 
+  def reschedule
+    replacement = DeliveryOrderRescheduler.call(company: Current.company, order_id: @delivery_order.id, date: params[:date])
+    redirect_to delivery_order_path(replacement), notice: "Entrega reprogramada. Ya podés planificarla en una nueva hoja.", status: :see_other
+  rescue ArgumentError, ActiveRecord::RecordInvalid => error
+    redirect_to delivery_order_path(@delivery_order), alert: error.message, status: :see_other
+  end
+
   private
 
   def set_order
@@ -79,7 +87,7 @@ class DeliveryOrdersController < ManagementController
   end
 
   def order_params
-    params.expect(delivery_order: [ :customer_id, :scheduled_date, :preferred_time, :window_start, :window_end, :notes,
-      delivery_order_items_attributes: [ [ :id, :product_id, :description, :quantity, :unit, :position, :_destroy ] ] ])
+    params.expect(delivery_order: [ :customer_id, :scheduled_date, :preferred_time, :window_start, :window_end, :notes, :load_units, :service_minutes,
+      delivery_order_items_attributes: [ [ :id, :product_id, :description, :quantity, :unit, :position, :unit_price, :unit_cost, :_destroy ] ] ])
   end
 end

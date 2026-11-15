@@ -1,4 +1,8 @@
 module ApplicationHelper
+  def historical_money(value, currency = Current.company.currency)
+    value.nil? ? "Sin informar" : number_to_currency(value, unit: "#{currency} ", precision: 2)
+  end
+
   def quantity_text(quantity)
     quantity.nil? ? "Sin registrar" : number_with_precision(quantity, precision: 3, strip_insignificant_zeros: true, delimiter: ".", separator: ",")
   end
@@ -18,7 +22,11 @@ module ApplicationHelper
   end
 
   def delivery_order_status(order)
-    { "pending" => "Pendiente", "assigned" => "Asignada a hoja", "completed" => "Completada", "cancelled" => "Cancelada" }.fetch(order.display_status)
+    { "pending" => "Pendiente", "assigned" => "Asignada a hoja", "completed" => "Completada", "needs_attention" => "Requiere intervención", "rescheduled" => "Reprogramada", "cancelled" => "Cancelada" }.fetch(order.display_status)
+  end
+
+  def fulfillment_label(order)
+    { "unrecorded" => "Sin confirmar", "unknown" => "Cantidades históricas incompletas", "full" => "Entrega completa", "partial" => "Entrega parcial", "none" => "Mercadería no entregada" }.fetch(order.fulfillment_result)
   end
 
   def merchandise_summary(order)
@@ -26,7 +34,7 @@ module ApplicationHelper
   end
 
   def operation_status(status)
-    { "draft" => "Borrador", "assigned" => "Asignado", "in_progress" => "En curso", "completed" => "Completado", "cancelled" => "Cancelado", "pending" => "Pendiente", "not_attended" => "No atendido", "closed" => "Cerrado", "rescheduled" => "Reprogramado" }.fetch(status)
+    { "draft" => "Borrador", "assigned" => "Asignado", "in_progress" => "En curso", "completed" => "Completado", "cancelled" => "Cancelado", "pending" => "Pendiente", "not_attended" => "No atendido", "closed" => "Cerrado", "rescheduled" => "Reprogramado", "rejected" => "Rechazada" }.fetch(status)
   end
 
   def customer_location_data(customer, readonly: false)

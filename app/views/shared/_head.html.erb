@@ -6,3 +6,5 @@
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <%= stylesheet_link_tag "tailwind", "leaflet", "application", "data-turbo-track": "reload" %>
 <%= javascript_importmap_tags %>
+<%= yield :head %>
+<meta name="offline-account" content="<%= Current.user ? "#{Current.company.id}:#{Current.user.id}" : "locked" %>">

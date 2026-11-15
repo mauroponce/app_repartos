@@ -11,6 +11,8 @@ class VisitsController < ManagementController
   def create
     @visit = @delivery_run.visits.new(visit_params.except(:customer_id).merge(company: Current.company))
     @visit.customer = Current.company.customers.find(visit_params[:customer_id]) if visit_params[:customer_id].present?
+    @visit.confirmed_by = Current.user unless @visit.pending?
+    @visit.assign_attributes(recorded_at: Time.current, recorded_at_source: "server") if @visit.receipt_version == 1 && !@visit.pending? && @visit.recorded_at.nil?
     unless @delivery_run.editable?
       @visit.errors.add(:base, "La hoja ya no admite paradas manuales")
       return render :new, status: :unprocessable_entity
@@ -33,7 +35,16 @@ class VisitsController < ManagementController
   def update
     saved = Current.company.with_lock do
       @delivery_run.reload
-      @visit.with_lock { @visit.update(execution_params) }
+      @visit.with_lock do
+        @visit.assign_attributes(execution_params)
+        @visit.confirmed_by = Current.user if @visit.status_in_database == "pending" && !@visit.pending?
+        @visit.assign_attributes(recorded_at: Time.current, recorded_at_source: "server") if @visit.receipt_version == 1 && !@visit.pending? && @visit.recorded_at.nil?
+        @visit.save.tap do |success|
+          if success && !@visit.pending? && (@delivery_run.assigned? || @delivery_run.in_progress?)
+            @delivery_run.update!(status: @delivery_run.visits.pending.exists? ? :in_progress : :completed)
+          end
+        end
+      end
     end
     if saved
       redirect_to delivery_run_path(@delivery_run), notice: "Visita y cantidades guardadas correctamente.", status: :see_other
@@ -75,7 +86,7 @@ class VisitsController < ManagementController
   end
 
   def visit_params
-    params.expect(visit: [ :customer_id, :position, :status, :notes,
+    params.expect(visit: [ :customer_id, :position, :status, :notes, :failure_reason, :receipt_version,
       delivery_items_attributes: [ [ :id, :product_id, :description, :unit, :planned_quantity, :delivered_quantity, :notes, :_destroy ] ] ])
   end
 end

@@ -1,0 +1,7 @@
+<div class="heading"><div><h1>Intento de visita #<%= @operation.visit_id %></h1><p><%= @operation.user.name %> · <%= @operation.operation_id %></p></div></div>
+<section class="management-panel"><h2>Resultado de sincronización</h2><p><%= @operation.result["message"] || "Sincronizada" %></p>
+<p>Recibida: <%= l(@operation.created_at, format: :short) %> · Hora declarada por el dispositivo: <%= @operation.payload["recorded_at"] %> (informativa).</p>
+<h2>Intento conservado</h2><pre><%= JSON.pretty_generate(@operation.payload.except("proof")) %></pre>
+<%= render "delivery_evidences/gallery", evidences: @operation.delivery_evidences.with_attached_file.order(:id) %>
+<% if @visit %><p>Servidor: <%= operation_status(@visit.status) %> · <%= @visit.confirmed_by&.name || "Sin autor confirmado" %></p><%= link_to "Revisar visita y cantidades actuales", delivery_run_path(@visit.delivery_run), class: "text-action" %><% end %>
+<p>La revisión no reaplica el intento. Coordiná con el repartidor y usá el flujo de reprogramación de faltantes si corresponde.</p></section>
