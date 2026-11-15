@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_16_021100) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_16_031000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -129,10 +129,53 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_021100) do
     t.boolean "routing_return_to_depot", default: false, null: false
     t.integer "routing_preferred_tolerance", default: 15, null: false
     t.integer "routing_service_minutes", default: 5, null: false
+    t.string "province", default: "Buenos Aires", null: false
     t.index ["slug"], name: "index_companies_on_slug", unique: true
     t.check_constraint "currency::text = ANY (ARRAY['ARS'::character varying::text, 'USD'::character varying::text, 'EUR'::character varying::text])", name: "companies_currency"
     t.check_constraint "depot_latitude IS NULL AND depot_longitude IS NULL OR depot_latitude IS NOT NULL AND depot_longitude IS NOT NULL AND depot_latitude >= '-90'::integer::numeric AND depot_latitude <= 90::numeric AND depot_longitude >= '-180'::integer::numeric AND depot_longitude <= 180::numeric", name: "company_depot_coordinates"
+    t.check_constraint "length(btrim(province::text)) > 0 AND length(province::text) <= 100", name: "company_province_present"
     t.check_constraint "routing_preferred_tolerance >= 0 AND routing_preferred_tolerance <= 120 AND routing_service_minutes >= 0 AND routing_service_minutes <= 240 AND routing_departure::text ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'::text AND (NOT routing_return_to_depot OR depot_latitude IS NOT NULL)", name: "company_routing_settings"
+  end
+
+  create_table "customer_import_rows", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.bigint "customer_import_id", null: false
+    t.bigint "customer_id"
+    t.integer "number", null: false
+    t.jsonb "original", default: [], null: false
+    t.jsonb "data", default: {}, null: false
+    t.jsonb "normalized", default: {}, null: false
+    t.jsonb "candidates", default: [], null: false
+    t.jsonb "issues", default: [], null: false
+    t.jsonb "warnings", default: [], null: false
+    t.jsonb "duplicates", default: [], null: false
+    t.string "address_key"
+    t.string "duplicate_key"
+    t.string "precision", default: "unlocated", null: false
+    t.string "review_state", default: "pending", null: false
+    t.string "provider"
+    t.decimal "latitude", precision: 10, scale: 7
+    t.decimal "longitude", precision: 11, scale: 7
+    t.boolean "excluded", default: false, null: false
+    t.boolean "manual_confirmation", default: false, null: false
+    t.integer "attempts", default: 0, null: false
+    t.datetime "processed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "customer_import_id, ((data ->> 'external_code'::text))", name: "customer_import_rows_external_code"
+    t.index ["company_id"], name: "index_customer_import_rows_on_company_id"
+    t.index ["customer_id"], name: "customer_import_rows_created_customer", unique: true, where: "(customer_id IS NOT NULL)"
+    t.index ["customer_id"], name: "index_customer_import_rows_on_customer_id"
+    t.index ["customer_import_id", "address_key"], name: "customer_import_rows_addresses"
+    t.index ["customer_import_id", "duplicate_key"], name: "customer_import_rows_duplicates"
+    t.index ["customer_import_id", "number"], name: "index_customer_import_rows_on_customer_import_id_and_number", unique: true
+    t.index ["customer_import_id", "precision", "id"], name: "customer_import_rows_precision"
+    t.index ["customer_import_id", "processed_at", "id"], name: "customer_import_rows_pending"
+    t.index ["customer_import_id"], name: "index_customer_import_rows_on_customer_import_id"
+    t.check_constraint "(\"precision\"::text = ANY (ARRAY['reliable'::character varying::text, 'approximate'::character varying::text, 'ambiguous'::character varying::text, 'unlocated'::character varying::text])) AND (review_state::text = ANY (ARRAY['pending'::character varying::text, 'automatic'::character varying::text, 'manual'::character varying::text, 'unlocated'::character varying::text]))", name: "customer_import_row_states"
+    t.check_constraint "NOT manual_confirmation OR review_state::text = 'manual'::text AND latitude IS NOT NULL AND longitude IS NOT NULL", name: "customer_import_row_manual"
+    t.check_constraint "latitude IS NULL AND longitude IS NULL OR latitude IS NOT NULL AND longitude IS NOT NULL AND latitude >= '-90'::integer::numeric AND latitude <= 90::numeric AND longitude >= '-180'::integer::numeric AND longitude <= 180::numeric", name: "customer_import_row_coordinates"
+    t.check_constraint "review_state::text <> 'automatic'::text OR \"precision\"::text = 'reliable'::text AND latitude IS NOT NULL AND longitude IS NOT NULL", name: "customer_import_row_automatic"
   end
 
   create_table "customer_imports", force: :cascade do |t|
@@ -146,7 +189,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_021100) do
     t.datetime "confirmed_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "initiated_by_id"
+    t.string "state", default: "legacy", null: false
+    t.integer "generation", default: 0, null: false
+    t.jsonb "sheet_names", default: [], null: false
+    t.integer "sheet_index", default: 0, null: false
+    t.integer "header_row", default: 1, null: false
+    t.jsonb "geographic_context", default: {}, null: false
+    t.integer "total_rows", default: 0, null: false
+    t.integer "processed_rows", default: 0, null: false
+    t.text "last_error"
+    t.datetime "heartbeat_at"
+    t.index ["company_id", "id"], name: "index_customer_imports_on_company_id_and_id", unique: true
     t.index ["company_id"], name: "index_customer_imports_on_company_id"
+    t.index ["initiated_by_id"], name: "index_customer_imports_on_initiated_by_id"
+    t.index ["state", "heartbeat_at"], name: "index_customer_imports_on_state_and_heartbeat_at"
+    t.check_constraint "state::text = ANY (ARRAY['legacy'::character varying::text, 'reading'::character varying::text, 'mapping'::character varying::text, 'preparing'::character varying::text, 'processing'::character varying::text, 'review'::character varying::text, 'importing'::character varying::text, 'completed'::character varying::text, 'cancelled'::character varying::text, 'failed'::character varying::text])", name: "customer_import_state"
+    t.check_constraint "total_rows >= 0 AND processed_rows >= 0 AND processed_rows <= total_rows AND generation >= 0", name: "customer_import_progress"
   end
 
   create_table "customer_notifications", force: :cascade do |t|
@@ -181,6 +240,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_021100) do
     t.decimal "latitude", precision: 10, scale: 7
     t.decimal "longitude", precision: 10, scale: 7
     t.string "external_code"
+    t.string "location_verification", default: "legacy", null: false
     t.index ["company_id", "external_code"], name: "index_customers_on_company_id_and_external_code", unique: true, where: "(external_code IS NOT NULL)"
     t.index ["company_id", "id"], name: "index_customers_on_company_id_and_id", unique: true
     t.index ["company_id", "name", "id"], name: "index_customers_on_company_id_and_name_and_id"
@@ -188,6 +248,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_021100) do
     t.index ["company_id"], name: "index_customers_on_company_id"
     t.check_constraint "external_code IS NULL OR length(btrim(external_code::text)) > 0 AND length(external_code::text) <= 255", name: "customers_external_code_present"
     t.check_constraint "latitude IS NULL AND longitude IS NULL OR latitude IS NOT NULL AND longitude IS NOT NULL AND latitude >= '-90'::integer::numeric AND latitude <= 90::numeric AND longitude >= '-180'::integer::numeric AND longitude <= 180::numeric", name: "customers_valid_coordinates"
+    t.check_constraint "location_verification::text = ANY (ARRAY['legacy'::character varying::text, 'pending'::character varying::text, 'provided'::character varying::text, 'reliable'::character varying::text, 'manual'::character varying::text])", name: "customers_location_verification"
     t.check_constraint "status::text = ANY (ARRAY['active'::character varying::text, 'inactive'::character varying::text])", name: "customers_valid_status"
   end
 
@@ -482,6 +543,30 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_021100) do
     t.check_constraint "status::text = ANY (ARRAY['synced'::character varying::text, 'conflict'::character varying::text, 'invalid'::character varying::text])", name: "driver_sync_valid_status"
   end
 
+  create_table "geocoding_cache_entries", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.string "key", null: false
+    t.jsonb "payload", default: {}, null: false
+    t.datetime "expires_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id", "key"], name: "index_geocoding_cache_entries_on_company_id_and_key", unique: true
+    t.index ["company_id"], name: "index_geocoding_cache_entries_on_company_id"
+    t.index ["expires_at"], name: "index_geocoding_cache_entries_on_expires_at"
+  end
+
+  create_table "geocoding_provider_states", force: :cascade do |t|
+    t.string "provider", null: false
+    t.datetime "available_at"
+    t.date "quota_date"
+    t.integer "requests", default: 0, null: false
+    t.integer "error_count", default: 0, null: false
+    t.bigint "tokens", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["provider"], name: "index_geocoding_provider_states_on_provider", unique: true
+  end
+
   create_table "incident_photos", force: :cascade do |t|
     t.bigint "company_id", null: false
     t.bigint "incident_id", null: false
@@ -628,7 +713,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_021100) do
     t.boolean "auto_publish", default: false, null: false
     t.index ["applied_by_id"], name: "index_route_optimization_proposals_on_applied_by_id"
     t.index ["company_id", "delivery_run_id", "created_at"], name: "route_proposals_history"
-    t.index ["company_id", "delivery_run_id", "request_key"], name: "unique_active_route_proposal", unique: true, where: "((status)::text = ANY ((ARRAY['queued'::character varying, 'processing'::character varying, 'ready'::character varying])::text[]))"
+    t.index ["company_id", "delivery_run_id", "request_key"], name: "unique_active_route_proposal", unique: true, where: "((status)::text = ANY (ARRAY[('queued'::character varying)::text, ('processing'::character varying)::text, ('ready'::character varying)::text]))"
     t.index ["company_id"], name: "index_route_optimization_proposals_on_company_id"
     t.index ["delivery_run_id"], name: "index_route_optimization_proposals_on_delivery_run_id"
     t.index ["id", "company_id"], name: "index_route_optimization_proposals_on_id_and_company_id", unique: true
@@ -852,7 +937,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_021100) do
   add_foreign_key "communication_consents", "companies"
   add_foreign_key "communication_consents", "customers", column: ["company_id", "customer_id"], primary_key: ["company_id", "id"], name: "communication_consents_customer_tenant"
   add_foreign_key "communication_consents", "users", column: ["company_id", "user_id"], primary_key: ["company_id", "id"], name: "communication_consents_user_tenant"
+  add_foreign_key "customer_import_rows", "companies"
+  add_foreign_key "customer_import_rows", "customer_imports", column: ["company_id", "customer_import_id"], primary_key: ["company_id", "id"], name: "customer_import_row_tenant"
+  add_foreign_key "customer_import_rows", "customers", column: ["company_id", "customer_id"], primary_key: ["company_id", "id"], name: "customer_import_row_customer_tenant"
   add_foreign_key "customer_imports", "companies"
+  add_foreign_key "customer_imports", "users", column: "initiated_by_id"
+  add_foreign_key "customer_imports", "users", column: ["company_id", "initiated_by_id"], primary_key: ["company_id", "id"], name: "customer_import_initiator_tenant"
   add_foreign_key "customer_notifications", "companies"
   add_foreign_key "customer_notifications", "customers", column: ["company_id", "customer_id"], primary_key: ["company_id", "id"], name: "customer_notifications_customer_tenant"
   add_foreign_key "customer_notifications", "delivery_orders", column: ["company_id", "customer_id", "delivery_order_id"], primary_key: ["company_id", "customer_id", "id"], name: "notifications_order_customer_tenant"
@@ -903,6 +993,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_021100) do
   add_foreign_key "driver_locations", "users", column: ["company_id", "user_id"], primary_key: ["company_id", "id"]
   add_foreign_key "driver_sync_operations", "companies"
   add_foreign_key "driver_sync_operations", "users", column: ["company_id", "user_id"], primary_key: ["company_id", "id"], name: "driver_sync_user_tenant"
+  add_foreign_key "geocoding_cache_entries", "companies"
   add_foreign_key "incident_photos", "companies"
   add_foreign_key "incident_photos", "incidents", column: ["company_id", "incident_id"], primary_key: ["company_id", "id"], name: "incident_photos_incident_tenant"
   add_foreign_key "incident_photos", "users", column: ["company_id", "user_id"], primary_key: ["company_id", "id"], name: "incident_photos_user_tenant"

@@ -144,7 +144,7 @@ Arquitectura, API, política de conflictos, comandos de tests y pruebas manuales
 
 ## Preparación del piloto comercial
 
-- [Importación de clientes Excel/CSV](docs/importacion_clientes.md): código externo por empresa, mapeo, previsualización, celdas vacías, errores y confirmación idempotente. Teléfono y coordenadas opcionales en la importación; ubicación pendiente hasta completarla.
+- [Importación de clientes Excel/CSV](docs/importacion_clientes.md): código externo por empresa, mapeo libre, geocodificación asíncrona, provincia obligatoria, revisión y confirmación idempotente. Teléfono y coordenadas opcionales en la importación; ubicación pendiente hasta completarla.
 - [GPS opcional](docs/gps_opcional.md): consentimiento explícito, revocación durable, primer plano y retención; sin recorridos históricos.
 - [Sincronización y mediciones](docs/sincronizacion_rendimiento.md): lectura consistente sin lock de empresa y ETag/304 sin regenerar HTML.
 - [Backups R2 cifrados y recuperación](docs/backups_r2.md): instalación, timers, alertas y restauración aislada; requiere configurar y verificar la cuenta real.
@@ -152,3 +152,9 @@ Arquitectura, API, política de conflictos, comandos de tests y pruebas manuales
 - [Informe y checklist comercial](docs/piloto_comercial.md): implementado, evidencia de tests y verificaciones reales pendientes.
 
 Los tests de integridad de backups y ShellCheck están en CI. `bin/test-backups` verifica además age/rclone y PostgreSQL reales con datos y remotes locales desechables; necesita las herramientas del host descritas en la documentación y no utiliza producción.
+
+## Importación inteligente de clientes
+
+Asistente CSV/XLSX con mapeo libre y lectura/geocodificación/alta en Solid Queue. Prioriza Georef, complementa con Photon y opcionalmente interpreta direcciones con Gemini Flash-Lite. Incluye revisión en Leaflet, estados de precisión, caché por empresa, cuotas e idempotencia. Las ubicaciones pendientes quedan excluidas de OSRM/VROOM.
+
+Ver [uso, configuración, arquitectura y pruebas](docs/importacion_clientes.md). Hay [cuatro planillas de ejemplo](docs/ejemplos/clientes/), incluida una de 2.000 filas. Aplicar migraciones y reiniciar web/worker; Gemini está deshabilitado de forma predeterminada.

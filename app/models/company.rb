@@ -1,5 +1,11 @@
 class Company < ApplicationRecord
   include RoutingChangeHooks
+  validates :province, inclusion: { in: ->(_) { Geocoding::ProvinceBoundary.names } }
+  validate do
+    if persisted? && will_save_change_to_province? && customer_imports.where(state: %w[reading mapping preparing processing review importing]).exists?
+      errors.add(:province, "no puede cambiar mientras haya importaciones pendientes; completalas o cancelalas primero")
+    end
+  end
   has_many :route_publications, dependent: :restrict_with_error
   has_many :routing_cache_entries, dependent: :delete_all
   has_many :route_optimization_proposals, dependent: :restrict_with_error

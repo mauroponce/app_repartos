@@ -48,6 +48,24 @@ env:
     OSRM_URL: http://app-repartos-osrm:5000
     MULTIVEHICLE_OPTIMIZATION_ENABLED: "false"
     VROOM_URL: ""
+    GEOREF_API_URL: <%= ENV.fetch("GEOREF_API_URL", "https://apis.datos.gob.ar/georef/api/v2.0").inspect %>
+    GEOREF_DAILY_LIMIT: <%= ENV.fetch("GEOREF_DAILY_LIMIT", "2000").inspect %>
+    GEOREF_INTERVAL_MS: <%= ENV.fetch("GEOREF_INTERVAL_MS", "1000").inspect %>
+    PHOTON_DAILY_LIMIT: <%= ENV.fetch("PHOTON_DAILY_LIMIT", "100").inspect %>
+    PHOTON_INTERVAL_MS: <%= ENV.fetch("PHOTON_INTERVAL_MS", "1500").inspect %>
+    GEMINI_ENABLED: <%= ENV.fetch("GEMINI_ENABLED", "false").inspect %>
+    GEMINI_MODEL: <%= ENV.fetch("GEMINI_MODEL", "gemini-3.5-flash-lite").inspect %>
+    GEMINI_DAILY_LIMIT: <%= ENV.fetch("GEMINI_DAILY_LIMIT", "100").inspect %>
+    GEMINI_INTERVAL_MS: <%= ENV.fetch("GEMINI_INTERVAL_MS", "2000").inspect %>
+    GEMINI_LOW_TEMPERATURE: <%= ENV.fetch("GEMINI_LOW_TEMPERATURE", "false").inspect %>
+    GEOCODING_TIMEOUT_SECONDS: <%= ENV.fetch("GEOCODING_TIMEOUT_SECONDS", "10").inspect %>
+    GEOCODING_CACHE_DAYS: <%= ENV.fetch("GEOCODING_CACHE_DAYS", "30").inspect %>
+    GEOCODING_RELIABLE_SCORE: <%= ENV.fetch("GEOCODING_RELIABLE_SCORE", "90").inspect %>
+    GEOCODING_AGREEMENT_METERS: <%= ENV.fetch("GEOCODING_AGREEMENT_METERS", "150").inspect %>
+    GEOCODING_EXPECTED_RADIUS_KM: <%= ENV.fetch("GEOCODING_EXPECTED_RADIUS_KM", "50").inspect %>
+    CUSTOMER_IMPORT_RETENTION_DAYS: <%= ENV.fetch("CUSTOMER_IMPORT_RETENTION_DAYS", "7").inspect %>
+    GEOCODING_BBOX: <%= ENV.fetch("GEOCODING_BBOX", "").inspect %>
+    PHOTON_URL: <%= ENV.fetch("PHOTON_URL", "https://photon.komoot.io/api/").inspect %>
     CUSTOMER_IMPORT_MAX_MB: <%= ENV.fetch("CUSTOMER_IMPORT_MAX_MB", "5") %>
     CUSTOMER_IMPORT_MAX_ROWS: <%= ENV.fetch("CUSTOMER_IMPORT_MAX_ROWS", "5000") %>
     DRIVER_LOCATION_RETENTION_HOURS: <%= ENV.fetch("DRIVER_LOCATION_RETENTION_HOURS", "24") %>
@@ -56,6 +74,9 @@ env:
     WEB_CONCURRENCY: 1
     JOB_CONCURRENCY: 1
   secret:
+    <% if %w[1 true yes on].include?(ENV.fetch("GEMINI_ENABLED", "false").downcase) %>
+    - GEMINI_API_KEY
+    <% end %>
     - SECRET_KEY_BASE
     - DATABASE_PASSWORD
 volumes:

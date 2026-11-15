@@ -1,12 +1,12 @@
 module RouteOptimization
   class Invalidation
     FIELDS = {
-      "Customer" => %w[latitude longitude address city],
+      "Customer" => %w[latitude longitude address city location_verification],
       "Visit" => %w[customer_id customer_address delivery_schedule_id position],
       "DeliveryOrder" => %w[visit_id preferred_time window_start window_end service_minutes],
       "DeliverySchedule" => %w[preferred_time window_start window_end],
       "DeliveryRun" => %w[scheduled_date routing_origin routing_return_to_depot],
-      "Company" => %w[time_zone depot_latitude depot_longitude routing_departure routing_return_to_depot routing_preferred_tolerance routing_service_minutes]
+      "Company" => %w[province time_zone depot_latitude depot_longitude routing_departure routing_return_to_depot routing_preferred_tolerance routing_service_minutes]
     }.freeze
 
     def self.call(record, destroying: false)

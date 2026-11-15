@@ -4,9 +4,9 @@ class OperationsEta
   class Unavailable < StandardError; end
 
   def self.signature(run)
-    Digest::SHA256.hexdigest([ run.id, run.driver_id, run.assignment_version, run.status,
+    Digest::SHA256.hexdigest([ run.id, run.driver_id, run.assignment_version, run.status, run.company.province,
       run.visits.select(&:pending?).map { |visit| [ visit.id, visit.position, visit.customer_address, visit.customer.latitude, visit.customer.longitude,
-        visit.customer.address, visit.customer.city, visit.delivery_orders.sort_by(&:id).map { |order| order.attributes.slice("id", "service_minutes", "preferred_time", "window_start", "window_end", "updated_at") } ] } ].to_json)
+        visit.customer.address, visit.customer.city, visit.customer.location_verification, visit.delivery_orders.sort_by(&:id).map { |order| order.attributes.slice("id", "service_minutes", "preferred_time", "window_start", "window_end", "updated_at") } ] } ].to_json)
   end
 
   def self.call(run:, location:, now: Time.current)
@@ -14,7 +14,7 @@ class OperationsEta
     return {} unless url && location.fresh? && location.accuracy <= 1000
     stops = run.visits.select(&:pending?).first(3)
     # A changed address invalidates the customer's old geocode.
-    stops = stops.take_while { |stop| stop.customer.latitude && stop.customer.longitude && stop.customer_address == [ stop.customer.address, stop.customer.city ].compact.join(", ") }
+    stops = stops.take_while { |stop| stop.customer.routing_location? && stop.customer_address == [ stop.customer.address, stop.customer.city ].compact.join(", ") }
     return {} if stops.empty?
     coords = [ [ location.longitude.to_f, location.latitude.to_f ], *stops.map { |stop| [ stop.customer.longitude.to_f, stop.customer.latitude.to_f ] } ]
     RouteOptimization::Dataset.validate_coverage!(coords)

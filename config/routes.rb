@@ -19,6 +19,7 @@ Rails.application.routes.draw do
   get "/repartidor", to: "repartidor#index", as: :repartidor_root
   patch "/repartidor/visitas/:id", to: "repartidor#update", as: :repartidor_visit
   scope "/admin" do
+    resource :company_settings, path: "configuracion-empresa", only: [ :edit, :update ]
     resource :routing_settings, path: "configuracion-rutas", only: [ :edit, :update ]
     resources :incidents, path: "incidencias", only: [ :index, :show ] do
       post :act, on: :member, path: "acciones"
@@ -60,6 +61,10 @@ Rails.application.routes.draw do
       get :template, on: :collection
       get :errors, on: :member
       post :confirm, on: :member
+      post :start, on: :member
+      post :cancel, on: :member
+      post :resume, on: :member
+      resources :rows, controller: "customer_import_rows", only: [ :edit, :update ]
     end
     resources :customers, path: "clientes", only: [] do
       resources :delivery_schedules, path: "programaciones", only: [ :new, :create, :edit, :update ]

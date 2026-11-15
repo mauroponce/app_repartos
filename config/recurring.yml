@@ -10,6 +10,9 @@
 #     schedule: at 5am every day
 
 production:
+  customer_import_maintenance:
+    class: CustomerImportMaintenanceJob
+    schedule: every 5 minutes
   route_proposal_maintenance:
     class: RouteProposalMaintenanceJob
     schedule: every 5 minutes

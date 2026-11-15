@@ -239,6 +239,13 @@ export default class extends Controller {
     }
   }
 
+  selectCandidate(event) {
+    const { latitude, longitude, address, city } = event.currentTarget.dataset
+    if (address && this.hasAddressTarget) this.addressTarget.value = address
+    if (city && this.hasCityTarget) this.cityTarget.value = city
+    this.setPosition(Number(latitude), Number(longitude), { confirm: true, pan: true })
+  }
+
   selectPlace(index) {
     const place = this.places[index]
     if (!place) return

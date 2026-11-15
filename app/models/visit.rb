@@ -20,7 +20,7 @@ class Visit < ApplicationRecord
   end
 
   def current_customer_location?
-    customer.located? && customer_address == [ customer.address, customer.city ].compact.join(", ")
+    customer.routing_location? && customer_address == [ customer.address, customer.city ].compact.join(", ")
   end
 
   FAILURE_REASONS = { "shortage" => "Faltante de mercadería", "damaged" => "Mercadería dañada", "customer_request" => "Pedido del cliente", "absent" => "Cliente ausente", "closed" => "Comercio cerrado", "rejected" => "Entrega rechazada", "other" => "Otro motivo" }.freeze

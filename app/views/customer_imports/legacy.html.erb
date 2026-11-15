@@ -1,0 +1,32 @@
+<div class="heading"><div><h1>Previsualización de clientes</h1><p><%= @preview.size %> filas · Revisá los códigos, las coincidencias y los campos que cambiarán.</p></div><div class="heading-actions"><%= link_to "Descargar errores", errors_customer_import_path(@customer_import), class: "btn btn-white", data: { turbo: false } %><%= link_to "Cargar otro archivo", new_customer_import_path, class: "btn btn-white" %></div></div>
+<% if @customer_import.confirmed_at %>
+  <section class="management-panel"><h2>Importación confirmada</h2>
+    <% { "created" => "Clientes creados", "updated" => "Clientes actualizados", "skipped" => "Filas omitidas", "pending_location" => "Ubicación pendiente", "errors" => "Errores" }.each do |key, label| %><p><strong><%= label %>:</strong> <%= @customer_import.summary[key] %></p><% end %>
+    <p>Reintentar esta confirmación no crea duplicados.</p><%= link_to "Ver clientes", customers_path, class: "btn btn-dark" %>
+  </section>
+<% elsif @customer_import.expired? %>
+  <div class="flash alert">La previsualización venció a las 24 horas. Volvé a cargar el archivo.</div>
+<% else %>
+  <%= form_with url: customer_import_path(@customer_import), method: :patch, class: "management-form" do |form| %>
+    <section class="management-panel"><h2>Mapear columnas</h2><div class="field-grid">
+      <% CustomerImporter::FIELDS.each do |field| %><div class="field"><%= label_tag "mapping_#{field}", CustomerImporter::LABELS.fetch(field) %><%= select_tag "mapping[#{field}]", options_for_select(@customer_import.headers.each_with_index.map { |header, index| [header, index.to_s] }, @customer_import.mapping[field]), include_blank: "Sin columna" %></div><% end %>
+    </div>
+    <label class="check-field"><%= check_box_tag :overwrite_blanks, "1", @customer_import.overwrite_blanks? %> Borrar valores existentes cuando una columna mapeada tenga una celda vacía. Puede dejar clientes sin ubicación.</label>
+    <p>Por defecto, las celdas vacías conservan los datos existentes. Cambiar una dirección sin indicar su nuevo punto elimina la ubicación anterior.</p>
+    </section>
+    <section class="management-panel"><div class="table-scroll" tabindex="0" role="region" aria-label="Previsualización de clientes"><table class="data-table"><thead><tr><th>Omitir</th><th>Fila</th><th>Acción</th><th>Código</th><th>Cliente / dirección</th><th>Ubicación</th><th>Cambios</th><th>Validación</th></tr></thead><tbody>
+      <% @preview.each do |row| %><tr>
+        <td><%= check_box_tag "excluded_rows[]", row.number, row.excluded, aria: { label: "Omitir fila #{row.number}" } %></td><td><%= row.number %></td><td><%= row.excluded ? "Omitir" : row.action %></td><td><%= row.customer.external_code || "Sin código" %></td><td><%= row.customer.name %><br><%= row.customer.address %>, <%= row.customer.city %></td><td><%= row.customer.located? ? "Con ubicación" : "Ubicación pendiente" %></td>
+        <td><ul><% row.changes.each do |field, (before, after)| %><li><%= field %>: <%= before.presence || "vacío" %> → <%= after.presence || "vacío" %></li><% end %></ul></td>
+        <td><% if row.errors.any? %><ul class="import-errors"><% row.errors.each do |error| %><li>Fila <%= row.number %>: <%= error %></li><% end %></ul><% elsif !row.excluded %>Válida<% end %><% row.warnings.each do |warning| %><p><%= warning %></p><% end %></td>
+      </tr><% end %>
+    </tbody></table></div><div class="form-actions"><%= form.submit "Actualizar previsualización", class: "btn btn-white", data: { turbo_submits_with: "Validando…" } %></div></section>
+  <% end %>
+  <section class="management-panel"><p>Se confirma en una transacción. Excluí explícitamente las filas que no deban importarse y actualizá la previsualización. No se fusionan clientes por nombre.</p>
+    <%= form_with url: confirm_customer_import_path(@customer_import), class: "management-form" do |form| %>
+      <%= hidden_field_tag :preview_digest, @preview_digest %>
+      <% if @preview.any? { |row| !row.excluded && row.warnings.any? } %><label class="check-field"><%= check_box_tag :acknowledge_duplicates, "1", false, required: true %> Revisé las coincidencias. Entiendo que las filas sin código crean clientes nuevos y pueden duplicar los existentes.</label><% end %>
+      <%= form.submit "Confirmar importación", class: "btn btn-dark", disabled: @preview.reject(&:excluded).empty? || @preview.any? { |row| !row.excluded && row.errors.any? }, data: { turbo_submits_with: "Importando…", turbo_confirm: "¿Confirmar los clientes revisados?" } %>
+    <% end %>
+  </section>
+<% end %>

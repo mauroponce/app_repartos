@@ -20,7 +20,7 @@ class RouteOptimizationProblem
       locations = company.customers.where(id: orders.map(&:customer_id)).order(:id).lock.index_by(&:id)
       orders.each { |order| order.customer = locations.fetch(order.customer_id) }
     end
-    missing = orders.reject { |order| order.customer.located? }
+    missing = orders.reject { |order| order.customer.routing_location? }
     raise ArgumentError, "Completá la ubicación de: #{missing.map(&:customer_name).uniq.join(', ')}" if missing.any?
     mismatched = orders.reject { |order| order.customer_address == [ order.customer.address, order.customer.city ].join(", ") }
     raise ArgumentError, "La dirección de una entrega cambió. Revisá su dirección antes de optimizar." if mismatched.any?
@@ -31,9 +31,9 @@ class RouteOptimizationProblem
 
   def fingerprint
     data = orders.map do |order|
-      [ order.attributes, order.customer.attributes.slice("latitude", "longitude", "address", "city"), order.delivery_order_items.map(&:attributes) ]
+      [ order.attributes, order.customer.attributes.slice("latitude", "longitude", "address", "city", "location_verification"), order.delivery_order_items.map(&:attributes) ]
     end
-    Digest::SHA256.hexdigest(JSON.generate([ data, vehicles.map { |row| row[:driver].attributes.slice("id", "name", "status", "role") }, settings, date ]))
+    Digest::SHA256.hexdigest(JSON.generate([ data, vehicles.map { |row| row[:driver].attributes.slice("id", "name", "status", "role") }, settings, date, company.province ]))
   end
 
   def payload(pins: {}, routes: nil)

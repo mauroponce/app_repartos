@@ -1,10 +1,12 @@
-<div class="heading"><div><h1>Importar clientes</h1><p>Cargá tu planilla, relacioná las columnas y revisá los cambios antes de confirmar.</p></div><%= link_to "Descargar plantilla CSV", template_customer_imports_path, class: "btn btn-white", data: { turbo: false } %></div>
+<div class="heading"><div><h1>Importación inteligente de clientes</h1><p>Cargá una planilla, relacioná sus columnas y revisá las ubicaciones antes de crear clientes.</p></div><%= link_to "Descargar plantilla CSV", template_customer_imports_path, class: "btn btn-white", data: { turbo: false } %></div>
 <section class="management-panel">
-  <p>CSV en UTF-8 (coma o punto y coma) o XLSX, primera hoja con encabezados. Hasta <%= CustomerImportReader.max_bytes / 1.megabyte %> MB, <%= CustomerImportReader.max_rows %> filas y 30 columnas.</p>
-  <p>Nombre, dirección y ciudad son obligatorios. Teléfono y ubicación pueden completarse después. Los clientes sin ubicación no pueden optimizarse. No se buscan coordenadas automáticamente.</p>
-  <p>Usá un código externo para reconocer clientes al reimportar. En Excel, guardá los códigos como texto para conservar todos sus dígitos.</p>
-  <%= form_with url: customer_imports_path, multipart: true, class: "management-form" do |form| %>
-    <div class="field"><%= form.label :file, "Archivo de clientes" %><%= form.file_field :file, accept: ".csv,.xlsx", required: true %></div>
-    <div class="form-actions"><%= link_to "Cancelar", customers_path, class: "btn btn-white" %><%= form.submit "Previsualizar archivo", class: "btn btn-dark", data: { turbo_submits_with: "Leyendo…" } %></div>
+  <h2>1. Cargar archivo</h2><p><strong>Provincia de la empresa: <%= Current.company.province %>.</strong> Solo se aceptan ubicaciones dentro de esta provincia. <% if Current.user.administrator? %><%= link_to "Configurar provincia", edit_company_settings_path %><% end %></p>
+  <p>CSV UTF-8 (coma o punto y coma) o XLSX. Hasta <%= CustomerImportReader.max_bytes / 1.megabyte %> MB, <%= CustomerImportReader.max_rows %> filas y 30 columnas. Podrás elegir la hoja y los encabezados.</p>
+  <p>Se necesitan nombre y dirección. La localidad puede venir en una columna, en la dirección o completarse para todas las filas. No se crean pedidos ni hojas de reparto.</p>
+  <%= form_with url: customer_imports_path, multipart: true, class: "management-form", data: { turbo_frame: "_top" } do |form| %>
+    <div class="field"><%= form.label :file, "Planilla de clientes" %><%= form.file_field :file, required: true, accept: ".csv,.xlsx" %></div>
+    <div class="form-actions"><%= link_to "Volver a clientes", customers_path, class: "btn btn-white" %><%= form.submit "Cargar y leer planilla", class: "btn btn-dark", data: { turbo_submits_with: "Cargando…" } %></div>
   <% end %>
 </section>
+
+<% if @recent_imports.any? %><section class="management-panel"><h2>Importaciones recientes</h2><ul><% @recent_imports.each do |import| %><li><%= link_to "Lote ##{import.id} · #{CustomerImports::Workflow::STATES.fetch(import.state)} · #{l(import.created_at, format: :short)}", customer_import_path(import) %></li><% end %></ul></section><% end %>

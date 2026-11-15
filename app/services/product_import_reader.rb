@@ -56,23 +56,7 @@ class ProductImportReader
   end
 
   def read_xlsx(upload)
-    Zip::File.open(upload.path) do |zip|
-      if zip.entries.size > 200 || zip.entries.sum(&:size) > 20.megabytes || zip.find_entry("xl/workbook.xml").nil?
-        raise InvalidFile, "El XLSX no es válido o supera el tamaño descomprimido permitido (20 MB)."
-      end
-      # Do not trust the sizes declared in a ZIP's directory. Bound the actual
-      # inflation before handing the archive to Roo/Nokogiri.
-      inflated = 0
-      zip.each do |entry|
-        raise InvalidFile, "El XLSX contiene rutas o referencias externas no admitidas." if entry.name.start_with?("/", "\\") || entry.name.split(/[\\\/]/).include?("..") || entry.name.start_with?("xl/externalLinks/") || entry.ftype == :symlink
-        entry.get_input_stream do |stream|
-          while (chunk = stream.read(64.kilobytes))
-            inflated += chunk.bytesize
-            raise InvalidFile, "El XLSX supera 20 MB descomprimidos." if inflated > 20.megabytes
-          end
-        end
-      end
-    end
+    validate_archive!(upload.path)
     book = Roo::Excelx.new(upload.path, file_warning: :ignore, cell_max: (@max_rows + 1) * @max_columns)
     sheet = book.sheet(0)
     raise InvalidFile, "La primera hoja está vacía." unless sheet.last_row
@@ -89,5 +73,25 @@ class ProductImportReader
     end
   ensure
     book&.close
+  end
+
+  def validate_archive!(path)
+    Zip::File.open(path) do |zip|
+      if zip.entries.size > 200 || zip.entries.sum(&:size) > 20.megabytes || zip.find_entry("xl/workbook.xml").nil?
+        raise InvalidFile, "El XLSX no es válido o supera el tamaño descomprimido permitido (20 MB)."
+      end
+      # Do not trust the sizes declared in a ZIP's directory. Bound the actual
+      # inflation before handing the archive to Roo/Nokogiri.
+      inflated = 0
+      zip.each do |entry|
+        raise InvalidFile, "El XLSX contiene rutas o referencias externas no admitidas." if entry.name.start_with?("/", "\\") || entry.name.split(/[\\\/]/).include?("..") || entry.name.start_with?("xl/externalLinks/") || entry.ftype == :symlink
+        entry.get_input_stream do |stream|
+          while (chunk = stream.read(64.kilobytes))
+            inflated += chunk.bytesize
+            raise InvalidFile, "El XLSX supera 20 MB descomprimidos." if inflated > 20.megabytes
+          end
+        end
+      end
+    end
   end
 end

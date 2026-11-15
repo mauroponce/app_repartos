@@ -1,8 +1,11 @@
 require "test_helper"
 require_relative "../test_helpers/single_route_test_helper"
 require_relative "../test_helpers/delivery_evidence_test_helper"
+require_relative "../test_helpers/customer_import_test_helper"
 
 class CommercialPilotTest < ActionDispatch::IntegrationTest
+  include ActiveJob::TestHelper
+  include CustomerImportTestHelper
   include SingleRouteTestHelper
   include DeliveryEvidenceTestHelper
 
@@ -16,14 +19,18 @@ class CommercialPilotTest < ActionDispatch::IntegrationTest
   test "Excel onboarding route planning road preview offline receipt evidence incident and administration stay tenant scoped" do
     post customer_imports_path, params: { file: fixture_file_upload("customers.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") }
     import = @company.customer_imports.last
+    drain_import_jobs
+    post start_customer_import_path(import)
+    offline_providers { drain_import_jobs }
     get customer_import_path(import)
-    digest = css_select('input[name="preview_digest"]').first["value"]
-    post confirm_customer_import_path(import), params: { preview_digest: digest }
+    assert_response :success
+    post confirm_customer_import_path(import), params: { acknowledge_pending: "1" }
     assert_redirected_to customer_import_path(import)
+    drain_import_jobs
     customer = @company.customers.find_by!(external_code: "000123")
     assert_nil customer.phone
     assert_not customer.located?
-    patch customer_path(customer), params: { customer: { latitude: -34.6037, longitude: -58.3816 } }
+    patch customer_path(customer), params: { customer: { city: "Adrogué", latitude: -34.8, longitude: -58.39 } }
     assert_redirected_to customer_path(customer)
     assert customer.reload.located?
 

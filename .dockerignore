@@ -20,3 +20,11 @@ backups
 .env.routing
 **/__pycache__
 **/*.pyc
+
+# Small import samples are exercised by the CI image's workbook tests.
+!docs/
+docs/*
+!docs/ejemplos/
+docs/ejemplos/*
+!docs/ejemplos/clientes/
+!docs/ejemplos/clientes/*.xlsx

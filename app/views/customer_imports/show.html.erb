@@ -1,32 +1,63 @@
-<div class="heading"><div><h1>Previsualización de clientes</h1><p><%= @preview.size %> filas · Revisá los códigos, las coincidencias y los campos que cambiarán.</p></div><div class="heading-actions"><%= link_to "Descargar errores", errors_customer_import_path(@customer_import), class: "btn btn-white", data: { turbo: false } %><%= link_to "Cargar otro archivo", new_customer_import_path, class: "btn btn-white" %></div></div>
-<% if @customer_import.confirmed_at %>
-  <section class="management-panel"><h2>Importación confirmada</h2>
-    <% { "created" => "Clientes creados", "updated" => "Clientes actualizados", "skipped" => "Filas omitidas", "pending_location" => "Ubicación pendiente", "errors" => "Errores" }.each do |key, label| %><p><strong><%= label %>:</strong> <%= @customer_import.summary[key] %></p><% end %>
-    <p>Reintentar esta confirmación no crea duplicados.</p><%= link_to "Ver clientes", customers_path, class: "btn btn-dark" %>
-  </section>
-<% elsif @customer_import.expired? %>
-  <div class="flash alert">La previsualización venció a las 24 horas. Volvé a cargar el archivo.</div>
-<% else %>
-  <%= form_with url: customer_import_path(@customer_import), method: :patch, class: "management-form" do |form| %>
-    <section class="management-panel"><h2>Mapear columnas</h2><div class="field-grid">
-      <% CustomerImporter::FIELDS.each do |field| %><div class="field"><%= label_tag "mapping_#{field}", CustomerImporter::LABELS.fetch(field) %><%= select_tag "mapping[#{field}]", options_for_select(@customer_import.headers.each_with_index.map { |header, index| [header, index.to_s] }, @customer_import.mapping[field]), include_blank: "Sin columna" %></div><% end %>
-    </div>
-    <label class="check-field"><%= check_box_tag :overwrite_blanks, "1", @customer_import.overwrite_blanks? %> Borrar valores existentes cuando una columna mapeada tenga una celda vacía. Puede dejar clientes sin ubicación.</label>
-    <p>Por defecto, las celdas vacías conservan los datos existentes. Cambiar una dirección sin indicar su nuevo punto elimina la ubicación anterior.</p>
+<%= turbo_frame_tag "customer-import" do %>
+  <div <%= tag.attributes(data: { controller: @customer_import.working? ? "import-progress" : nil, import_progress_url_value: request.fullpath }) %>>
+  <div class="heading"><div><h1>Importación inteligente de clientes</h1><p><%= @customer_import.source_file.filename if @customer_import.source_file.attached? %> · <%= CustomerImports::Workflow::STATES.fetch(@customer_import.state) %></p></div><div class="heading-actions"><%= link_to "Clientes", customers_path, class: "btn btn-white", data: { turbo_frame: "_top" } %><%= link_to "Cargar otra planilla", new_customer_import_path, class: "btn btn-white", data: { turbo_frame: "_top" } %></div></div>
+  <% if @customer_import.last_error.present? %><p class="flash alert" role="alert"><%= @customer_import.last_error %></p><% end %>
+  <% if @customer_import.state == "completed" %>
+    <section class="management-panel"><h2>Importación confirmada</h2>
+      <% { "created" => "Clientes creados", "skipped" => "Filas omitidas", "pending_location" => "Ubicaciones pendientes" }.each do |key, label| %><p><strong><%= label %>:</strong> <%= @customer_import.summary[key] %></p><% end %>
+      <p>Las ubicaciones pendientes deben confirmarse desde la edición del cliente antes de optimizar rutas. Repetir la confirmación no crea duplicados.</p>
+      <%= link_to "Ver clientes", customers_path, class: "btn btn-dark", data: { turbo_frame: "_top" } %>
     </section>
-    <section class="management-panel"><div class="table-scroll" tabindex="0" role="region" aria-label="Previsualización de clientes"><table class="data-table"><thead><tr><th>Omitir</th><th>Fila</th><th>Acción</th><th>Código</th><th>Cliente / dirección</th><th>Ubicación</th><th>Cambios</th><th>Validación</th></tr></thead><tbody>
-      <% @preview.each do |row| %><tr>
-        <td><%= check_box_tag "excluded_rows[]", row.number, row.excluded, aria: { label: "Omitir fila #{row.number}" } %></td><td><%= row.number %></td><td><%= row.excluded ? "Omitir" : row.action %></td><td><%= row.customer.external_code || "Sin código" %></td><td><%= row.customer.name %><br><%= row.customer.address %>, <%= row.customer.city %></td><td><%= row.customer.located? ? "Con ubicación" : "Ubicación pendiente" %></td>
-        <td><ul><% row.changes.each do |field, (before, after)| %><li><%= field %>: <%= before.presence || "vacío" %> → <%= after.presence || "vacío" %></li><% end %></ul></td>
-        <td><% if row.errors.any? %><ul class="import-errors"><% row.errors.each do |error| %><li>Fila <%= row.number %>: <%= error %></li><% end %></ul><% elsif !row.excluded %>Válida<% end %><% row.warnings.each do |warning| %><p><%= warning %></p><% end %></td>
-      </tr><% end %>
-    </tbody></table></div><div class="form-actions"><%= form.submit "Actualizar previsualización", class: "btn btn-white", data: { turbo_submits_with: "Validando…" } %></div></section>
-  <% end %>
-  <section class="management-panel"><p>Se confirma en una transacción. Excluí explícitamente las filas que no deban importarse y actualizá la previsualización. No se fusionan clientes por nombre.</p>
-    <%= form_with url: confirm_customer_import_path(@customer_import), class: "management-form" do |form| %>
-      <%= hidden_field_tag :preview_digest, @preview_digest %>
-      <% if @preview.any? { |row| !row.excluded && row.warnings.any? } %><label class="check-field"><%= check_box_tag :acknowledge_duplicates, "1", false, required: true %> Revisé las coincidencias. Entiendo que las filas sin código crean clientes nuevos y pueden duplicar los existentes.</label><% end %>
-      <%= form.submit "Confirmar importación", class: "btn btn-dark", disabled: @preview.reject(&:excluded).empty? || @preview.any? { |row| !row.excluded && row.errors.any? }, data: { turbo_submits_with: "Importando…", turbo_confirm: "¿Confirmar los clientes revisados?" } %>
+  <% elsif @customer_import.expired? %>
+    <p class="flash alert">La preparación venció a las 24 horas. Cargá nuevamente la planilla.</p>
+  <% elsif @customer_import.state == "mapping" %>
+    <section class="management-panel"><h2>2. Elegir hoja y mapear columnas</h2>
+      <%= form_with url: customer_import_path(@customer_import), method: :patch, class: "management-form", data: { turbo_frame: "_top" } do |form| %>
+        <div class="field-grid">
+          <div class="field"><%= label_tag :sheet_index, "Hoja" %><%= select_tag :sheet_index, options_for_select(@customer_import.sheet_names.each_with_index.map { |name, index| [name, index] }, @customer_import.sheet_index) %></div>
+          <div class="field"><%= label_tag :header_row, "Fila de encabezados detectada" %><%= number_field_tag :header_row, @customer_import.header_row, min: 1, max: 20 %><span class="hint">Cambiar hoja o encabezados vuelve a leer la planilla.</span></div>
+          <% CustomerImports::Preparation::FIELDS.each do |field| %>
+            <div class="field"><%= label_tag "mapping_#{field}", CustomerImports::Preparation::LABELS.fetch(field) %><%= select_tag "mapping[#{field}]", options_for_select(@customer_import.headers.each_with_index.map { |header, index| [header, index.to_s] }, @customer_import.mapping[field]), include_blank: "Sin columna" %></div>
+          <% end %>
+        </div>
+        <h3>Contexto geográfico general</h3><p>Se aplica cuando la columna está vacía. Usá solamente datos que conozcas de estos clientes.</p>
+        <div class="field-grid"><% (Geocoding::Address::CONTEXT_FIELDS - %w[province country]).each do |field| %><div class="field"><%= label_tag "geographic_context_#{field}", CustomerImports::Preparation::LABELS.fetch(field) %><%= text_field_tag "geographic_context[#{field}]", @customer_import.geographic_context[field].presence || (field == "country" ? "Argentina" : nil), maxlength: 255 %></div><% end %></div>
+        <div class="form-actions"><%= form.submit "Guardar mapeo / leer hoja", class: "btn btn-white", data: { turbo_submits_with: "Guardando…" } %></div>
+      <% end %>
+      <p>País: Argentina · Provincia obligatoria: <strong><%= Current.company.province %></strong>. Las filas y coordenadas de otra provincia se rechazan.</p>
+      <h3>Vista previa del archivo</h3>
+      <div class="table-scroll" tabindex="0" role="region" aria-label="Primeras filas originales"><table class="data-table"><thead><tr><th>Fila</th><% @customer_import.headers.each do |header| %><th><%= header %></th><% end %></tr></thead><tbody><% @customer_import.import_rows.order(:number).limit(5).each do |row| %><tr><td><%= row.number %></td><% @customer_import.headers.each_index do |index| %><td><%= row.original[index] %></td><% end %></tr><% end %></tbody></table></div>
+      <p><%= @customer_import.total_rows %> filas. Se detectarán errores y duplicados antes de consultar proveedores. Las coincidencias existentes no se actualizan.</p>
+      <%= button_to "Procesar direcciones", start_customer_import_path(@customer_import), class: "btn btn-dark", form: { data: { turbo_frame: "_top" } }, data: { turbo_submits_with: "Iniciando…" } %>
+    </section>
+  <% else %>
+    <section class="management-panel" aria-live="polite"><h2><%= @customer_import.state == "review" ? "3. Revisar resultados" : CustomerImports::Workflow::STATES.fetch(@customer_import.state) %></h2>
+      <p><%= @customer_import.processed_rows %> de <%= @customer_import.total_rows %> filas procesadas · <%= @customer_import.progress %>%</p>
+      <progress value="<%= @customer_import.processed_rows %>" max="<%= [@customer_import.total_rows, 1].max %>" aria-label="Progreso de geocodificación" style="width:100%"></progress>
+      <% if @customer_import.working? %><p>Podés salir de esta pantalla. El trabajo continúa en segundo plano; el progreso se actualiza automáticamente.</p><% end %>
+      <div class="import-summary"><% CustomerImportRow::PRECISION_LABELS.each do |key, label| %><%= link_to customer_import_path(@customer_import, precision: key), class: "import-summary-item" do %><strong><%= @counts[key] || 0 %></strong><span><%= label %></span><% end %><% end %><%= link_to "#{@error_count} errores", customer_import_path(@customer_import, precision: "errors") %><%= link_to "#{@duplicate_count} duplicados posibles", customer_import_path(@customer_import, precision: "duplicates") %></div>
+    </section>
+    <% if @customer_import.import_rows.exists? %>
+      <section class="management-panel">
+        <%= form_with url: customer_import_path(@customer_import), method: :get, class: "field-grid" do |form| %><div class="field"><%= form.label :q, "Buscar cliente o dirección" %><%= form.search_field :q, value: @query, maxlength: 120 %></div><div class="field"><%= form.label :precision, "Estado" %><%= form.select :precision, [["Todos", ""]] + CustomerImportRow::PRECISION_LABELS.map { |key, label| [label, key] } + [["Errores", "errors"], ["Duplicados", "duplicates"], ["Pendientes de revisión", "pending"]], selected: @precision %></div><div class="form-actions"><%= form.submit "Filtrar", class: "btn btn-white" %><%= link_to "Descargar errores", errors_customer_import_path(@customer_import), class: "btn btn-white", data: { turbo: false } %></div><% end %>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Resultados de importación"><table class="data-table"><thead><tr><th>Fila / cliente</th><th>Dirección original</th><th>Normalizada / localidad</th><th>Proveedor</th><th>Precisión</th><th>Validación</th><th>Acción</th></tr></thead><tbody>
+          <% @rows.each do |row| %><tr><td><%= row.number %> · <%= row.data["name"].presence || "Sin nombre" %><% if row.customer_id %><br>Creado<% elsif row.excluded? %><br>Omitida<% end %></td><td><%= @customer_import.mapping["address"].present? ? row.original[@customer_import.mapping["address"].to_i] : row.original.join(" · ") %></td><td><%= Geocoding::Address.query(row.normalized) %><br><%= row.normalized["city"] %></td><td><%= { "georef" => "Georef Argentina", "photon" => "Photon", "user" => "Archivo del usuario", "manual" => "Revisión manual" }.fetch(row.provider, "Sin proveedor") %></td><td><%= row.processed_at ? row.label : "Pendiente" %></td><td><% (row.issues + row.warnings + row.duplicates).each do |message| %><p><%= message %></p><% end %></td><td><% if @customer_import.editable? && row.customer_id.nil? %><%= link_to "Revisar fila #{row.number}", edit_customer_import_row_path(@customer_import, row), class: "btn btn-white", data: { turbo_frame: "_top" } %><% end %></td></tr><% end %>
+        </tbody></table></div>
+        <div class="form-actions"><% if @page > 1 %><%= link_to "Anterior", customer_import_path(@customer_import, page: @page - 1, q: @query, precision: @precision), class: "btn btn-white" %><% end %><span>Página <%= @page %> de <%= @pages %></span><% if @page < @pages %><%= link_to "Siguiente", customer_import_path(@customer_import, page: @page + 1, q: @query, precision: @precision), class: "btn btn-white" %><% end %></div>
+      </section>
     <% end %>
-  </section>
+    <% if @customer_import.editable? %>
+      <section class="management-panel"><h2>4. Confirmar clientes</h2><p>Se crearán clientes nuevos. Las filas omitidas no se importan. Las ubicaciones aproximadas o ambiguas se conservan como sugerencias del lote y el cliente queda sin punto definitivo.</p>
+        <%= form_with url: confirm_customer_import_path(@customer_import), class: "management-form", data: { turbo_frame: "_top" } do |form| %>
+          <label class="check-field"><%= check_box_tag :acknowledge_duplicates, "1" %> Revisé los duplicados posibles y autorizo crear esos clientes nuevos, sin fusionar los existentes.</label>
+          <label class="check-field"><%= check_box_tag :acknowledge_pending, "1" %> Autorizo importar ubicaciones pendientes. Deberán verificarse antes de optimizar rutas.</label>
+          <%= form.submit "Confirmar importación", class: "btn btn-dark", disabled: @error_count.positive? && @customer_import.import_rows.where(excluded: false).where("issues <> '[]'::jsonb").exists?, data: { turbo_submits_with: "Confirmando…" } %>
+        <% end %>
+      </section>
+    <% end %>
+  <% end %>
+  <% unless @customer_import.expired? %>
+    <div class="form-actions"><% if @customer_import.state.in?(%w[reading mapping preparing processing review failed]) %><%= button_to "Cancelar trabajos pendientes", cancel_customer_import_path(@customer_import), class: "btn btn-white", form: { data: { turbo_frame: "_top" } } %><% end %><% if @customer_import.state.in?(%w[cancelled failed]) %><%= button_to "Reanudar", resume_customer_import_path(@customer_import), class: "btn btn-dark", form: { data: { turbo_frame: "_top" } } %><% end %></div>
+  <% end %>
+  </div>
 <% end %>

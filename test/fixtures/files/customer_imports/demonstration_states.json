@@ -1,0 +1,7 @@
+{
+  "notice": "Coordenadas sintéticas exclusivamente para pruebas. No son puntos de entrega verificados.",
+  "reliable": { "provider": "photon", "street": "Belgrano", "house_number": "450", "city": "Adrogué", "district": "Almirante Brown", "province": "Buenos Aires", "country": "Argentina", "latitude": -34.8, "longitude": -58.39, "precision": "address", "type": "address" },
+  "approximate": { "provider": "georef", "street": "Belgrano", "house_number": "450", "city": "Adrogué", "district": "Almirante Brown", "province": "Buenos Aires", "country": "Argentina", "latitude": -34.8, "longitude": -58.39, "precision": "interpolated", "type": "address" },
+  "ambiguous": { "provider": "photon", "street": "Belgrano", "house_number": "450", "city": "Adrogué", "district": "Almirante Brown", "province": "Buenos Aires", "country": "Argentina", "latitude": -34.82, "longitude": -58.39, "precision": "address", "type": "address" },
+  "unlocated": []
+}

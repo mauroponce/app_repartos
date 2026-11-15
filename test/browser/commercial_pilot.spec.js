@@ -16,39 +16,51 @@ async function login(page, email, password) {
   await page.getByRole("button", { name: "Ingresar" }).click()
 }
 
-test("Excel customer onboarding previews without geocoding then CSV mapping updates the same tenant code", async ({ page }) => {
-  const data = fixture("create")
-  const setup = fixture("operations", data.company_id)
-  let geocodingRequests = 0
-  page.on("request", request => { if (request.url().includes("photon.komoot.io")) geocodingRequests++ })
-  page.on("dialog", dialog => dialog.accept())
+test("Excel onboarding is asynchronous and repeated external codes never overwrite customers", async ({ page }) => {
+  test.skip(process.env.PWA_TEST_SERVER !== "1", "Uses an isolated Rails test server")
+  test.setTimeout(180000)
+  const imports = (action, id = "") => {
+    const output = execFileSync("bin/rails", ["runner", "test/browser/customer_import_fixtures.rb", action, String(id)], { encoding: "utf8", env: { ...process.env, RAILS_ENV: "test" } })
+    return output.trim() ? JSON.parse(output.trim().split("\n").at(-1)) : null
+  }
+  const data = imports("create")
   try {
-    await login(page, setup.manager_email, data.password)
+    await login(page, data.email, data.password)
     await page.waitForURL(/\/admin\/?$/)
     await page.getByRole("link", { name: "Importar clientes", exact: true }).click()
     await page.locator('input[type="file"]').setInputFiles(fileURLToPath(new URL("../fixtures/files/customers.xlsx", import.meta.url)))
-    await page.getByRole("button", { name: "Previsualizar archivo" }).click()
-    await expect(page.getByRole("heading", { name: "Previsualización de clientes" })).toBeVisible()
+    await page.getByRole("button", { name: "Cargar y leer planilla", exact: true }).click()
+    await page.waitForURL(/importaciones-clientes\/\d+/)
+    imports("drain", data.company_id)
+    await expect(page.getByRole("heading", { name: "2. Elegir hoja y mapear columnas" })).toBeVisible({ timeout: 15000 })
     await expect(page.locator("td")).toContainText(["000123"])
-    await expect(page.getByText("Ubicación pendiente", { exact: true })).toBeVisible()
+    await page.getByRole("button", { name: "Procesar direcciones", exact: true }).click()
+    imports("drain", data.company_id)
+    await expect(page.getByRole("heading", { name: "3. Revisar resultados" })).toBeVisible({ timeout: 15000 })
+    await page.locator('[name="acknowledge_pending"]').check()
     await page.getByRole("button", { name: "Confirmar importación", exact: true }).click()
-    await expect(page.getByRole("heading", { name: "Importación confirmada" })).toBeVisible()
-    await expect(page.locator("p").filter({ hasText: "Clientes creados:" })).toContainText("1")
-    await page.getByRole("link", { name: "Cargar otro archivo" }).click()
-    await page.locator('input[type="file"]').setInputFiles({ name: "clientes.csv", mimeType: "text/csv", buffer: Buffer.from("Zona;Negocio;Calle;Identificador\nCABA;Comercio actualizado;Mitre 123;000123\n") })
-    await page.getByRole("button", { name: "Previsualizar archivo" }).click()
+    imports("drain", data.company_id)
+    await expect(page.getByRole("heading", { name: "Importación confirmada" })).toBeVisible({ timeout: 15000 })
+    const original = imports("inspect", data.company_id).customers
+    expect(original).toHaveLength(1)
+    await page.getByRole("link", { name: "Cargar otra planilla", exact: true }).click()
+    await page.locator('input[type="file"]').setInputFiles({ name: "clientes.csv", mimeType: "text/csv", buffer: Buffer.from("Zona;Negocio;Calle;Identificador\nAdrogué;Comercio actualizado;Mitre 123;000123\n") })
+    await page.getByRole("button", { name: "Cargar y leer planilla", exact: true }).click()
+    await page.waitForURL(/importaciones-clientes\/\d+/)
+    imports("drain", data.company_id)
+    await expect(page.getByRole("heading", { name: "2. Elegir hoja y mapear columnas" })).toBeVisible({ timeout: 15000 })
     await page.locator("#mapping_external_code").selectOption("3")
     await page.locator("#mapping_name").selectOption("1")
     await page.locator("#mapping_address").selectOption("2")
     await page.locator("#mapping_city").selectOption("0")
-    await page.getByRole("button", { name: "Actualizar previsualización" }).click()
-    await expect(page.getByRole("cell", { name: "Actualizar", exact: true })).toBeVisible()
-    await expect(page.getByRole("cell", { name: /Comercio actualizado/ }).first()).toBeVisible()
-    await page.getByRole("button", { name: "Confirmar importación", exact: true }).click()
-    await expect(page.locator("p").filter({ hasText: "Clientes actualizados:" })).toContainText("1")
-    await expect(page.locator("p").filter({ hasText: "Clientes creados:" })).toContainText("0")
-    expect(geocodingRequests).toBe(0)
-  } finally { fixture("cleanup", data.company_id) }
+    await page.getByRole("button", { name: "Guardar mapeo / leer hoja", exact: true }).click()
+    await page.getByRole("button", { name: "Procesar direcciones", exact: true }).click()
+    imports("drain", data.company_id)
+    await expect(page.getByRole("heading", { name: "3. Revisar resultados" })).toBeVisible({ timeout: 15000 })
+    await expect(page.getByText(/mismo código.*no se modificará/)).toBeVisible()
+    await expect(page.getByRole("button", { name: "Confirmar importación", exact: true })).toBeDisabled()
+    expect(imports("inspect", data.company_id).customers).toEqual(original)
+  } finally { imports("cleanup", data.company_id) }
 })
 
 test("GPS stays off with browser permission and an offline stop survives reload without reactivating", async ({ page, context }) => {

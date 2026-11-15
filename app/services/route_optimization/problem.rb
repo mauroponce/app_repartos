@@ -18,7 +18,7 @@ module RouteOptimization
       end
       @stops = visits.map do |visit|
         customer = visit.customer
-        raise ArgumentError, "Falta la ubicación de #{visit.customer_name}" unless customer.located?
+        raise ArgumentError, "Falta la ubicación de #{visit.customer_name}" unless customer.routing_location?
         unless visit.customer_address == [ customer.address, customer.city ].compact.join(", ")
           raise ArgumentError, "La dirección histórica de #{visit.customer_name} difiere de su ubicación actual. Revisá la parada antes de optimizar."
         end
@@ -36,8 +36,8 @@ module RouteOptimization
     end
 
     def fingerprint
-      snapshot = [ run.attributes, company.attributes.slice("time_zone", "depot_latitude", "depot_longitude", "routing_departure", "routing_return_to_depot", "routing_preferred_tolerance", "routing_service_minutes"),
-        settings, visits.map { |visit| [ visit.attributes, visit.customer.attributes.slice("id", "latitude", "longitude", "address", "city", "updated_at"), visit.delivery_schedule&.attributes, visit.delivery_items.map(&:attributes), visit.delivery_orders.sort_by(&:id).map { |order| [ order.attributes, order.delivery_order_items.map(&:attributes) ] } ] } ]
+      snapshot = [ run.attributes, company.attributes.slice("province", "time_zone", "depot_latitude", "depot_longitude", "routing_departure", "routing_return_to_depot", "routing_preferred_tolerance", "routing_service_minutes"),
+        settings, visits.map { |visit| [ visit.attributes, visit.customer.attributes.slice("id", "latitude", "longitude", "address", "city", "location_verification", "updated_at"), visit.delivery_schedule&.attributes, visit.delivery_items.map(&:attributes), visit.delivery_orders.sort_by(&:id).map { |order| [ order.attributes, order.delivery_order_items.map(&:attributes) ] } ] } ]
       Digest::SHA256.hexdigest(JSON.generate(canonical(snapshot)))
     end
 

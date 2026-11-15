@@ -11,6 +11,7 @@ class Customer < ApplicationRecord
   attr_accessor :location_confirmed
 
   before_validation :clear_outdated_location
+  before_validation :confirm_form_location
 
   enum :status, { active: "active", inactive: "inactive" }, validate: true
   normalizes :name, :contact, :address, :city, with: ->(value) { value.strip }
@@ -32,6 +33,11 @@ class Customer < ApplicationRecord
     latitude.present? && longitude.present?
   end
 
+  def routing_location?
+    located? && location_verification.in?(%w[legacy reliable manual]) &&
+      (location_verification == "legacy" || Geocoding::ProvinceBoundary.contains?(company.province, latitude, longitude))
+  end
+
   scope :alphabetical, -> { order(Arel.sql('LOWER(customers.name) COLLATE "es-x-icu"'), :id) }
   scope :search, ->(query) {
     pattern = "%#{sanitize_sql_like(query)}%"
@@ -40,6 +46,11 @@ class Customer < ApplicationRecord
 
   private
 
+  def confirm_form_location
+    return unless validation_context == :geocoded
+    self.location_verification = located? ? "manual" : "pending"
+  end
+
   def clear_outdated_location
     return unless persisted? && (will_save_change_to_address? || will_save_change_to_city?)
     return if will_save_change_to_latitude? || will_save_change_to_longitude?
@@ -47,5 +58,6 @@ class Customer < ApplicationRecord
 
     self.latitude = nil
     self.longitude = nil
+    self.location_verification = "pending"
   end
 end

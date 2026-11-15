@@ -1,0 +1,5 @@
+<div class="heading"><div><h1>Provincia de la empresa</h1><p>Los clientes importados deben ubicarse dentro de esta provincia.</p></div><%= link_to "Importar clientes", new_customer_import_path, class: "btn btn-white" %></div>
+<section class="management-panel"><%= form_with model: @company, url: company_settings_path, method: :patch, class: "field-grid" do |form| %>
+  <% if @company.errors.any? %><div class="field full validation-errors" role="alert"><%= @company.errors.full_messages.to_sentence %></div><% end %>
+  <div class="field"><%= form.label :province, "Provincia de operación" %><%= form.select :province, Geocoding::ProvinceBoundary.names, required: true %></div><p class="field full">La provincia no puede cambiarse mientras haya importaciones pendientes. Los clientes sin ubicación seguirán necesitando revisión.</p><div class="form-actions"><%= form.submit "Guardar provincia", class: "btn btn-dark" %></div>
+<% end %></section>

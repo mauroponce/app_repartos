@@ -9,6 +9,7 @@
         <div class="drawer-data-row"><dt><%= label %></dt><dd><%= value.presence || "Sin informar" %></dd></div>
       <% end %>
     </dl>
+    <% unless @customer.routing_location? %><p class="drawer-note">Ubicación pendiente de verificación. Confirmá el punto desde la edición del cliente antes de optimizar rutas.</p><% end %>
     <% if @customer.located? %>
       <section class="customer-location-detail" <%= tag.attributes(data: customer_location_data(@customer, readonly: true)) %> aria-label="Ubicación del cliente">
         <div class="customer-map" data-location-target="map" role="region" aria-label="Mapa de ubicación del cliente"></div>

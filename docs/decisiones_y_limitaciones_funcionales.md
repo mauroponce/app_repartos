@@ -158,7 +158,7 @@ La preparación y las comprobaciones locales realizadas no acreditan un desplieg
 
 ## Preparación comercial incorporada
 
-La única importación nueva es la de clientes desde Excel/CSV, con revisión antes de confirmar, código externo único por empresa y datos de ubicación/teléfono opcionales. No se importan pedidos ni entregas. Las ubicaciones pendientes se resuelven desde el mapa antes de optimizar; las ubicaciones fuera del mapa activo permiten planificación manual. Ver [importación](importacion_clientes.md).
+La importación de clientes desde Excel/CSV se prepara y confirma en segundo plano, con mapeo de columnas, código externo único por empresa y revisión persistente. Primero consulta Georef y Photon; solo recurre a Gemini para direcciones difíciles, usando una única clave del servidor, sin pedir credenciales a las empresas. Los clientes importados deben pertenecer a la provincia de su empresa, inicialmente Buenos Aires: se comprueban tanto los datos del proveedor como los puntos dentro de límites provinciales oficiales, incluyendo la revisión manual. Las ubicaciones aproximadas o ambiguas requieren revisión, y las pendientes no se usan en OSRM/VROOM. No se actualizan clientes existentes ni se crean pedidos o entregas automáticamente. Las ubicaciones verificadas fuera del mapa vial activo permiten planificación manual. Ver [importación](importacion_clientes.md).
 
 GPS apagado por defecto: permiso del navegador y consentimiento para compartir son decisiones diferentes. Se exige activación voluntaria, primer plano, sesión y jornada válidas; se conserva la revocación pendiente y se elimina la última posición al confirmarla. No se guardan recorridos históricos. Ver [GPS](gps_opcional.md).
 
