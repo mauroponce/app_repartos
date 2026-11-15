@@ -67,7 +67,7 @@ module DriverApi
       def serialize_visit(visit)
         { id: visit.id, position: visit.position, status: visit.status, customer_name: visit.customer_name,
           customer_address: visit.customer_address, phone: visit.customer.phone,
-          latitude: visit.customer.latitude, longitude: visit.customer.longitude,
+          latitude: visit.current_customer_location? ? visit.customer.latitude : nil, longitude: visit.current_customer_location? ? visit.customer.longitude : nil,
           revision: DriverWorkSnapshot.revision(visit), proof: DriverWorkSnapshot.issue(user: Current.user, visit: visit),
           items: visit.delivery_items.sort_by(&:id).map { |item| item.attributes.slice("id", "product_id", "description", "unit", "planned_quantity", "delivered_quantity") } }
       end

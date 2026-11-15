@@ -6,7 +6,7 @@ Preparación para **un único servidor** con Ubuntu 24.04 LTS, Docker, PostgreSQ
 
 Debe tener Docker/Buildx, Ruby 3.4.12 y Bundler (o un entorno equivalente de desarrollo), acceso SSH con clave y el repositorio privado. No necesita instalar OSRM en el host. Ejecutar `bundle install`; el lockfile fija Kamal 2.12.0.
 
-Antes de un despliegue real, revisar y commitear los cambios que se quieran publicar. Kamal construye desde el checkout Git: los cambios locales sin commit no deben darse por incluidos. Esta implementación no realiza commits, push ni un despliegue automáticamente.
+Antes de un despliegue real, revisar y commitear los cambios que se quieran publicar. Kamal construye desde el checkout Git: los cambios locales sin commit no deben darse por incluidos. El procedimiento de deploy no crea commits ni hace push automáticamente; los commits por etapa de esta iniciativa están registrados en Git. No se realizó un despliegue real.
 
 El [registry local oficial de Kamal](https://kamal-deploy.org/docs/configuration/docker-registry/) usa `localhost:5555` en el equipo que construye y túneles SSH para descargar las imágenes en el VPS. No publica la aplicación en Docker Hub ni requiere cuenta/plan de registry. El equipo constructor debe permanecer conectado durante el deploy, con su Docker funcionando y el puerto local libre. Las imágenes almacenadas en el VPS permiten rollback a versiones conservadas; para reconstruir una versión eliminada debe estar disponible el equipo constructor/repo. Un fallo de túnel no debe solucionarse publicando el registry en Internet.
 

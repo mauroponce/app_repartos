@@ -40,6 +40,26 @@ for entry in "primary:$PRIMARY_DATABASE_NAME" "queue:$QUEUE_DATABASE_NAME"; do
     echo 'Falló la restauración. Conservá mantenimiento y recuperá desde la copia cifrada elegida o previa.' >&2; exit 1
   fi
 done
+# Restoring an older snapshot must not resurrect sessions or GPS consent that
+# were revoked after it was taken. Keep offline operation grants intact: users
+# can authenticate again and submit their pending operations normally.
+docker exec -i "$backup_db" psql -X -qAt -U "$backup_user" -d "$PRIMARY_DATABASE_NAME" -v ON_ERROR_STOP=1 <<'SQL'
+BEGIN;
+DELETE FROM sessions;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'location_sharing_enabled') THEN
+    UPDATE users SET location_sharing_enabled = false,
+      location_consent_version = location_consent_version + 1,
+      location_deactivated_at = CURRENT_TIMESTAMP
+      WHERE location_sharing_enabled OR location_consent_id IS NOT NULL;
+  END IF;
+  IF to_regclass('public.driver_locations') IS NOT NULL THEN
+    DELETE FROM driver_locations;
+  END IF;
+END $$;
+COMMIT;
+SQL
 if [[ -n "${RESTORE_STORAGE_SERVICE:-}" ]]; then
   docker exec "$backup_db" psql -X -qAt -U "$backup_user" -d "$PRIMARY_DATABASE_NAME" -v ON_ERROR_STOP=1 -c "UPDATE active_storage_blobs SET service_name = 'persistent'"
 fi

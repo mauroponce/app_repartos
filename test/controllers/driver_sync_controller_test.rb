@@ -108,6 +108,29 @@ class DriverSyncControllerTest < ActionDispatch::IntegrationTest
     assert_no_match @visit.customer_name, response.body
   end
 
+  test "commercial maintenance timestamps do not invalidate unchanged driver work" do
+    get "/repartidor/api/v1/work"
+    etag = response.headers.fetch("ETag")
+    @company.update_columns(opportunities_changed_at: Time.current, opportunities_job_enqueued_at: Time.current)
+    get "/repartidor/api/v1/work", headers: { "If-None-Match" => etag }
+    assert_response :not_modified
+  end
+
+  test "a changed customer address never replaces a historical visit destination with its new map point" do
+    historical_address = @visit.customer_address
+    @visit.customer.update!(address: "Nueva dirección 999", latitude: -34.61, longitude: -58.40)
+    get "/repartidor/api/v1/work"
+    assert_response :success
+    package = response.parsed_body["packages"].find { |row| row["id"] == @run.id }
+    visit = package["visits"].find { |row| row["id"] == @visit.id }
+    assert_equal historical_address, visit["customer_address"]
+    assert_nil visit["latitude"]
+    assert_nil visit["longitude"]
+    links = Nokogiri::HTML.fragment(package["html"]).css('a[href*="google.com/maps/dir/"]')
+    assert links.any?
+    links.each { |link| assert_equal historical_address, URI.decode_www_form(URI.parse(link["href"]).query).to_h["destination"] }
+  end
+
   test "failed visit is synced with zero quantities and an immutable incident" do
     submit(attributes.merge(status: "not_attended", notes: "No atendió"))
     assert_response :success

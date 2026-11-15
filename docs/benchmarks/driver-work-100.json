@@ -1,0 +1,145 @@
+{
+  "measured_at": "2026-11-15T15:30:31-03:00",
+  "revision": "pilot-review",
+  "mode": "in-process Rack sessions, PostgreSQL, shared host, no network or compression",
+  "lock_sample_interval_ms": 20,
+  "max_connections_waiting_for_locks": 49,
+  "lock_wait_samples": 1196,
+  "rows": [
+    {
+      "drivers": 5,
+      "stops": 100,
+      "scenario": "initial",
+      "p50_ms": 4411.12,
+      "p95_ms": 4443.48,
+      "queries_per_request": 30.0,
+      "sql_ms_per_request": 1187.82,
+      "total_bytes": 5717847,
+      "statuses": {
+        "200": 5
+      },
+      "max_connections_waiting_for_locks": 0,
+      "rss_kib": 223048
+    },
+    {
+      "drivers": 5,
+      "stops": 100,
+      "scenario": "unchanged",
+      "p50_ms": 309.28,
+      "p95_ms": 310.71,
+      "queries_per_request": 19.0,
+      "sql_ms_per_request": 243.51,
+      "total_bytes": 0,
+      "statuses": {
+        "304": 5
+      },
+      "max_connections_waiting_for_locks": 0,
+      "rss_kib": 223256
+    },
+    {
+      "drivers": 5,
+      "stops": 100,
+      "scenario": "sync",
+      "p50_ms": 3316.81,
+      "p95_ms": 3458.61,
+      "queries_per_request": 42.0,
+      "sql_ms_per_request": 3196.27,
+      "total_bytes": 1198,
+      "statuses": {
+        "200": 5
+      },
+      "max_connections_waiting_for_locks": 4,
+      "rss_kib": 223624
+    },
+    {
+      "drivers": 20,
+      "stops": 100,
+      "scenario": "initial",
+      "p50_ms": 14857.83,
+      "p95_ms": 15158.62,
+      "queries_per_request": 30.0,
+      "sql_ms_per_request": 7367.8,
+      "total_bytes": 22870577,
+      "statuses": {
+        "200": 20
+      },
+      "max_connections_waiting_for_locks": 0,
+      "rss_kib": 411624
+    },
+    {
+      "drivers": 20,
+      "stops": 100,
+      "scenario": "unchanged",
+      "p50_ms": 1417.52,
+      "p95_ms": 1437.26,
+      "queries_per_request": 19.0,
+      "sql_ms_per_request": 1314.57,
+      "total_bytes": 0,
+      "statuses": {
+        "304": 20
+      },
+      "max_connections_waiting_for_locks": 0,
+      "rss_kib": 411972
+    },
+    {
+      "drivers": 20,
+      "stops": 100,
+      "scenario": "sync",
+      "p50_ms": 11327.4,
+      "p95_ms": 14389.34,
+      "queries_per_request": 41.0,
+      "sql_ms_per_request": 10647.12,
+      "total_bytes": 4808,
+      "statuses": {
+        "200": 20
+      },
+      "max_connections_waiting_for_locks": 19,
+      "rss_kib": 422256
+    },
+    {
+      "drivers": 50,
+      "stops": 100,
+      "scenario": "initial",
+      "p50_ms": 36554.38,
+      "p95_ms": 38619.67,
+      "queries_per_request": 30.0,
+      "sql_ms_per_request": 17688.32,
+      "total_bytes": 57131676,
+      "statuses": {
+        "200": 50
+      },
+      "max_connections_waiting_for_locks": 0,
+      "rss_kib": 742628
+    },
+    {
+      "drivers": 50,
+      "stops": 100,
+      "scenario": "unchanged",
+      "p50_ms": 3094.81,
+      "p95_ms": 3105.34,
+      "queries_per_request": 19.0,
+      "sql_ms_per_request": 2954.42,
+      "total_bytes": 0,
+      "statuses": {
+        "304": 50
+      },
+      "max_connections_waiting_for_locks": 0,
+      "rss_kib": 754000
+    },
+    {
+      "drivers": 50,
+      "stops": 100,
+      "scenario": "sync",
+      "p50_ms": 11774.96,
+      "p95_ms": 12528.44,
+      "queries_per_request": 40.4,
+      "sql_ms_per_request": 11400.46,
+      "total_bytes": 12038,
+      "statuses": {
+        "200": 50
+      },
+      "max_connections_waiting_for_locks": 49,
+      "rss_kib": 754648
+    }
+  ]
+}

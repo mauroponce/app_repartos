@@ -3,6 +3,7 @@
   <div class="delivery-note"><b><%= visit.customer_name %></b><br><%= visit.customer_address %><br><%= driver_visit_time(visit) %></div>
   <% if visit.notes.present? %><p><%= visit.notes %></p><% end %>
   <div class="tiny-actions"><%= link_to "Navegar", driver_navigation_url(visit), target: "_blank", rel: "noopener noreferrer" %><%= link_to "Llamar al cliente", "tel:#{visit.customer.phone.gsub(/[^+\d]/, '')}" if visit.customer.phone.present? %></div>
+  <% unless visit.current_customer_location? %><p class="hint">Ubicación pendiente o dirección de la visita distinta de la ubicación actual. La navegación usa la dirección de esta visita.</p><% end %>
   <% if visit.pending? %>
     <%= form_with scope: :visit, url: repartidor_visit_path(visit), method: :patch, authenticity_token: false, data: { controller: "delivery-proof visit-timing", visit_timing_recorded_value: visit.attributes.slice(*Visit::TIMING_FIELDS).compact.to_json, action: "submit->repartidor#submitVisit", visit_id: visit.id, work_snapshot: DriverWorkSnapshot.recording_data(user: Current.user, visit: visit) } do |form| %>
       <% if @invalid_visit_id == visit.id %><p class="validation-errors" role="alert"><%= @recording_error %></p><% end %>

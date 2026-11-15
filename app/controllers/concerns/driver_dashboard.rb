@@ -18,7 +18,7 @@ module DriverDashboard
     @completed_count = @visits.count(&:completed?)
     @progress = @visits.empty? ? 0 : (@resolved_count * 100.0 / @visits.size).round
     @markers = @visits.filter_map do |visit|
-      next unless visit.customer.latitude && visit.customer.longitude
+      next unless visit.current_customer_location?
       { id: visit.id, position: visit.position, name: visit.customer_name, latitude: visit.customer.latitude.to_f,
         longitude: visit.customer.longitude.to_f, status: visit.status, current: visit == @next_visit }
     end

@@ -6,7 +6,7 @@ module RepartidorHelper
 
   def driver_navigation_url(visit)
     customer = visit.customer
-    destination = if customer.latitude && customer.longitude
+    destination = if visit.current_customer_location?
       "#{customer.latitude},#{customer.longitude}"
     else
       visit.customer_address

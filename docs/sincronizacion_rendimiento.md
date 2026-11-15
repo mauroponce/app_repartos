@@ -49,4 +49,25 @@ El RSS final del proceso fue 574.772 KiB antes y 414.228 KiB después. Es memori
 
 No se demuestra una mejora estable de las escrituras: en 20 repartidores el p95 de sincronización fue peor después. Se necesita repetir sobre hardware equivalente y con cargas mixtas. En 50 descargas iniciales el p95 posterior fue 22,5 s; el cliente permite hasta 60 s para trabajo completo, manteniendo los plazos separados de operaciones y adjuntos. La descarga inicial sigue siendo costosa; los 304 evitan repetirla. No prometer 50 descargas simultáneas en un VPS de 8 GB sin pruebas HTTP adicionales ni considerar 60 s un objetivo de latencia.
 
-Datos: [antes](benchmarks/driver-work-before.json), [después](benchmarks/driver-work-after.json). La ejecución de 100 paradas queda disponible con el comando anterior; esta comparación se midió con 30.
+Datos: [antes](benchmarks/driver-work-before.json), [después](benchmarks/driver-work-after.json). Esta comparación se midió con 30 paradas.
+
+
+## Comprobación adicional con 100 paradas
+
+Una ola adicional del 15/11/2026 sobre la revisión final, con CI y construcción de imágenes concurrentes en el mismo host. Sin ejecución previa comparable de 100 paradas: estos datos describen el escenario y no demuestran una mejora respecto de la versión anterior.
+
+| Repartidores | Escenario | p50 / p95 (ms) | Consultas por solicitud | Cuerpo total (bytes) | Máximo esperando locks |
+| --- | --- | --- | --- | --- | --- |
+| 5 | initial | 4411.12 / 4443.48 | 30.0 | 5717847 | 0 |
+| 5 | unchanged | 309.28 / 310.71 | 19.0 | 0 | 0 |
+| 5 | sync | 3316.81 / 3458.61 | 42.0 | 1198 | 4 |
+| 20 | initial | 14857.83 / 15158.62 | 30.0 | 22870577 | 0 |
+| 20 | unchanged | 1417.52 / 1437.26 | 19.0 | 0 | 0 |
+| 20 | sync | 11327.40 / 14389.34 | 41.0 | 4808 | 19 |
+| 50 | initial | 36554.38 / 38619.67 | 30.0 | 57131676 | 0 |
+| 50 | unchanged | 3094.81 / 3105.34 | 19.0 | 0 | 0 |
+| 50 | sync | 11774.96 / 12528.44 | 40.4 | 12038 | 49 |
+
+Las 50 descargas iniciales alcanzaron p95 de **38,62 s** y 57,13 MB totales sin comprimir, mientras las comprobaciones sin cambios devolvieron 304 sin cuerpo y p95 de 3,11 s. Las confirmaciones llegaron a p95 de 14,39 s con 20 repartidores y conservaron la contención de escritura por empresa. El RSS final del proceso fue 754.648 KiB. Estas cifras refuerzan la necesidad de escalonar descargas iniciales y medir HTTP/carga mixta sobre el VPS antes de acordar concurrencia comercial; no acreditan capacidad para 50 conexiones simultáneas en 8 GB.
+
+[Datos completos de 100 paradas](benchmarks/driver-work-100.json).

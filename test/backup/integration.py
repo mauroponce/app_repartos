@@ -83,12 +83,16 @@ with tempfile.TemporaryDirectory(prefix="app-repartos-backup-test-") as temporar
         result = json.loads(report.strip().splitlines()[-1])
         assert result["status"] == "verified" and result["storage"]["blobs"] == 2
         assert result["primary_counts"]["companies"] == 1
+        assert result["primary_counts"]["users"] == 1
         command(["bin/vps-restore", str(fetched)], env, success=False)
         # Exercise the separately guarded destructive command ONLY against our
         # two disposable fixture databases and temporary storage directory.
         restore_env = {**env, "RESTORE_MAINTENANCE": "1", "RESTORE_CONFIRM": f"{data['primary']}:{data['queue']}", "RESTORE_STORAGE_SERVICE": "persistent"}
         command(["bin/vps-restore", str(fetched)], restore_env)
         assert len(list(storage.rglob("*backupfixture*"))) == 2
+        recovery_state = command(["docker", "compose", "exec", "-T", "db", "psql", "-X", "-qAt", "-U", "repartos", "-d", data["primary"], "-v", "ON_ERROR_STOP=1", "-c",
+                                  "SELECT (SELECT count(*) FROM sessions), (SELECT count(*) FROM driver_locations), (SELECT count(*) FROM users WHERE location_sharing_enabled), (SELECT min(location_consent_version) FROM users), (SELECT count(*) FROM users WHERE location_deactivated_at IS NOT NULL)"])
+        assert recovery_state.strip() == "0|0|0|2|1", recovery_state
         prepared = work / "prepared"
         command(["bin/backup-remote", "prepare", str(fetched), str(prepared)], env)
         assert (prepared / "primary.dump").exists()
@@ -144,7 +148,7 @@ with tempfile.TemporaryDirectory(prefix="app-repartos-backup-test-") as temporar
         assert not list(root.glob(".creating-*")) and not list(root.glob(".restore-*"))
         print(json.dumps({"status": "passed", "encryption": "real-age", "remote": "rclone-local-fixture (not R2)",
                           "database_restore": "two isolated PostgreSQL 18 databases", "blobs_verified": 2,
-                          "checks": ["round-trip", "catalog-and-files", "restore-guards", "guarded-restore-on-disposable-targets", "legacy-v1-recovery", "corruption", "missing-file", "failed-upload", "encryption-failure", "space", "missing-remote", "staleness", "retention", "webhook", "temporary-cleanup"]}))
+                          "checks": ["round-trip", "catalog-and-files", "restore-guards", "guarded-restore-on-disposable-targets", "restore-revokes-sessions-and-gps", "legacy-v1-recovery", "corruption", "missing-file", "failed-upload", "encryption-failure", "space", "missing-remote", "staleness", "retention", "webhook", "temporary-cleanup"]}))
     finally:
         server.shutdown()
         for database in ("app_repartos_backup_test", "app_repartos_backup_queue_test"):

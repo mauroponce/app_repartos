@@ -1,0 +1,25 @@
+{
+  "status": "passed",
+  "encryption": "real-age",
+  "remote": "rclone-local-fixture (not R2)",
+  "database_restore": "two isolated PostgreSQL 18 databases",
+  "blobs_verified": 2,
+  "checks": [
+    "round-trip",
+    "catalog-and-files",
+    "restore-guards",
+    "guarded-restore-on-disposable-targets",
+    "restore-revokes-sessions-and-gps",
+    "legacy-v1-recovery",
+    "corruption",
+    "missing-file",
+    "failed-upload",
+    "encryption-failure",
+    "space",
+    "missing-remote",
+    "staleness",
+    "retention",
+    "webhook",
+    "temporary-cleanup"
+  ]
+}

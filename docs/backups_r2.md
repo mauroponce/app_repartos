@@ -147,6 +147,8 @@ El comando rechaza roles Kamal web/jobs activos y conexiones a las bases, verifi
 
 Por defecto preserva nombres de servicio Active Storage. Para recuperar objetos R2 materializados en el backup sobre Disk, elegir explícitamente `RESTORE_STORAGE_SERVICE=persistent` **antes** del comando. Esto cambia `active_storage_blobs.service_name` para usar los archivos restaurados; mantener `ACTIVE_STORAGE_SERVICE=persistent`. Si se conserva `r2`, reponer también sus credenciales y bucket originales mediante el procedimiento separado de secretos.
 
+La restauración elimina las sesiones restauradas, desactiva todo consentimiento GPS y borra la última ubicación. Exige iniciar sesión y decidir nuevamente si se comparte ubicación: una copia anterior no debe resucitar accesos o consentimientos revocados después del backup. Conserva los grants y UUID offline; con los mismos secretos Rails y una cuenta autorizada, el repartidor puede volver a autenticarse y sincronizar operaciones pendientes. Revisar también estados de cuentas/permisos: reflejan la fecha del backup y deben contrastarse con las bajas posteriores antes de habilitar acceso.
+
 5. Verificar empresas, usuarios, clientes, visitas, operaciones offline, fotos y firmas; revisar cola/jobs y mapa. Ejecutar migraciones solo con una versión de código compatible y un plan explícito. Iniciar web, comprobar acceso y adjuntos privados; iniciar jobs después de revisar sus efectos pendientes. Quitar mantenimiento y comprobar PWA/sincronización.
 6. Borrar los directorios preparados en claro en ambos equipos y revisar permisos UID/GID (1000 por defecto). Conservar el backup cifrado original y la copia previa hasta confirmar recuperación. Documentar hora/pérdida de datos observada y actualizar monitoreo.
 
@@ -161,4 +163,6 @@ bin/check-backup-scripts
 bin/test-backups
 ```
 
-La integración usa **dos bases desechables con nombres fijos de prueba**, archivos y remotes rclone locales. Prueba cifrado age real, subida/lectura, adjuntos Disk/R2 simulados, restauración aislada y comando protegido contra destinos desechables, errores, retención y webhook local. No reemplaza una prueba real de R2/IAM, systemd en Hetzner ni una recuperación con datos y tiempos del cliente. Las claves de prueba se generan en un temporal y se eliminan.
+La integración usa **dos bases desechables con nombres fijos de prueba**, archivos y remotes rclone locales. Prueba cifrado age real, subida/lectura, adjuntos Disk/R2 simulados, restauración aislada y comando protegido contra destinos desechables, revocación de sesiones/GPS restaurados, errores, retención y webhook local. No reemplaza una prueba real de R2/IAM, systemd en Hetzner ni una recuperación con datos y tiempos del cliente. Las claves de prueba se generan en un temporal y se eliminan.
+
+Resultado de la ejecución local completa del 15/11/2026: [verificación de recuperación](benchmarks/backup-recovery-local.json). Las comprobaciones aprobaron con cifrado age y PostgreSQL reales; el backend remoto fue una carpeta rclone local, no R2.

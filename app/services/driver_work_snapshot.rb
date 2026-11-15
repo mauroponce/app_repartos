@@ -27,7 +27,7 @@ class DriverWorkSnapshot
     visits = company.visits.where(delivery_run_id: runs.select(:id))
     confirmed = company.visits.where(confirmed_by_id: user.id).where.not(confirmed_at: nil)
     content = [ "work-v1", presentation_revision, session_id, today, Time.current.to_i / 1.hour.to_i,
-      company.attributes, user.attributes.slice("id", "company_id", "name", "phone", "email_address", "role", "status"),
+      company.attributes.slice("id", "name", "slug", "time_zone", "currency"), user.attributes.slice("id", "company_id", "name", "phone", "email_address", "role", "status"),
       records(runs), records(visits),
       records(company.customers.where(id: visits.select(:customer_id))),
       records(company.delivery_items.where(visit_id: visits.select(:id))),

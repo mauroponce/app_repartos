@@ -15,7 +15,7 @@ El token sólo tiene `contents: read`; checkout no conserva credenciales y todas
 5. `bin/rails test`, con dos workers de Minitest.
 6. `RAILS_ENV=test bin/rails db:seed:replant`: comprueba que la tarea funciona en la base de prueba; los seeds demo sólo se cargan en development.
 7. `npm run test:js`: incluye Photon y la cola offline de IndexedDB.
-8. `PWA_TEST_SERVER=1 npm run test:browser`: cuatro escenarios offline reales de Chromium, incluyendo cierre/reapertura del navegador, actualización del worker, cambios de cuenta, errores 503 y sesión revocada.
+8. `PWA_TEST_SERVER=1 npm run test:browser`: escenarios offline reales de Chromium, incluyendo cierre/reapertura del navegador, actualización del worker, cambios de cuenta, errores 503 y sesión revocada.
 
 El ejecutor Rails acumula los resultados y termina con código distinto de cero si falla cualquier paso. El workflow no usa `continue-on-error`, y Playwright no reintenta para ocultar fallos. También rechaza `test.only` en CI. Las auditorías necesitan conexión a sus fuentes públicas; un fallo de consulta bloquea el resultado exitoso.
 
