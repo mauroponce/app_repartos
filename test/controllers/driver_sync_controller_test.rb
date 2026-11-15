@@ -41,7 +41,7 @@ class DriverSyncControllerTest < ActionDispatch::IntegrationTest
         assert_equal result, @order.fulfillment_result
         assert_equal @driver.id, @visit.reload.confirmed_by_id
         assert_in_delta Time.current, @visit.confirmed_at, 5
-        assert_equal [ BigDecimal("20"), BigDecimal("2.5") ], @visit.delivery_items.pluck(:planned_quantity)
+        assert_equal [ BigDecimal("20"), BigDecimal("2.5") ], @visit.delivery_items.order(:id).pluck(:planned_quantity)
         raise ActiveRecord::Rollback
       end
       @visit.reload
