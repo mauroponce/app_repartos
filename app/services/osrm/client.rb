@@ -6,6 +6,7 @@ module Osrm
     class Unavailable < Error; end
     class InvalidResponse < Error; end
     class NoRoute < Error; end
+    class OutsideCoverage < NoRoute; end
     MAX_COORDINATES = 101
     MAX_BYTES = 8_000_000
 
@@ -69,7 +70,9 @@ module Osrm
       unless points.is_a?(Array) && points.size.in?(2..limit) && points.all? { |point| valid_point?(point) }
         raise Error, "Ingresá entre 2 y #{limit} coordenadas válidas en orden longitud, latitud"
       end
-      points.map { |point| point.map(&:to_f) }
+      normalized = points.map { |point| point.map(&:to_f) }
+      RouteOptimization::Dataset.validate_coverage!(normalized, url: @uri.to_s)
+      normalized
     end
 
     def valid_point?(point)
@@ -92,7 +95,8 @@ module Osrm
         raise InvalidResponse, "La respuesta de OSRM es demasiado grande" if response.body.to_s.bytesize > MAX_BYTES
         body = JSON.parse(response.body)
         raise InvalidResponse, "OSRM devolvió una respuesta inválida" unless body.is_a?(Hash)
-        raise NoRoute, "OSRM no encuentra conexión vial entre las paradas; revisá las coordenadas y la cobertura del mapa" if body["code"].in?(%w[NoRoute NoTable NoSegment])
+        raise OutsideCoverage, "Esta ubicación está fuera de la zona disponible para optimización o no tiene una calle accesible en el mapa activo" if body["code"] == "NoSegment"
+        raise NoRoute, "OSRM no encuentra conexión vial entre las paradas; revisá las coordenadas y la cobertura del mapa" if body["code"].in?(%w[NoRoute NoTable])
         raise InvalidResponse, "OSRM rechazó el cálculo vial" unless response.code.to_i.in?(200..299)
         raise InvalidResponse, "OSRM no pudo calcular este recorrido" unless body["code"] == "Ok"
         body

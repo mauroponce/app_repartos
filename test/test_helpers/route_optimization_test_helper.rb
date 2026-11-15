@@ -31,14 +31,17 @@ module RouteOptimizationTestHelper
 
   def with_optimization_response(response = nil)
     original = VroomClient.method(:new)
+    original_available = VroomClient.method(:available?)
     client = Object.new
     client.define_singleton_method(:call) do |_payload|
       raise VroomClient::Error, "No disponible" unless response
       response
     end
     VroomClient.define_singleton_method(:new) { client }
+    VroomClient.define_singleton_method(:available?) { true }
     yield
   ensure
     VroomClient.define_singleton_method(:new, original)
+    VroomClient.define_singleton_method(:available?, original_available)
   end
 end

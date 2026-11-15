@@ -2,6 +2,24 @@ require "test_helper"
 require "socket"
 
 class VroomClientTest < ActiveSupport::TestCase
+  setup do
+    @original_enabled = ENV["MULTIVEHICLE_OPTIMIZATION_ENABLED"]
+    ENV["MULTIVEHICLE_OPTIMIZATION_ENABLED"] = "true"
+  end
+  teardown { ENV["MULTIVEHICLE_OPTIMIZATION_ENABLED"] = @original_enabled }
+
+  test "an endpoint alone cannot enable the multivehicle backend" do
+    ENV["MULTIVEHICLE_OPTIMIZATION_ENABLED"] = "false"
+    with_endpoint('{"code":0}') do
+      assert_not VroomClient.available?
+      assert_raises(VroomClient::Error) { VroomClient.new.call({}) }
+    end
+  end
+
+  test "availability requires a successful bounded health response" do
+    with_endpoint("healthy") { assert VroomClient.available? }
+    with_endpoint("unavailable", status: 503) { assert_not VroomClient.available? }
+  end
   test "posts the JSON contract and parses a valid response" do
     with_endpoint('{"code":0,"routes":[],"unassigned":[]}') do |requests|
       assert_equal 0, VroomClient.new.call({ jobs: [], vehicles: [] })["code"]

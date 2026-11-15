@@ -1,4 +1,5 @@
 class OperationsEtaJob < ApplicationJob
+  limits_concurrency to: 1, key: ->(company_id, user_id) { "eta:#{company_id}:#{user_id}" }, duration: 1.minute
   def perform(company_id, user_id)
     company = Company.find_by(id: company_id)
     return unless company

@@ -40,6 +40,9 @@ class RouteOptimizationProposal < ApplicationRecord
       return self if status == "applied"
       raise ArgumentError, "La propuesta caducó; solicitá un nuevo cálculo" if expires_at <= Time.current
       raise ArgumentError, "La propuesta todavía no está lista o no es viable" unless status == "ready" && result.dig("proposed", "feasible") == true
+      if result["dataset_identity"].present? && result["dataset_identity"] != RouteOptimization::Dataset.identity
+        raise ArgumentError, "El mapa cambió desde el cálculo; solicitá otra propuesta"
+      end
       current = company.delivery_runs.find(delivery_run_id)
       lock_location_inputs(current)
       problem = RouteOptimization::Problem.new(current, settings: settings)

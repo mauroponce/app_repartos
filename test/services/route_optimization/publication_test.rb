@@ -313,4 +313,30 @@ class RouteOptimizationPublicationTest < ActiveSupport::TestCase
     DeliveryRunReorderer.call(company: @company, delivery_run: @run, visit_ids: @run.visits.pluck(:id).reverse)
     assert_equal before, RouteOptimization::Problem.new(@run.reload).calculation_key
   end
+
+  test "maintenance stops a stalled publication and an explicit retry creates fresh work" do
+    proposal = confirm
+    proposal.update!(expires_at: 1.minute.ago)
+    @publication.update_columns(updated_at: 6.minutes.ago)
+    RouteProposalMaintenanceJob.perform_now(@company.id)
+    assert_equal "failed", @publication.reload.state
+    assert_match(/venció/, @publication.error_message)
+    @publication = RoutePublication.request!(user: @manager, run: @run.reload)
+    fresh = prepare
+    assert_not_equal proposal.id, fresh.id
+    finish(fresh)
+    assert_equal "ready", @publication.reload.state
+  end
+
+  test "a pending publication without a proposal can be retried or published manually after its deadline" do
+    @publication = RoutePublication.request!(user: @manager, run: @run.reload)
+    @publication.update_columns(updated_at: 11.minutes.ago)
+    assert @publication.stalled?
+    RoutePublication.request!(user: @manager, run: @run.reload)
+    assert_not @publication.reload.stalled?
+    @publication.update_columns(updated_at: 11.minutes.ago)
+    RoutePublication.use_manual!(user: @manager, run: @run.reload)
+    assert_equal "manual", @publication.reload.state
+    assert_equal "assigned", @run.reload.status
+  end
 end

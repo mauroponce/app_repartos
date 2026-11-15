@@ -32,6 +32,7 @@ module RouteOptimization
         { id: visit.id, index: index, window_start: starts.max, window_end: finishes.min, preferred: preferred.first,
           service: orders.any? ? orders.sum(&:service_minutes) * 60 : company.routing_service_minutes * 60 }
       end
+      Dataset.validate_coverage!(coordinates)
     end
 
     def fingerprint

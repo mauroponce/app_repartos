@@ -1,5 +1,7 @@
 <details class="optimization-options">
-  <summary>Optimización automática entre varios vehículos</summary>
+  <summary>Optimización automática entre varios vehículos<%= " · No disponible" unless available %></summary>
+  <% unless available %><p role="status">La optimización multivehículo está deshabilitada o su servicio no responde. Podés organizar la hoja manualmente y optimizar una hoja con OSRM cuando esté disponible.</p><% end %>
+  <fieldset <%= "disabled" unless available %>>
   <p>Todos salen del depósito y regresan a él. Seleccioná un vehículo por repartidor. La carga de los pedidos y las capacidades deben usar la misma unidad.</p>
   <p class="hint">Se respetan las franjas y los horarios puntuales (inicio de descarga a esa hora exacta). Los tiempos de descarga se suman por pedido. Jornada y horarios de <%= Current.company.time_zone %>. Podés editar carga y descarga en cada entrega; los valores iniciales son 1 unidad y 10 minutos.</p>
   <div data-action="input->route-planner#optimizationSettingsChanged change->route-planner#optimizationSettingsChanged">
@@ -27,4 +29,5 @@
     <button type="button" class="text-action" data-action="route-planner#useManual">Volver a planificación manual</button>
   </div>
   <p role="status" data-route-planner-target="optimizationStatus"></p>
+  </fieldset>
 </details>

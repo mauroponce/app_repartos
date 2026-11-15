@@ -25,6 +25,7 @@ class RouteOptimizationProblem
     mismatched = orders.reject { |order| order.customer_address == [ order.customer.address, order.customer.city ].join(", ") }
     raise ArgumentError, "La dirección de una entrega cambió. Revisá su dirección antes de optimizar." if mismatched.any?
     @settings = normalize_settings(settings.deep_stringify_keys, lock: lock)
+    RouteOptimization::Dataset.validate_coverage!([ @settings.fetch("depot"), *orders.map { |order| [ order.customer.longitude.to_f, order.customer.latitude.to_f ] } ])
     @groups = orders.group_by(&:planning_key).values.index_by { |rows| rows.first.id }
   end
 

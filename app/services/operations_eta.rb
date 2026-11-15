@@ -17,6 +17,7 @@ class OperationsEta
     stops = stops.take_while { |stop| stop.customer.latitude && stop.customer.longitude && stop.customer_address == [ stop.customer.address, stop.customer.city ].compact.join(", ") }
     return {} if stops.empty?
     coords = [ [ location.longitude.to_f, location.latitude.to_f ], *stops.map { |stop| [ stop.customer.longitude.to_f, stop.customer.latitude.to_f ] } ]
+    RouteOptimization::Dataset.validate_coverage!(coords)
     uri = URI.parse("#{url.delete_suffix('/')}/route/v1/driving/#{coords.map { |pair| pair.join(',') }.join(';')}?overview=false&steps=false&radiuses=#{coords.map { '1000' }.join(';')}")
     raise Unavailable unless uri.is_a?(URI::HTTP) && uri.host.present? && !uri.userinfo
     response = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https", open_timeout: 2, read_timeout: 3, write_timeout: 2) { |http| http.get(uri.request_uri) }
@@ -37,7 +38,7 @@ class OperationsEta
       { visit_id: stop.id, arrival_at: arrival.iso8601 }
     end
     { run_id: run.id, signature: signature(run), calculated_at: now.iso8601, stops: estimates }
-  rescue URI::InvalidURIError, JSON::ParserError, KeyError, TypeError, ArgumentError, IOError, SystemCallError, Timeout::Error, OpenSSL::SSL::SSLError => error
+  rescue Osrm::Client::Error, URI::InvalidURIError, JSON::ParserError, KeyError, TypeError, ArgumentError, IOError, SystemCallError, Timeout::Error, OpenSSL::SSL::SSLError => error
     raise Unavailable, error.class.name
   end
 

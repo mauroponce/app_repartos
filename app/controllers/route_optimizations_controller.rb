@@ -6,7 +6,7 @@ class RouteOptimizationsController < ManagementController
     result = DeliveryRouteOptimizer.call(company: Current.company, date: input[:date], order_ids: input[:order_ids],
       settings: (input[:settings] || {}).to_h, pins: (input[:pins] || {}).to_h, routes: input[:routes]&.map(&:to_h))
     render json: result
-  rescue ArgumentError, VroomClient::Error => error
+  rescue Osrm::Client::Error, ArgumentError, VroomClient::Error => error
     render json: { error: error.message }, status: :unprocessable_entity
   end
 end

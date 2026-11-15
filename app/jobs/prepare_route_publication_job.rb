@@ -22,7 +22,7 @@ class PrepareRoutePublicationJob < ApplicationJob
       publication.update!(proposal: proposal, input_key: key, error_message: nil)
       OptimizeDeliveryRunJob.perform_later(company_id, proposal.id) if proposal.status == "ready"
     end
-  rescue ArgumentError, ActiveRecord::RecordInvalid => error
+  rescue Osrm::Client::Error, ArgumentError, ActiveRecord::RecordInvalid => error
     company&.with_lock do
       company.route_publications.find_by(delivery_run_id: run_id, state: "pending")&.update!(state: "failed", error_message: error.message.first(1000))
     end

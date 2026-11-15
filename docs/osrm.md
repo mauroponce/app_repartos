@@ -230,3 +230,28 @@ docker compose -f compose.yml -f compose.osrm-test.yml rm --force osrm-test
 - **Cambio de mapa:** reiniciar OSRM y recalcular propuestas antes de operar si se modificó significativamente la red.
 
 Referencias: [API OSRM](https://project-osrm.org/docs/v5.24.0/api/), [imagen oficial fijada](https://github.com/Project-OSRM/osrm-backend/pkgs/container/osrm-backend/399470569?tag=v6.0.0), [Osmium extract](https://docs.osmcode.org/osmium/latest/osmium-extract.html).
+
+## Piloto: cobertura, disponibilidad y recuperación
+
+La cobertura se verifica contra `bbox` del manifest del mapa local activo antes de solicitar una matriz o propuesta. Para un proveedor externo, declarar `OSRM_COVERAGE_BBOX=OESTE,SUR,ESTE,NORTE` y una `OSRM_MAP_VERSION` real. Sin metadatos externos, OSRM sigue verificando acceso a la red mediante su radio de ajuste; no se inventa un polígono de cobertura. Un bbox malformado impide optimizar hasta corregirlo. Estar dentro del rectángulo no garantiza calles accesibles: `NoSegment` también requiere revisar la ubicación. Fuera del área se muestra «Esta ubicación está fuera de la zona disponible para optimización». Registrar clientes y planificar manualmente sigue permitido.
+
+Las propuestas viales con versión conocida no se pueden aplicar después de cambiar el mapa. Los cálculos vencidos pasan a un fallo recuperable; no se renuevan indefinidamente en mantenimiento. Una publicación sin propuesta tiene un plazo de diez minutos para iniciarse, y las propuestas conservan su vencimiento de treinta minutos. La pantalla permite reintentar explícitamente o publicar el orden manual aun antes de que el mantenimiento procese el vencimiento. Los controles de ejecución, fingerprint, idempotencia y empresa se conservan.
+
+Para el primer VPS se elige **VROOM deshabilitado**: Kamal declara `MULTIVEHICLE_OPTIMIZATION_ENABLED=false` y `VROOM_URL` vacío. No se instala un servicio multivehículo que no haya sido dimensionado. El asistente conserva controles deshabilitados con una explicación, en vez de ofrecer un cálculo operativo. Declarar solo la URL no habilita la función.
+
+El stack opcional de desarrollo `compose.routing.yml` habilita VROOM internamente, sin puertos publicados, con 512 MiB, una CPU, un hilo y healthcheck `/health`. Web y worker reciben la misma configuración. La interfaz habilita multivehículo solo con el flag, URL y respuesta de salud satisfactoria (cacheada hasta 15 s). Una falla posterior del cálculo deja intacta la planificación manual. El healthcheck prueba el servicio, no reemplaza una optimización real con la cobertura elegida. Antes de habilitarlo en Hetzner hay que agregar su accessory privado, medir RAM/CPU con OSRM y Rails simultáneos y verificar propuestas reales. No se validó un VROOM real en esta etapa; las pruebas de contrato y UI usan respuestas controladas.
+
+Solid Queue separa `routing` en un worker de un hilo y un proceso. El resto de colas conserva dos hilos por proceso; `JOB_CONCURRENCY` se aplica a esas colas. `OptimizeDeliveryRunJob` mantiene el límite global de un cálculo pesado y las ETA se serializan por repartidor durante un minuto. Reiniciar el worker al modificar `config/queue.yml`. Los límites Docker son máximos, no reservas ni garantías de capacidad. El piloto de 8 GB requiere medir el conjunto: web 1,5 GiB, jobs 1,5 GiB, PostgreSQL 1,5 GiB y OSRM 2 GiB, más sistema operativo y caché. Preparar mapas fuera del horario operativo o en otro equipo; no sumar un proceso de construcción de mapa a esa carga.
+
+Medición real adicional del 15/11/2026, equipo local compartido, mapa AMBA ya disponible y `bin/benchmark-routing --live`:
+
+| Paradas | Matriz OSRM (s) | Algoritmo (s) | Consultas matriz | RSS proceso Ruby (KiB) |
+| --- | --- | --- | --- | --- |
+| 10 | 4,6883 | 0,2379 | 1 | 114800 |
+| 25 | 0,4122 | 1,5341 | 1 | 119356 |
+| 50 | 0,8569 | 3,0742 | 1 | 120128 |
+| 100 | 1,6177 | 5,4851 | 1 | 120328 |
+
+Es una ejecución por tamaño, sin vaciar caché ni aislar el disco de otras tareas. La primera matriz tuvo una latencia mayor. RSS corresponde al cliente Rails/Ruby y no incluye OSRM ni PostgreSQL. `bin/test-osrm` también verificó la matriz real, geometría y solución de cinco paradas. No convertir estos resultados en promesas de tiempos o ahorros comerciales.
+
+Referencia del healthcheck: [VROOM Express](https://github.com/VROOM-Project/vroom-express).

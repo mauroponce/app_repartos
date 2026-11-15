@@ -14,6 +14,10 @@ class RoutePublication < ApplicationRecord
     state.in?(%w[pending failed])
   end
 
+  def stalled?
+    state == "pending" && (proposal ? proposal.expires_at <= Time.current : updated_at < 10.minutes.ago)
+  end
+
   def use_manual!
     if proposal&.status.in?(%w[queued processing ready])
       proposal.update!(status: "discarded", error_message: "Se eligió conservar el orden manual.")
@@ -33,8 +37,9 @@ class RoutePublication < ApplicationRecord
       problem = RouteOptimization::Problem.new(run, settings: settings)
       publication = find_or_initialize_by(company: user.company, delivery_run: run)
       key = problem.calculation_key
-      unless publication.persisted? && publication.input_key == key && publication.state.in?(%w[pending ready])
+      unless publication.persisted? && publication.input_key == key && publication.state.in?(%w[pending ready]) && !publication.stalled?
         publication.assign_attributes(requested_by: user, settings: settings, input_key: key, state: "pending", proposal: nil, error_message: nil)
+        publication.updated_at = Time.current
         publication.save!
         run.update_columns(assignment_version: run.assignment_version + 1)
       end

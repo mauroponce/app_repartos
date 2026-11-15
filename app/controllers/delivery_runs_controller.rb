@@ -34,7 +34,7 @@ class DeliveryRunsController < ManagementController
     end
     message = automatic ? "Confirmación recibida. Preparando el recorrido en segundo plano antes de publicarlo." : "Hoja de ruta creada correctamente."
     redirect_to delivery_run_path(@delivery_run), notice: message, status: :see_other
-  rescue ActiveRecord::RecordInvalid, ArgumentError => error
+  rescue Osrm::Client::Error, ActiveRecord::RecordInvalid, ArgumentError => error
     @delivery_run.errors.add(:base, error.message)
     load_available_orders
     render :new, status: :unprocessable_entity
@@ -50,7 +50,7 @@ class DeliveryRunsController < ManagementController
   def create_optimized
     runs = OptimizedDeliveryRunPlanner.call(company: Current.company, token: params[:proposal_token], name: run_params[:name].to_s, status: run_params[:status].to_s)
     redirect_to delivery_runs_path(date: runs.first.scheduled_date), notice: "Se guardaron #{runs.size} hojas de ruta.", status: :see_other
-  rescue ActiveRecord::RecordInvalid, ArgumentError => error
+  rescue Osrm::Client::Error, ActiveRecord::RecordInvalid, ArgumentError => error
     redirect_to new_delivery_run_path, alert: error.message, status: :see_other
   end
 

@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["step", "tab", "order", "stops", "count", "summary", "name", "date", "driver", "status", "error", "previous", "next", "proposalToken", "manualStops", "proposal", "depotLatitude", "depotLongitude", "vehicle", "optimizeButton", "evaluateButton", "releaseButton", "optimizationStatus", "confirmButton"]
-  static values = { availableUrl: String, optimizeUrl: String, optimizedUrl: String, tilesUrl: String }
+  static values = { availableUrl: String, optimizeUrl: String, optimizedUrl: String, tilesUrl: String, multiVehicleEnabled: Boolean }
 
   connect() {
     this.currentStep = 0
@@ -213,7 +213,7 @@ export default class extends Controller {
     this.optimizationRequest?.abort()
     this.optimizationRequest = null
     this.optimizing = false
-    if (this.hasOptimizeButtonTarget) this.optimizeButtonTarget.disabled = false
+    if (this.hasOptimizeButtonTarget) this.optimizeButtonTarget.disabled = !this.multiVehicleEnabledValue
     if (this.hasEvaluateButtonTarget) this.evaluateButtonTarget.disabled = false
   }
 
@@ -243,7 +243,7 @@ export default class extends Controller {
     }
   }
 
-  optimize() { return this.requestOptimization(false) }
+  optimize() { if (this.multiVehicleEnabledValue) return this.requestOptimization(false) }
   evaluate() { return this.requestOptimization(true) }
   releaseAssignments() {
     this.pins = {}

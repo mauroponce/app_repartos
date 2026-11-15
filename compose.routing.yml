@@ -5,13 +5,16 @@ services:
   web:
     environment:
       VROOM_URL: http://vroom:3000
+      MULTIVEHICLE_OPTIMIZATION_ENABLED: "true"
       OSRM_URL: http://osrm:5000
   worker:
     environment:
       OSRM_URL: http://osrm:5000
+      VROOM_URL: http://vroom:3000
+      MULTIVEHICLE_OPTIMIZATION_ENABLED: "true"
   osrm:
-    profiles: []
-    command: ["osrm-routed", "--algorithm", "mld", "--mmap=true", "--max-table-size", "1000", "/data/current/region.osrm"]
+    profiles: !reset []
+    command: ["osrm-routed", "--algorithm", "mld", "--threads", "2", "--mmap=true", "--max-table-size", "1000", "/data/current/region.osrm"]
   vroom:
     image: ghcr.io/vroom-project/vroom-docker:v1.15.0
     environment:
@@ -20,3 +23,11 @@ services:
       - ./config/routing/vroom.yml:/conf/config.yml:ro
     depends_on:
       - osrm
+    mem_limit: 512m
+    cpus: 1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

@@ -22,10 +22,15 @@ class RouteProposalMaintenanceJob < ApplicationJob
       end
     end
     company.route_publications.where(state: "pending").where("updated_at < ?", 5.minutes.ago).find_each do |publication|
-      if publication.proposal&.expires_at && publication.proposal.expires_at <= Time.current
-        publication.update!(proposal: nil)
+      company.with_lock do
+        publication.reload
+        next unless publication.state == "pending"
+        if publication.stalled?
+          publication.update!(state: "failed", error_message: "El cálculo venció o no pudo iniciarse. Reintentá la optimización o publicá el orden manual.")
+        else
+          PrepareRoutePublicationJob.perform_later(company.id, publication.delivery_run_id)
+        end
       end
-      PrepareRoutePublicationJob.perform_later(company.id, publication.delivery_run_id)
     end
     company.route_optimization_proposals.where(status: %w[queued processing ready]).where("expires_at <= ?", Time.current).in_batches.update_all(status: "expired", updated_at: Time.current)
     company.route_optimization_proposals.where(status: %w[queued processing]).where("updated_at < ? AND expires_at > ?", 5.minutes.ago, Time.current).find_each do |proposal|

@@ -1,4 +1,5 @@
-<%= form_with model: @delivery_run, class: "route-wizard", data: { controller: "route-planner", route_planner_available_url_value: available_delivery_runs_path, route_planner_optimize_url_value: route_optimizations_path, route_planner_optimized_url_value: create_optimized_delivery_runs_path, route_planner_tiles_url_value: ENV["OSM_TILES_URL"].presence, action: "turbo:frame-load->route-planner#selection submit->route-planner#validateSubmission" } do |form| %>
+<% multivehicle_available = VroomClient.available? %>
+<%= form_with model: @delivery_run, class: "route-wizard", data: { controller: "route-planner", route_planner_multi_vehicle_enabled_value: multivehicle_available, route_planner_available_url_value: available_delivery_runs_path, route_planner_optimize_url_value: route_optimizations_path, route_planner_optimized_url_value: create_optimized_delivery_runs_path, route_planner_tiles_url_value: ENV["OSM_TILES_URL"].presence, action: "turbo:frame-load->route-planner#selection submit->route-planner#validateSubmission" } do |form| %>
   <%= hidden_field_tag :proposal_token, "", data: { route_planner_target: "proposalToken" } %>
   <%= render "shared/validation_errors", record: @delivery_run %>
   <nav class="planning-steps" aria-label="Pasos para crear una hoja de ruta">
@@ -19,7 +20,7 @@
   </section>
   <section class="management-panel" data-route-planner-target="step">
     <div class="panel-heading"><div><div class="eyebrow">Paso 3</div><h2>Organizá las paradas</h2><p>Las entregas del mismo cliente y horario se agrupan. Usá las flechas para ordenar el recorrido.</p></div></div>
-    <%= render "optimization_options" %>
+    <%= render "optimization_options", available: multivehicle_available %>
     <div data-route-planner-target="manualStops"><ol class="planning-stops" data-route-planner-target="stops"></ol><p class="hint">Las flechas funcionan con teclado y pantallas táctiles.</p></div>
     <div data-route-planner-target="proposal" aria-live="polite"></div>
   </section>

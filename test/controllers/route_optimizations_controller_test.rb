@@ -35,7 +35,7 @@ class RouteOptimizationsControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
     get new_delivery_run_path
     assert_response :success
-    assert_select "button", text: "Optimizar rutas"
+    assert_select "fieldset[disabled] button", text: "Optimizar rutas"
     assert_select "input[name='delivery_run[name]']"
   end
 

@@ -1,6 +1,6 @@
 class RoutePublicationsController < ManagementController
   before_action :set_run
-  rescue_from ArgumentError, ActiveRecord::RecordInvalid, with: :invalid_request
+  rescue_from Osrm::Client::Error, ArgumentError, ActiveRecord::RecordInvalid, with: :invalid_request
 
   def create
     RoutePublication.request!(user: Current.user, run: @run, settings: params.fetch(:optimization, ActionController::Parameters.new).permit(:origin, :departure, :return_to_depot).to_h)
@@ -9,7 +9,7 @@ class RoutePublicationsController < ManagementController
 
   def show
     publication = @run.route_publication
-    render json: { state: publication&.state || "manual", updated_at: publication&.updated_at&.iso8601(6), location: delivery_run_path(@run) }
+    render json: { state: publication&.stalled? ? "failed" : publication&.state || "manual", updated_at: publication&.updated_at&.iso8601(6), location: delivery_run_path(@run) }
   end
 
   def manual
