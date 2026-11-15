@@ -4,7 +4,7 @@ class CustomerTest < ActiveSupport::TestCase
   test "requires a company and required commerce data" do
     customer = Customer.new
     assert_not customer.valid?
-    [ :company, :name, :phone, :address, :city ].each { |field| assert customer.errors[field].any? }
+    [ :company, :name, :address, :city ].each { |field| assert customer.errors[field].any? }
   end
 
   test "normalizes input and permits an absent email" do

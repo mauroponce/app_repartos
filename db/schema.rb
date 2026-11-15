@@ -135,6 +135,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_021100) do
     t.check_constraint "routing_preferred_tolerance >= 0 AND routing_preferred_tolerance <= 120 AND routing_service_minutes >= 0 AND routing_service_minutes <= 240 AND routing_departure::text ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'::text AND (NOT routing_return_to_depot OR depot_latitude IS NOT NULL)", name: "company_routing_settings"
   end
 
+  create_table "customer_imports", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.jsonb "headers", default: [], null: false
+    t.jsonb "rows", default: [], null: false
+    t.jsonb "mapping", default: {}, null: false
+    t.jsonb "excluded_rows", default: [], null: false
+    t.boolean "overwrite_blanks", default: false, null: false
+    t.jsonb "summary", default: {}, null: false
+    t.datetime "confirmed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id"], name: "index_customer_imports_on_company_id"
+  end
+
   create_table "customer_notifications", force: :cascade do |t|
     t.bigint "company_id", null: false
     t.bigint "customer_id", null: false
@@ -157,7 +171,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_021100) do
     t.bigint "company_id", null: false
     t.string "name", limit: 90, null: false
     t.string "contact"
-    t.string "phone", null: false
+    t.string "phone"
     t.string "email"
     t.string "address", null: false
     t.string "city", null: false
@@ -166,10 +180,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_021100) do
     t.datetime "updated_at", null: false
     t.decimal "latitude", precision: 10, scale: 7
     t.decimal "longitude", precision: 10, scale: 7
+    t.string "external_code"
+    t.index ["company_id", "external_code"], name: "index_customers_on_company_id_and_external_code", unique: true, where: "(external_code IS NOT NULL)"
     t.index ["company_id", "id"], name: "index_customers_on_company_id_and_id", unique: true
     t.index ["company_id", "name", "id"], name: "index_customers_on_company_id_and_name_and_id"
     t.index ["company_id", "status"], name: "index_customers_on_company_id_and_status"
     t.index ["company_id"], name: "index_customers_on_company_id"
+    t.check_constraint "external_code IS NULL OR length(btrim(external_code::text)) > 0 AND length(external_code::text) <= 255", name: "customers_external_code_present"
     t.check_constraint "latitude IS NULL AND longitude IS NULL OR latitude IS NOT NULL AND longitude IS NOT NULL AND latitude >= '-90'::integer::numeric AND latitude <= 90::numeric AND longitude >= '-180'::integer::numeric AND longitude <= 180::numeric", name: "customers_valid_coordinates"
     t.check_constraint "status::text = ANY (ARRAY['active'::character varying::text, 'inactive'::character varying::text])", name: "customers_valid_status"
   end
@@ -611,7 +628,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_021100) do
     t.boolean "auto_publish", default: false, null: false
     t.index ["applied_by_id"], name: "index_route_optimization_proposals_on_applied_by_id"
     t.index ["company_id", "delivery_run_id", "created_at"], name: "route_proposals_history"
-    t.index ["company_id", "delivery_run_id", "request_key"], name: "unique_active_route_proposal", unique: true, where: "((status)::text = ANY (ARRAY[('queued'::character varying)::text, ('processing'::character varying)::text, ('ready'::character varying)::text]))"
+    t.index ["company_id", "delivery_run_id", "request_key"], name: "unique_active_route_proposal", unique: true, where: "((status)::text = ANY ((ARRAY['queued'::character varying, 'processing'::character varying, 'ready'::character varying])::text[]))"
     t.index ["company_id"], name: "index_route_optimization_proposals_on_company_id"
     t.index ["delivery_run_id"], name: "index_route_optimization_proposals_on_delivery_run_id"
     t.index ["id", "company_id"], name: "index_route_optimization_proposals_on_id_and_company_id", unique: true
@@ -829,6 +846,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_021100) do
   add_foreign_key "communication_consents", "companies"
   add_foreign_key "communication_consents", "customers", column: ["company_id", "customer_id"], primary_key: ["company_id", "id"], name: "communication_consents_customer_tenant"
   add_foreign_key "communication_consents", "users", column: ["company_id", "user_id"], primary_key: ["company_id", "id"], name: "communication_consents_user_tenant"
+  add_foreign_key "customer_imports", "companies"
   add_foreign_key "customer_notifications", "companies"
   add_foreign_key "customer_notifications", "customers", column: ["company_id", "customer_id"], primary_key: ["company_id", "id"], name: "customer_notifications_customer_tenant"
   add_foreign_key "customer_notifications", "delivery_orders", column: ["company_id", "customer_id", "delivery_order_id"], primary_key: ["company_id", "customer_id", "id"], name: "notifications_order_customer_tenant"

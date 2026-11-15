@@ -13,10 +13,12 @@ class Customer < ApplicationRecord
   before_validation :clear_outdated_location
 
   enum :status, { active: "active", inactive: "inactive" }, validate: true
-  normalizes :name, :contact, :phone, :address, :city, with: ->(value) { value.strip }
+  normalizes :name, :contact, :address, :city, with: ->(value) { value.strip }
+  normalizes :phone, :external_code, with: ->(value) { value.strip.presence }
   normalizes :email, with: ->(value) { value.strip.downcase.presence }
 
-  validates :name, :phone, :address, :city, presence: true
+  validates :name, :address, :city, presence: true
+  validates :external_code, length: { maximum: 255 }, uniqueness: { scope: :company_id }, allow_nil: true
   validates :name, length: { maximum: 90 }
   validates :contact, :phone, :email, :address, :city, length: { maximum: 255 }
   validates :email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true

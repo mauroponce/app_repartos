@@ -129,7 +129,7 @@ class CustomersControllerTest < ActionDispatch::IntegrationTest
       post customers_path, params: { customer: valid_attributes.merge(phone: "", email: "invalid") }
     end
     assert_response :unprocessable_entity
-    assert_select "[role=alert]", text: /Teléfono/
+    assert_select "[role=alert]", text: /Email/
     assert_select "turbo-frame#modal", count: 1
     assert_select "input[name='customer[name]'][value='Nuevo Comercio']"
   end
@@ -240,7 +240,7 @@ class CustomersControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_select "[role=alert]", text: /Latitud/
     assert_select "input[name='customer[name]'][value='Nuevo Comercio']"
-    patch customer_path(customers(:one)), params: { customer: { phone: "", latitude: "-34.8123456", longitude: "-58.4123456" } }
+    patch customer_path(customers(:one)), params: { customer: { name: "", latitude: "-34.8123456", longitude: "-58.4123456" } }
     assert_response :unprocessable_entity
     assert_select "input[name='customer[latitude]'][value='-34.8123456']"
     assert_select "turbo-frame#modal", count: 1

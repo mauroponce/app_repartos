@@ -4,7 +4,8 @@
   <% end %>
   <div class="field full"><%= form.label :name, "Nombre del cliente / comercio *" %><%= form.text_field :name, required: true, maxlength: 90, placeholder: "Ej. Almacén San Martín", autocomplete: "organization", autofocus: true, data: { location_target: "name" } %></div>
   <div class="field"><%= form.label :contact, "Persona de contacto" %><%= form.text_field :contact, maxlength: 255, autocomplete: "name" %></div>
-  <div class="field"><%= form.label :phone, "Teléfono *" %><%= form.telephone_field :phone, required: true, maxlength: 255, placeholder: "+54 11...", autocomplete: "tel" %></div>
+  <div class="field"><%= form.label :phone, "Teléfono" %><%= form.telephone_field :phone, maxlength: 255, placeholder: "+54 11...", autocomplete: "tel" %></div>
+  <div class="field"><%= form.label :external_code, "Código externo" %><%= form.text_field :external_code, maxlength: 255 %></div>
   <div class="field full"><%= form.label :email, "Email" %><%= form.email_field :email, maxlength: 255, placeholder: "pedidos@comercio.com", autocomplete: "email" %></div>
 
   <fieldset class="location-picker field full" aria-describedby="location-instructions">

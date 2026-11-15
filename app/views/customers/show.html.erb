@@ -5,7 +5,7 @@
     <div class="modal-title"><div><div class="eyebrow">Directorio de clientes</div><h1 id="customer-detail-title"><%= @customer.name %></h1><p><%= Current.company.name %></p></div><%= link_to customers_path, class: "icon-btn", aria: { label: "Cerrar detalle" }, data: { action: "modal#close" } do %><%= icon("close") %><% end %></div>
     <span class="chip <%= @customer.status %>"><%= customer_status(@customer) %></span>
     <dl class="drawer-data">
-      <% [["Persona de contacto", @customer.contact], ["Teléfono", @customer.phone], ["Email", @customer.email], ["Dirección de entrega", @customer.address], ["Ciudad / zona", @customer.city]].each do |label, value| %>
+      <% [["Código externo", @customer.external_code], ["Persona de contacto", @customer.contact], ["Teléfono", @customer.phone], ["Email", @customer.email], ["Dirección de entrega", @customer.address], ["Ciudad / zona", @customer.city]].each do |label, value| %>
         <div class="drawer-data-row"><dt><%= label %></dt><dd><%= value.presence || "Sin informar" %></dd></div>
       <% end %>
     </dl>

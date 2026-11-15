@@ -41,6 +41,7 @@ class Company < ApplicationRecord
   has_many :delivery_dispatch_changes, dependent: :restrict_with_error
   has_many :delivery_evidences, dependent: :restrict_with_error
   has_many :product_imports, dependent: :destroy
+  has_many :customer_imports, dependent: :destroy
   normalizes :slug, with: ->(slug) { slug.strip.downcase }
   validates :currency, inclusion: { in: %w[ARS USD EUR] }
   validate :preserve_accounting_currency

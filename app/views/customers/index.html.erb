@@ -2,7 +2,7 @@
 <div class="breadcrumb"><span>Operación</span><%= icon("chevron") %><strong>Clientes</strong></div>
 <div class="heading">
   <div><div class="eyebrow">Directorio</div><h1>Clientes</h1><p>Organizá tus comercios, sus contactos y direcciones para cada reparto.</p></div>
-  <div class="heading-actions"><%= link_to new_customer_path, class: "btn btn-dark", data: { turbo_frame: "modal" } do %><%= icon("plus") %> Nuevo cliente<% end %></div>
+  <div class="heading-actions"><%= link_to "Importar clientes", new_customer_import_path, class: "btn btn-white" %><%= link_to new_customer_path, class: "btn btn-dark", data: { turbo_frame: "modal" } do %><%= icon("plus") %> Nuevo cliente<% end %></div>
 </div>
 <section class="kpi-grid" aria-label="Resumen de clientes">
   <% [["Clientes registrados", @total, "En el directorio", "violet", "store"], ["Clientes activos", @active, "Con servicio habilitado", "good", "check-circle"], ["Clientes inactivos", @inactive, "Sin servicio habilitado", "peach", "store"], ["Ciudades / zonas", @cities, "Cobertura de tus clientes", "pink", "pin"]].each do |label, value, caption, color, symbol| %>

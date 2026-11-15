@@ -55,6 +55,11 @@ Rails.application.routes.draw do
       get :template, on: :collection
       post :confirm, on: :member
     end
+    resources :customer_imports, path: "importaciones-clientes", only: [ :new, :create, :show, :update ] do
+      get :template, on: :collection
+      get :errors, on: :member
+      post :confirm, on: :member
+    end
     resources :customers, path: "clientes", only: [] do
       resources :delivery_schedules, path: "programaciones", only: [ :new, :create, :edit, :update ]
     end
