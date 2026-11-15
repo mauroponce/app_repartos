@@ -1,0 +1,13 @@
+[Unit]
+Description=Notify App Repartos backup service failure
+
+[Service]
+Type=oneshot
+User=root
+EnvironmentFile=/etc/app-repartos/backup.env
+ExecStart=/usr/local/lib/app-repartos/bin/backup-alert systemd-failure
+UMask=0077
+NoNewPrivileges=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/backups/app-repartos

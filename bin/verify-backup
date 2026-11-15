@@ -1,24 +1,54 @@
 #!/usr/bin/env bash
-# A disposable PostgreSQL 18 restore. Never connects to an existing database.
+# Restores only into a disposable PostgreSQL container with no network/ports.
 set -euo pipefail
-backup_source="$(realpath "${1:?Uso: bin/verify-backup DIRECTORIO_BACKUP}")"
-(cd "$backup_source" && sha256sum --check SHA256SUMS)
-verify_container="repartos-restore-check-$$"
-trap 'timeout 15s docker rm -f "$verify_container" >/dev/null 2>&1 || true' EXIT
-docker run -d --name "$verify_container" --network none --memory 1g --cpus 2 --tmpfs /var/lib/postgresql -e POSTGRES_HOST_AUTH_METHOD=trust postgres:18-alpine >/dev/null
+script_root="$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")"
+# shellcheck source=../lib/backup/common.sh
+source "$script_root/lib/backup/common.sh"
+backup_init verify
+backup_space
+verify_legacy=false
+if [[ "${1:-}" == --upgrade-legacy ]]; then
+  backup_source="$(realpath "${3:?Indicá un directorio privado vacío para la conversión}")"
+  python3 "$backup_lib/bundle.py" legacy-input "${2:?Indicá el backup local v1}" "$backup_source"
+  verify_legacy=true
+else
+  backup_open_source "${1:?Uso: AGE_IDENTITY_FILE=/RUTA/FUERA/DEL/VPS bin/verify-backup ARCHIVO.tar.age}"
+fi
+backup_verify_container="repartos-restore-check-$$-$(python3 -c 'import secrets; print(secrets.token_hex(4))')"
+backup_stage="temporary-postgres"
+docker run -d --name "$backup_verify_container" --network none --memory "${VERIFY_POSTGRES_MEMORY:-1g}" --cpus 2 --tmpfs /var/lib/postgresql -e POSTGRES_HOST_AUTH_METHOD=trust postgres:18-alpine >/dev/null
 ready=0
-for attempt in {1..30}; do
-  # The image starts a temporary Unix-only server during initdb. Wait for TCP
-  # so a successful probe cannot race that server's shutdown.
-  if docker exec "$verify_container" pg_isready -h 127.0.0.1 -U postgres >/dev/null 2>&1; then ready=1; break; fi
+for _attempt in {1..60}; do
+  if docker exec "$backup_verify_container" pg_isready -h 127.0.0.1 -U postgres >/dev/null 2>&1; then ready=1; break; fi
   sleep 1
 done
 [[ "$ready" == 1 ]] || { echo 'La base temporal no inició' >&2; exit 1; }
+backup_stage="temporary-restore"
 for name in primary queue; do
-  docker exec "$verify_container" createdb -U postgres "$name"
-  docker exec -i "$verify_container" pg_restore -U postgres --no-owner --no-acl --exit-on-error --dbname "$name" < "$backup_source/$name.dump"
+  docker exec "$backup_verify_container" createdb -U postgres "$name"
+  if ! docker exec -i -e 'PGOPTIONS=-c log_error_verbosity=terse -c log_min_error_statement=panic' "$backup_verify_container" pg_restore -U postgres --no-owner --no-acl --exit-on-error --dbname "$name" < "$backup_source/$name.dump" 2>/dev/null; then
+    echo "No se pudo restaurar la base temporal $name; revisá versión e integridad del backup" >&2; exit 1
+  fi
 done
-docker exec "$verify_container" psql -U postgres -d primary -v ON_ERROR_STOP=1 -c 'SELECT count(*) AS empresas_restauradas FROM companies'
-docker exec "$verify_container" psql -U postgres -d queue -v ON_ERROR_STOP=1 -c 'SELECT count(*) AS trabajos_restaurados FROM solid_queue_jobs'
-tar -tzf "$backup_source/files.tar.gz" >/dev/null
-echo 'Ambas bases y el archivo de adjuntos se verificaron en un entorno temporal sin puertos ni conexión de red.'
+backup_stage="restored-integrity"
+verify_work="$(mktemp -d "$backup_root/.verify-XXXXXX")"
+backup_cleanup_paths+=("$verify_work")
+docker exec "$backup_verify_container" psql -X -qAt -U postgres -d primary -v ON_ERROR_STOP=1 -c "$backup_blob_sql" > "$verify_work/blobs.csv"
+docker exec "$backup_verify_container" psql -X -qAt -U postgres -d primary -v ON_ERROR_STOP=1 -c "$backup_counts_sql" > "$verify_work/counts.json"
+if [[ "$verify_legacy" == true ]]; then
+  cp "$verify_work/blobs.csv" "$backup_source/blobs.csv"
+  cp "$verify_work/counts.json" "$backup_source/primary-counts.json"
+  python3 "$backup_lib/bundle.py" manifest "$backup_source"
+else
+  python3 "$backup_lib/bundle.py" compare-restored "$backup_source" "$verify_work/blobs.csv" "$verify_work/counts.json"
+fi
+verify_queue_count="$(docker exec "$backup_verify_container" psql -X -qAt -U postgres -d queue -v ON_ERROR_STOP=1 -c 'SELECT count(*) FROM solid_queue_jobs')"
+[[ "$verify_queue_count" =~ ^[0-9]+$ ]] || { echo 'No se pudo verificar Solid Queue' >&2; exit 1; }
+python3 "$backup_lib/bundle.py" verify "$backup_source" >/dev/null
+python3 - "$backup_source/manifest.json" "$verify_queue_count" <<'PY'
+import datetime,json,sys
+with open(sys.argv[1]) as stream: manifest=json.load(stream)
+print(json.dumps(dict(status='verified',verified_at=datetime.datetime.now(datetime.timezone.utc).isoformat(),primary_counts=manifest['primary_counts'],queue_jobs=int(sys.argv[2]),storage=manifest['storage'],environment='disposable-postgres-18-network-none')))
+PY
+backup_stage="complete"
+backup_write_state ok

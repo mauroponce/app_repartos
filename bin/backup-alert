@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+script_root="$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")"
+# shellcheck source=../lib/backup/common.sh
+source "$script_root/lib/backup/common.sh"
+backup_init alert
+backup_stage="${1:-systemd-failure}"
+backup_notify failed

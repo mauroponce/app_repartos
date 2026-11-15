@@ -45,3 +45,6 @@
 !/.kamal/secrets.example
 /.kamal/*.lock
 /backups/
+# Python backup verification artifacts
+__pycache__/
+*.pyc

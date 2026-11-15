@@ -18,3 +18,5 @@ app/assets/builds/*
 .kamal/secrets*
 backups
 .env.routing
+**/__pycache__
+**/*.pyc

@@ -6,6 +6,8 @@ CI.run do
   step "Build: CSS", "bin/rails tailwindcss:build"
 
   step "Style: Ruby", "bin/rubocop"
+  step "Style: Backup scripts", "bin/check-backup-scripts"
+  step "Tests: Backup integrity", "python3 -m unittest discover -s test/backup -p 'test_*.py'"
 
   step "Security: Gem audit", "bin/bundler-audit check --update"
   step "Security: JavaScript audit", "npm audit"

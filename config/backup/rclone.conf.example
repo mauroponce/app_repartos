@@ -1,0 +1,17 @@
+# Install outside the checkout at /etc/app-repartos/rclone.conf, root:root 0600.
+[r2-backups]
+type = s3
+provider = Cloudflare
+access_key_id = REPLACE_BACKUP_ACCESS_KEY_ID
+secret_access_key = REPLACE_BACKUP_SECRET_ACCESS_KEY
+endpoint = https://REPLACE_ACCOUNT_ID.r2.cloudflarestorage.com
+acl = private
+no_check_bucket = true
+# Optional distinct read-only token for existing Active Storage R2 objects.
+# [r2-media]
+# type = s3
+# provider = Cloudflare
+# access_key_id = REPLACE_READ_ONLY_MEDIA_ACCESS_KEY_ID
+# secret_access_key = REPLACE_READ_ONLY_MEDIA_SECRET_ACCESS_KEY
+# endpoint = https://REPLACE_ACCOUNT_ID.r2.cloudflarestorage.com
+# no_check_bucket = true

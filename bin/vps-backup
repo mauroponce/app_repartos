@@ -1,30 +1,33 @@
 #!/usr/bin/env bash
-# Run on the VPS as its owner/root. Does not alter the live databases.
+# Only ciphertext leaves this VPS. Recovery identities never belong here.
 set -euo pipefail
-umask 077
-backup_root="${BACKUP_DIR:-/var/backups/app-repartos}"
-backup_storage="${APP_STORAGE_DIR:-/var/lib/app-repartos/storage}"
-backup_db="${POSTGRES_CONTAINER:-app-repartos-db}"
-backup_user="${POSTGRES_ADMIN_USER:-postgres}"
-backup_primary="${PRIMARY_DATABASE_NAME:-app_repartos_production}"
-backup_queue="${QUEUE_DATABASE_NAME:-app_repartos_production_queue}"
-backup_keep="${BACKUP_KEEP:-14}"
-[[ "$backup_keep" =~ ^[1-9][0-9]*$ ]] || { echo 'BACKUP_KEEP debe ser un entero positivo' >&2; exit 1; }
-mkdir -p "$backup_root"
-exec 9>"$backup_root/.backup.lock"
-flock -n 9 || { echo 'Ya hay un backup en curso' >&2; exit 1; }
-backup_stage="$(mktemp -d "$backup_root/.creating-XXXXXX")"
-trap 'rm -rf "${backup_stage:-}"' EXIT
-docker exec "$backup_db" pg_dump -U "$backup_user" -Fc --no-owner "$backup_primary" > "$backup_stage/primary.dump"
-docker exec "$backup_db" pg_dump -U "$backup_user" -Fc --no-owner "$backup_queue" > "$backup_stage/queue.dump"
-tar -C "$backup_storage" -czf "$backup_stage/files.tar.gz" .
-printf 'App Repartos backup v1\nPrimary: %s\nQueue: %s\nUTC: %s\n' "$backup_primary" "$backup_queue" "$(date -u +%FT%TZ)" > "$backup_stage/manifest.txt"
-(cd "$backup_stage" && sha256sum primary.dump queue.dump files.tar.gz manifest.txt > SHA256SUMS)
-backup_target="$backup_root/backup-$(date -u +%Y%m%dT%H%M%SZ)-$$"
-mv "$backup_stage" "$backup_target"
-backup_stage=""
-# Rotation only considers complete backups created by this script.
-mapfile -t backups < <(find "$backup_root" -maxdepth 1 -mindepth 1 -type d -name 'backup-*' | sort -r)
-for ((index=backup_keep; index<${#backups[@]}; index++)); do rm -rf -- "${backups[index]}"; done
-if [[ -n "${BACKUP_REMOTE:-}" ]]; then rsync -a -- "$backup_target/" "${BACKUP_REMOTE%/}/$(basename "$backup_target")/"; fi
-echo "Backup completo: $backup_target"
+script_root="$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")"
+# shellcheck source=../lib/backup/common.sh
+source "$script_root/lib/backup/common.sh"
+backup_init backup
+backup_lock
+[[ -z "${BACKUP_REMOTE:-}" ]] || { echo 'BACKUP_REMOTE/rsync fue retirado. Configurá BACKUP_RCLONE_REMOTE cifrado.' >&2; exit 1; }
+if [[ "${BACKUP_LOCAL_ONLY:-0}" != 1 ]]; then backup_require_remote; fi
+backup_work="$(mktemp -d "$backup_root/.creating-XXXXXX")"
+backup_cleanup_paths+=("$backup_work")
+backup_id="backup-$(date -u +%Y%m%dT%H%M%SZ)-$(python3 -c 'import secrets; print(secrets.token_hex(6))').tar.age"
+backup_target="$backup_root/$backup_id"
+backup_capture "$backup_work" "$backup_target"
+backup_external=false
+if [[ "${BACKUP_LOCAL_ONLY:-0}" != 1 ]]; then
+  backup_stage="upload"
+  rclone copyto "$backup_target" "${backup_remote%/}/$backup_id" --immutable --quiet
+  backup_stage="remote-integrity"
+  backup_local_hash="$(sha256sum "$backup_target" | cut -d' ' -f1)"
+  backup_remote_hash="$(rclone cat "${backup_remote%/}/$backup_id" | sha256sum | cut -d' ' -f1)"
+  [[ "$backup_local_hash" == "$backup_remote_hash" ]] || { echo 'La copia remota no coincide con el archivo cifrado local' >&2; exit 1; }
+  backup_stage="remote-retention"
+  rclone delete "$backup_remote" --min-age "${backup_remote_days}d" --include 'backup-*.tar.age' --max-depth 1 --quiet
+  backup_external=true
+fi
+backup_stage="local-retention"
+mapfile -t backups < <(find "$backup_root" -maxdepth 1 -type f -name 'backup-*.tar.age' | sort -r)
+for ((index=backup_keep; index<${#backups[@]}; index++)); do rm -- "${backups[index]}"; done
+backup_stage="complete"
+backup_write_state ok "$backup_external" "$backup_target"
+if [[ "$backup_external" == true ]]; then echo "Backup externo cifrado y verificado: $backup_id"; else echo "Backup local cifrado: $backup_id. NO se realizó copia externa."; fi

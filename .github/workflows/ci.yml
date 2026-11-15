@@ -45,7 +45,7 @@ jobs:
           persist-credentials: false
 
       - name: System dependencies
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y build-essential libpq-dev libvips42t64 pkg-config
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y build-essential libpq-dev libvips42t64 pkg-config python3 shellcheck
 
       - name: Ruby and gems
         uses: ruby/setup-ruby@b3aaceaef7e0ee231b499e7b5f49c03fc1d32199 # v1 (includes Ruby 3.4.12)

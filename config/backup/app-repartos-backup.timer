@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily App Repartos encrypted backup
+
+[Timer]
+OnCalendar=*-*-* 03:20:00 America/Argentina/Buenos_Aires
+RandomizedDelaySec=15m
+Persistent=true
+Unit=app-repartos-backup.service
+
+[Install]
+WantedBy=timers.target

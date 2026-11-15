@@ -1,0 +1,10 @@
+[Unit]
+Description=Hourly check of App Repartos external backup
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+Unit=app-repartos-backup-check.service
+
+[Install]
+WantedBy=timers.target

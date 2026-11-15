@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -euo pipefail
+script_root="$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")"
+# shellcheck source=../lib/backup/common.sh
+source "$script_root/lib/backup/common.sh"
+backup_init check
+backup_stage="monitoring"
+backup_space
+backup_require_remote
+backup_latest="$(python3 - "$backup_root" <<'PY'
+import datetime,json,os,pathlib,re,sys
+root=pathlib.Path(sys.argv[1]); now=datetime.datetime.now(datetime.timezone.utc)
+def state(name,max_hours):
+ try:
+  data=json.loads((root/name).read_text())
+  age=(now-datetime.datetime.fromisoformat(data['at'])).total_seconds()/3600
+  if data['status']!='ok' or age < -0.1 or age>max_hours: raise ValueError()
+  return data
+ except (OSError,ValueError,KeyError): raise SystemExit('Backup ausente, fallido o demasiado antiguo')
+run=state('last-run.json',int(os.environ.get('BACKUP_MAX_AGE_HOURS','36')))
+remote=state('last-external.json',int(os.environ.get('BACKUP_MAX_AGE_HOURS','36')))
+if not run.get('external') or not remote.get('external'): raise SystemExit('El último backup no tiene copia externa verificada')
+if not re.fullmatch(r'backup-\d{8}T\d{6}Z-[0-9a-f]{12}\.tar\.age',remote['file']): raise SystemExit('Identificador remoto inválido')
+if os.environ.get('BACKUP_REQUIRE_VERIFIED')=='1':
+ state('last-verification.json',int(os.environ.get('BACKUP_VERIFY_MAX_AGE_DAYS','7'))*24)
+print(remote['file'])
+PY
+)"
+backup_remote_info="$(rclone lsjson --stat "${backup_remote%/}/$backup_latest")"
+printf '%s' "$backup_remote_info" | python3 -c 'import json,sys; from pathlib import Path; actual=json.load(sys.stdin); expected=json.loads(Path(sys.argv[1]).read_text()); assert not actual["IsDir"] and actual["Size"]==expected["bytes"], "La copia remota no existe o cambió de tamaño"' "$backup_root/last-external.json"
+backup_stage="complete"
+echo 'Backup externo reciente y presente; espacio y comprobaciones configuradas correctos.'

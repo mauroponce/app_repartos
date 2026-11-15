@@ -1,29 +1,49 @@
 #!/usr/bin/env bash
+# Production restoration is deliberately separate from verification.
 set -euo pipefail
-backup_source="$(realpath "${1:?Uso: RESTORE_MAINTENANCE=1 bin/vps-restore DIRECTORIO_BACKUP}")"
-[[ "${RESTORE_MAINTENANCE:-}" == 1 ]] || { echo 'Detené web/jobs, activá mantenimiento y definí RESTORE_MAINTENANCE=1' >&2; exit 1; }
+script_root="$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")"
+# shellcheck source=../lib/backup/common.sh
+source "$script_root/lib/backup/common.sh"
+backup_init restore
+[[ "${RESTORE_MAINTENANCE:-}" == 1 && "${RESTORE_CONFIRM:-}" == "$PRIMARY_DATABASE_NAME:$QUEUE_DATABASE_NAME" ]] || { echo 'Detené web/jobs, activá mantenimiento y definí RESTORE_MAINTENANCE=1 y RESTORE_CONFIRM=PRINCIPAL:QUEUE explícitamente' >&2; exit 1; }
+[[ -z "${RESTORE_STORAGE_SERVICE:-}" || "$RESTORE_STORAGE_SERVICE" == persistent ]] || { echo 'La conversión opcional solo admite RESTORE_STORAGE_SERVICE=persistent' >&2; exit 1; }
+[[ "${APP_UID:-1000}" =~ ^[0-9]+$ && "${APP_GID:-1000}" =~ ^[0-9]+$ ]] || { echo 'UID/GID inválidos' >&2; exit 1; }
+backup_lock
 for role in web jobs; do
-  [[ -z "$(docker ps --filter label=service=app-repartos --filter "label=role=$role" --format '{{.ID}}')" ]] || { echo "El rol $role sigue activo; detenelo antes de restaurar" >&2; exit 1; }
+  [[ -z "$(docker ps --filter label=service=app-repartos --filter "label=role=$role" --format '{{.ID}}')" ]] || { echo "El rol $role sigue activo" >&2; exit 1; }
 done
-(cd "$backup_source" && sha256sum --check SHA256SUMS)
-tar -tzf "$backup_source/files.tar.gz" >/dev/null
-backup_db="${POSTGRES_CONTAINER:-app-repartos-db}"
-backup_user="${POSTGRES_ADMIN_USER:-postgres}"
-backup_primary="${PRIMARY_DATABASE_NAME:-app_repartos_production}"
-backup_queue="${QUEUE_DATABASE_NAME:-app_repartos_production_queue}"
-backup_storage="${APP_STORAGE_DIR:-/var/lib/app-repartos/storage}"
-backup_role="${APP_DATABASE_ROLE:-repartos}"
-storage_stage="$(mktemp -d "$(dirname "$backup_storage")/.restore-files-XXXXXX")"
-trap '[[ -z "${storage_stage:-}" ]] || rm -rf -- "$storage_stage"' EXIT
-tar -xzf "$backup_source/files.tar.gz" -C "$storage_stage" --no-same-owner
-chown -R 1000:1000 "$storage_stage"
-# A safety copy of both databases is retained before destructive restoration.
-safety_dir="$(mktemp -d "${BACKUP_DIR:-/var/backups/app-repartos}/before-restore-XXXXXX")"
-docker exec "$backup_db" pg_dump -U "$backup_user" -Fc --no-owner "$backup_primary" > "$safety_dir/primary.dump"
-docker exec "$backup_db" pg_dump -U "$backup_user" -Fc --no-owner "$backup_queue" > "$safety_dir/queue.dump"
-docker exec -i "$backup_db" pg_restore -U "$backup_user" --role "$backup_role" --clean --if-exists --exit-on-error --no-owner --dbname "$backup_primary" < "$backup_source/primary.dump"
-docker exec -i "$backup_db" pg_restore -U "$backup_user" --role "$backup_role" --clean --if-exists --exit-on-error --no-owner --dbname "$backup_queue" < "$backup_source/queue.dump"
-[[ ! -e "$backup_storage" ]] || mv "$backup_storage" "$backup_storage.before-restore-$(date +%s)"
-mv "$storage_stage" "$backup_storage"
-storage_stage=""
-echo "Restauración terminada. Copia previa: $safety_dir. Verificá datos, permisos y cola antes de iniciar web/jobs."
+backup_space
+backup_open_source "${1:?Indicá el archivo .tar.age que se verificó}"
+backup_stage="verification"
+"$script_root/bin/verify-backup" "$backup_source"
+restore_role="${APP_DATABASE_ROLE:-repartos}"
+[[ "$restore_role" =~ ^[a-zA-Z0-9_]+$ ]] || { echo 'Rol PostgreSQL inválido' >&2; exit 1; }
+restore_connections="$(docker exec "$backup_db" psql -X -qAt -U "$backup_user" -d postgres -v ON_ERROR_STOP=1 -c "SELECT count(*) FROM pg_stat_activity WHERE datname IN ('$PRIMARY_DATABASE_NAME','$QUEUE_DATABASE_NAME') AND backend_type = 'client backend'")"
+[[ "$restore_connections" == 0 ]] || { echo 'Todavía hay conexiones a las bases de destino. No se inició la restauración.' >&2; exit 1; }
+restore_role_exists="$(docker exec "$backup_db" psql -X -qAt -U "$backup_user" -d postgres -v ON_ERROR_STOP=1 -c "SELECT count(*) FROM pg_roles WHERE rolname='$restore_role'")"
+[[ "$restore_role_exists" == 1 ]] || { echo 'Prepará el rol de aplicación antes de restaurar' >&2; exit 1; }
+restore_files="$(mktemp -d "$(dirname "$backup_storage")/.restore-files-XXXXXX")"
+backup_cleanup_paths+=("$restore_files")
+python3 "$backup_lib/bundle.py" extract-files "$backup_source" "$restore_files"
+chown -R -- "${APP_UID:-1000}:${APP_GID:-1000}" "$restore_files"
+# An encrypted safety copy is mandatory before any DROP/restore operation.
+restore_safety_work="$(mktemp -d "$backup_root/.safety-XXXXXX")"
+backup_cleanup_paths+=("$restore_safety_work")
+restore_safety="$backup_root/before-restore-$(date -u +%Y%m%dT%H%M%SZ)-$$.tar.age"
+backup_capture "$restore_safety_work" "$restore_safety"
+backup_stage="production-restore"
+for entry in "primary:$PRIMARY_DATABASE_NAME" "queue:$QUEUE_DATABASE_NAME"; do
+  dump="${entry%%:*}"; database="${entry#*:}"
+  docker exec "$backup_db" dropdb -U "$backup_user" "$database"
+  docker exec "$backup_db" createdb -U "$backup_user" -O "$restore_role" "$database"
+  if ! docker exec -i -e 'PGOPTIONS=-c log_error_verbosity=terse -c log_min_error_statement=panic' "$backup_db" pg_restore -U "$backup_user" --role "$restore_role" --exit-on-error --no-owner --no-acl --dbname "$database" < "$backup_source/$dump.dump" 2>/dev/null; then
+    echo 'Falló la restauración. Conservá mantenimiento y recuperá desde la copia cifrada elegida o previa.' >&2; exit 1
+  fi
+done
+if [[ -n "${RESTORE_STORAGE_SERVICE:-}" ]]; then
+  docker exec "$backup_db" psql -X -qAt -U "$backup_user" -d "$PRIMARY_DATABASE_NAME" -v ON_ERROR_STOP=1 -c "UPDATE active_storage_blobs SET service_name = 'persistent'"
+fi
+[[ ! -e "$backup_storage" ]] || mv "$backup_storage" "$backup_storage.before-restore-$(date -u +%Y%m%dT%H%M%SZ)-$$"
+mv "$restore_files" "$backup_storage"
+backup_stage="complete"
+echo "Restauración terminada. Copia previa cifrada: $(basename "$restore_safety"). Verificá datos, adjuntos y jobs antes de quitar mantenimiento."

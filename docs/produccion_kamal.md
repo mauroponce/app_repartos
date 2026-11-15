@@ -116,7 +116,7 @@ bundle exec kamal accessory details all
 bundle exec kamal app exec --roles jobs --reuse 'bin/jobs-healthy'
 ```
 
-Kamal Proxy termina HTTPS y consulta `/up` en el puerto interno 3000. Solo proxy publica 80/443; PostgreSQL y OSRM no publican puertos. Se usa el target `production` del Dockerfile, assets precompilados, Puma en `0.0.0.0:3000`, usuario UID/GID 1000 y almacenamiento Disk privado persistente. No se necesita R2 para una instalación nueva.
+Kamal Proxy termina HTTPS y consulta `/up` en el puerto interno 3000. Solo proxy publica 80/443; PostgreSQL y OSRM no publican puertos. Se usa el target `production` del Dockerfile, assets precompilados, Puma en `0.0.0.0:3000`, usuario UID/GID 1000 y almacenamiento Disk privado persistente. Active Storage puede permanecer en Disk; antes del piloto hay que configurar R2 separado para backups externos cifrados.
 
 La web ejecuta `db:prepare` antes de arrancar por `RUN_DB_PREPARE=1`. Las bases ya existen; Rails aplica migraciones/schema sin recrearlas. El worker no migra. Los seeds demostrativos tienen guard de desarrollo y no crean datos en producción. Para cambios posteriores:
 
@@ -149,46 +149,17 @@ El rollback no revierte schema, adjuntos ni datos. Verificar compatibilidad ante
 
 ## Backups y restauración
 
-Copiar los scripts al servidor e instalarlos con propietario root y permisos 0750. No necesitan un checkout completo:
+El procedimiento vigente usa **age + rclone + Cloudflare R2** con bucket privado, claves de backup separadas, temporales privados, comprobación de adjuntos y restauración aislada. No se usa rsync ni cron para las copias nuevas. Los backups locales v1 siguen siendo verificables; no subirlos en claro.
+
+Instalar `age`, `rclone`, Python 3.11+, curl y util-linux en el host y ejecutar `sudo bin/install-backups`. Completar los archivos privados de `/etc/app-repartos` con la clave **pública** age, el remote R2 y sus credenciales; conservar la identidad privada fuera del VPS. Ejecutar primero el servicio manualmente y comprobar su resultado antes de habilitar los timers diarios y de monitoreo.
 
 ```sh
-scp bin/vps-backup bin/vps-restore bin/verify-backup "$DEPLOY_SSH_USER@$DEPLOY_HOST:/tmp/"
-ssh -t "$DEPLOY_SSH_USER@$DEPLOY_HOST" 'sudo install -m 0750 /tmp/vps-backup /usr/local/sbin/app-repartos-backup && sudo install -m 0750 /tmp/vps-restore /usr/local/sbin/app-repartos-restore && sudo install -m 0750 /tmp/verify-backup /usr/local/sbin/app-repartos-verify-backup'
+sudo systemctl start app-repartos-backup.service
+sudo systemctl enable --now app-repartos-backup.timer app-repartos-backup-check.timer
+sudo systemctl list-timers 'app-repartos-backup*'
 ```
 
-`vps-backup` usa `pg_dump -Fc` de ambas bases, un tar de archivos, manifest y SHA-256. Trabaja en un directorio temporal y publica solo backups completos. Retiene 14 copias completas de forma predeterminada. Variables opcionales: `BACKUP_DIR`, `BACKUP_KEEP`, `APP_STORAGE_DIR`, `POSTGRES_CONTAINER`, `POSTGRES_ADMIN_USER`, `PRIMARY_DATABASE_NAME`, `QUEUE_DATABASE_NAME` y `BACKUP_REMOTE`.
-
-```sh
-# En el VPS:
-sudo /usr/local/sbin/app-repartos-backup
-sudo /usr/local/sbin/app-repartos-verify-backup /var/backups/app-repartos/backup-VERSION
-```
-
-Programar con cron del propietario root, por ejemplo `20 3 * * * /usr/local/sbin/app-repartos-backup >> /var/log/app-repartos-backup.log 2>&1`. Configurar rotación de ese log y revisar fallos/espacio disponible. Los dumps tienen snapshots consistentes por base, pero no una transacción distribuida con los archivos: para una copia coordinada y antes de restaurar, activar mantenimiento y detener escrituras/web/jobs. La limpieza de evidencias puede borrar archivos mientras se copian si no se detienen los jobs.
-
-`verify-backup` restaura ambas bases en un PostgreSQL 18 temporal, sin red ni puertos, valida tablas esperadas y lee el archivo de adjuntos. No toca la instancia existente. Para restaurar realmente:
-
-```sh
-# Desde el equipo que despliega:
-bundle exec kamal app maintenance
-bundle exec kamal app stop --roles web,jobs
-# En el VPS, tras elegir y verificar el backup:
-sudo env RESTORE_MAINTENANCE=1 /usr/local/sbin/app-repartos-restore /var/backups/app-repartos/backup-VERSION
-# Luego verificar datos, adjuntos y tareas pendientes antes de reactivar:
-bundle exec kamal app start --roles web,jobs
-bundle exec kamal app live
-```
-
-El script se niega a restaurar si detecta web/jobs activos, exige la variable de mantenimiento y conserva dumps y archivos previos. Restaura objetos bajo el rol `repartos`; si una instalación usa otro rol, ajustar `APP_DATABASE_ROLE`. Las tareas de la base de cola pueden volver a ejecutarse; revisar su estado antes de reactivar worker. Las contraseñas/roles PostgreSQL y secretos se conservan/configuran aparte del dump de cada base.
-
-**Un backup solo dentro del mismo VPS no protege contra pérdida total del servidor.** Copiar opcionalmente a un equipo del propietario mediante SSH/rsync, sin contratar otro servicio:
-
-```sh
-# Ejemplo de variable al ejecutar backup; completar host, usuario y ruta reales.
-sudo env BACKUP_REMOTE=USUARIO@EQUIPO_DEL_PROPIETARIO:/RUTA_PRIVADA /usr/local/sbin/app-repartos-backup
-```
-
-También se pueden descargar los backups desde ese equipo. Conservar fuera del VPS una copia cifrada/controlada de los secretos y del mapa o la capacidad de reconstruirlo. No incluir contraseñas en comandos persistidos en historial.
+Preparación de R2, retención, alertas, consistencia real de los snapshots, lista/descarga, prueba de restauración y recuperación completa sobre un VPS nuevo: [Backups cifrados R2](backups_r2.md). La restauración productiva exige mantenimiento y confirmación explícita de ambas bases; no es el comando de prueba. No se configuró una cuenta real ni se ejecutó una restauración productiva.
 
 ## Problemas frecuentes y límites
 
@@ -196,7 +167,7 @@ También se pueden descargar los backups desde ese equipo. Conservar fuera del V
 - Jobs no saludables: revisar heartbeat y base queue; `bin/jobs-healthy` limita su comprobación al hostname del contenedor. La web no ejecuta jobs embebidos.
 - OSRM reinicia: revisar mapa activo, versión binaria, permisos y OOM. Volver al release anterior y medir RAM antes de aumentar cobertura.
 - Registry local inaccesible: mantener Docker/SSH del equipo constructor disponibles y revisar puerto/túnel. No abrir PostgreSQL/OSRM/registry al público.
-- No hay un backup remoto contratado, geocodificador comercial, teselas comerciales ni API de optimización paga. Las funciones cartográficas anteriores siguen siendo opcionales y admiten ingreso manual de coordenadas.
+- El backup externo requiere completar una cuenta y bucket R2 privados. No se requiere un geocodificador comercial, teselas comerciales ni API de optimización paga. Las funciones cartográficas anteriores siguen siendo opcionales y admiten ingreso manual de coordenadas.
 - Falta verificar DNS/HTTPS, capacidad efectiva del VPS, acceso SSH y un deploy/rollback reales cuando se proporcione infraestructura. La validación local no sustituye esas pruebas.
 
 Referencias: [Kamal 2 configuración](https://kamal-deploy.org/docs/configuration/overview/), [accessories](https://kamal-deploy.org/docs/configuration/accessories/), [Docker Ubuntu](https://docs.docker.com/engine/install/ubuntu/), [PostgreSQL 18 backup](https://www.postgresql.org/docs/18/backup-dump.html).

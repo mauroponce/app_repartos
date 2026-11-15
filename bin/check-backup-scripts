@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+scripts=(bin/vps-backup bin/vps-restore bin/verify-backup bin/backup-remote bin/check-backup bin/backup-alert bin/install-backups bin/test-backups lib/backup/common.sh)
+for script in "${scripts[@]}"; do bash -n "$script"; done
+shellcheck -P SCRIPTDIR -x "${scripts[@]}"

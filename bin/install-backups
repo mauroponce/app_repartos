@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+script_root="$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")"
+install_root="${1:-/usr/local/lib/app-repartos}"
+if [[ "$#" == 0 && "$EUID" != 0 ]]; then echo 'La instalación del servidor requiere root. Un destino explícito permite probar el paquete localmente.' >&2; exit 1; fi
+install -d -m 750 "$install_root/bin" "$install_root/lib/backup" "$install_root/config/backup"
+for script in vps-backup vps-restore verify-backup backup-remote check-backup backup-alert; do install -m 750 "$script_root/bin/$script" "$install_root/bin/$script"; done
+install -m 640 "$script_root/lib/backup/common.sh" "$install_root/lib/backup/common.sh"
+install -m 750 "$script_root/lib/backup/bundle.py" "$install_root/lib/backup/bundle.py"
+install -m 640 "$script_root/config/backup/"* "$install_root/config/backup/"
+if [[ "$#" == 0 ]]; then
+  install -d -m 700 /etc/app-repartos /var/backups/app-repartos
+  install -m 644 "$script_root/config/backup/"*.service "$script_root/config/backup/"*.timer /etc/systemd/system/
+  ln -sfn "$install_root/bin/vps-backup" /usr/local/sbin/app-repartos-backup
+  ln -sfn "$install_root/bin/vps-restore" /usr/local/sbin/app-repartos-restore
+  ln -sfn "$install_root/bin/verify-backup" /usr/local/sbin/app-repartos-verify-backup
+  systemctl daemon-reload
+  echo 'Instalado. Configurá claves públicas, R2 y alertas antes de habilitar los timers.'
+else echo 'Paquete local preparado; no se modificó systemd ni se habilitaron servicios.'; fi
