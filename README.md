@@ -94,7 +94,7 @@ Preparación de Ubuntu, secretos, primer despliegue, migraciones, actualización
 
 ## OSRM y optimización de una hoja existente
 
-La planificación manual y la distribución multivehículo existente con VROOM se conservan. Desde el detalle de una hoja editable, **Optimizar ruta** solicita una propuesta en Solid Queue. Compara conducción vial, distancia, atención, espera, horarios y restricciones. Confirmar cambia únicamente posiciones mediante `DeliveryRunReorderer`; una propuesta desactualizada no se aplica.
+La planificación manual y la distribución multivehículo con VROOM se conservan. En el piloto Kamal deshabilita multivehículo explícitamente hasta configurar y verificar su servicio; la opción requiere flag y salud satisfactoria. Desde el detalle de una hoja editable, **Optimizar ruta** solicita una propuesta en Solid Queue. Compara conducción vial, distancia, atención, espera, horarios y restricciones. Confirmar cambia únicamente posiciones mediante `DeliveryRunReorderer`; una propuesta desactualizada no se aplica.
 
 **Confirmar y optimizar**, disponible en el cierre del asistente y en una hoja editable, prepara y publica el orden definitivo en segundo plano. La PWA espera ese resultado; las modificaciones relevantes solicitan otra preparación antes de la ejecución. Las matrices viales, soluciones y trazados se reutilizan por empresa y versión de mapa. Cambiar nombres, precios o cantidades no obliga a repetir la optimización. También se puede publicar expresamente el orden manual.
 
@@ -136,8 +136,19 @@ La integración usa el [API de Photon](https://github.com/komoot/photon/blob/mas
 
 En `/repartidor`, iniciar sesión con conexión y esperar **Datos descargados** y **Acceso offline preparado**. Las visitas se guardan primero en el dispositivo tanto online como offline, sobreviven al cierre y reapertura de la PWA y se sincronizan al abrir, recuperar conectividad, volver al primer plano o pulsar **Sincronizar ahora**. Requiere HTTPS o localhost.
 
-La cola usa UUID e IndexedDB separado por empresa/usuario. Rails procesa cada UUID de forma atómica e idempotente. Las descargas firmadas permiten sincronizar hasta 48 horas después, incluso al día siguiente; una reasignación, cambio de planificación, visita ya registrada o descarga vencida produce un conflicto conservado. Administración lo revisa en **Sincronizaciones**. No hay GPS ni sincronización garantizada con la app cerrada.
+La cola usa UUID e IndexedDB separado por empresa/usuario. Rails procesa cada UUID de forma atómica e idempotente. Las descargas firmadas permiten sincronizar hasta 48 horas después, incluso al día siguiente; una reasignación, cambio de planificación, visita ya registrada o descarga vencida produce un conflicto conservado. Administración lo revisa en **Sincronizaciones**. El GPS es voluntario, apagado por defecto y solo funciona con la PWA visible; no hay sincronización garantizada con la app cerrada.
 
 El Service Worker sólo cachea recursos públicos y el shell. Los datos privados, presentaciones de hojas y operaciones están en IndexedDB; no se borran al actualizar ni al cerrar sesión. Con registros pendientes se avisa antes de salir. El navegador puede revocar almacenamiento: revisar/sincronizar o exportar registros antes de borrar datos del sitio.
 
 Arquitectura, API, política de conflictos, comandos de tests y pruebas manuales pendientes de Android y Safari/iPhone: [PWA offline](docs/pwa_offline.md). Se verifica automáticamente con Rails, JavaScript y Chromium; eso no valida todavía dispositivos físicos ni iOS.
+
+## Preparación del piloto comercial
+
+- [Importación de clientes Excel/CSV](docs/importacion_clientes.md): código externo por empresa, mapeo, previsualización, celdas vacías, errores y confirmación idempotente. Teléfono y coordenadas opcionales en la importación; ubicación pendiente hasta completarla.
+- [GPS opcional](docs/gps_opcional.md): consentimiento explícito, revocación durable, primer plano y retención; sin recorridos históricos.
+- [Sincronización y mediciones](docs/sincronizacion_rendimiento.md): lectura consistente sin lock de empresa y ETag/304 sin regenerar HTML.
+- [Backups R2 cifrados y recuperación](docs/backups_r2.md): instalación, timers, alertas y restauración aislada; requiere configurar y verificar la cuenta real.
+- [Pruebas físicas pendientes](docs/pruebas_dispositivos_piloto.md): Android, Safari e iPhone instalado.
+- [Informe y checklist comercial](docs/piloto_comercial.md): implementado, evidencia de tests y verificaciones reales pendientes.
+
+Los tests de integridad de backups y ShellCheck están en CI. `bin/test-backups` verifica además age/rclone y PostgreSQL reales con datos y remotes locales desechables; necesita las herramientas del host descritas en la documentación y no utiliza producción.

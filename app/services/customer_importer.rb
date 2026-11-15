@@ -49,7 +49,7 @@ class CustomerImporter
           errors << "No se admiten referencias internas a empresas, clientes o usuarios. Quitá la columna #{header}."
         end
         begin
-          %w[latitude longitude].each { |field| attributes[field] = coordinate(attributes[field]) if attributes.key?(field) }
+          %w[latitude longitude].each { |field| attributes[field] = coordinate(attributes[field], limit: field == "latitude" ? 90 : 180) if attributes.key?(field) }
           attributes["status"] = status(attributes["status"]) if attributes.key?("status") && attributes["status"].present?
           attributes.delete("status") if attributes["status"].blank? && !@import.overwrite_blanks?
           customer.assign_attributes(attributes)
@@ -118,11 +118,13 @@ class CustomerImporter
     end
   end
 
-  def coordinate(value)
+  def coordinate(value, limit:)
     return nil if value.blank?
     text = value.to_s.tr(",", ".")
-    raise InvalidImport, "Coordenada inválida: #{value}" unless text.match?(/\A-?\d+(?:\.\d{1,7})?\z/)
-    BigDecimal(text)
+    raise InvalidImport, "Coordenada inválida: #{value}" unless text.size <= 128 && text.match?(/\A[+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d{1,3})?\z/)
+    number = BigDecimal(text)
+    raise InvalidImport, "Coordenada fuera de rango: #{value}" unless number.between?(-limit, limit)
+    number.round(7)
   end
 
   def status(value)

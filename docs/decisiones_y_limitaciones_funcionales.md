@@ -155,3 +155,15 @@ La preparación y las comprobaciones locales realizadas no acreditan un desplieg
 - [Funcionamiento sin conexión y revisión de conflictos](pwa_offline.md).
 - [Entregas parciales, reprogramaciones e historial](entregas_y_auditoria.md).
 - [Incidencias, tareas, fórmulas y reglas comerciales](incidencias_tareas_reportes.md).
+
+## Preparación comercial incorporada
+
+La única importación nueva es la de clientes desde Excel/CSV, con revisión antes de confirmar, código externo único por empresa y datos de ubicación/teléfono opcionales. No se importan pedidos ni entregas. Las ubicaciones pendientes se resuelven desde el mapa antes de optimizar; las ubicaciones fuera del mapa activo permiten planificación manual. Ver [importación](importacion_clientes.md).
+
+GPS apagado por defecto: permiso del navegador y consentimiento para compartir son decisiones diferentes. Se exige activación voluntaria, primer plano, sesión y jornada válidas; se conserva la revocación pendiente y se elimina la última posición al confirmarla. No se guardan recorridos históricos. Ver [GPS](gps_opcional.md).
+
+La descarga offline comprueba cambios con ETag y puede reutilizar sus hojas sin otra transferencia de HTML. Las confirmaciones siguen verificándose de forma idempotente y las reasignaciones producen conflictos conservados. Ver [mediciones y límites](sincronizacion_rendimiento.md).
+
+En Kamal, VROOM permanece deshabilitado expresamente hasta verificar infraestructura y recursos. OSRM conserva el mapa AMBA versionado y la planificación manual está disponible cuando falla la optimización. Los backups nuevos se cifran antes de salir hacia R2; cuenta, permisos, timers y restauración operativa real deben completarse antes del piloto. Ver [informe comercial](piloto_comercial.md) y [backups](backups_r2.md).
+
+El alcance excluye cobranzas, rendiciones, facturación electrónica, ERP, importación de pedidos/entregas, portal de clientes, registro público, suscripciones y tracking obligatorio o en segundo plano.

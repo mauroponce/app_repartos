@@ -70,3 +70,11 @@ bin/ci
 Crear previamente ese usuario PostgreSQL con permiso para crear bases, usando exclusivamente un servidor local de pruebas. El puerto 3006 debe estar libre para el servidor de Playwright. `PLAYWRIGHT_CHROMIUM_EXECUTABLE` permite elegir explícitamente otro Chromium instalado; CI usa el descargado por Playwright.
 
 Para exigir que el job bloquee merges, agregar **Rails, JavaScript and security** a los status checks requeridos de la regla de protección/ruleset de la rama en GitHub. Esa configuración del repositorio no se aplica desde el YAML. La primera ejecución remota requiere subir los cambios; la verificación local no crea un run de Actions.
+
+## Preparación comercial y backups
+
+CI incluye ahora `bin/check-backup-scripts` (Bash y ShellCheck) y diez tests Python de integridad/seguridad de bundles. Python 3.11+ y ShellCheck están declarados en la imagen CI y en GitHub Actions. La integración real `bin/test-backups` se ejecuta por separado en un host Linux con Docker, age y rclone: crea únicamente sus dos bases y archivos desechables, usa un remote local y prueba también el comando protegido de restauración. No utiliza producción ni certifica R2/IAM real.
+
+Los tests Rails incluyen el circuito Excel → planificación/optimización → recibo, evidencias/incidencia y control multiempresa. Chromium agrega onboarding XLSX/remapeo CSV y revocación GPS offline después de recargar. El servidor gestionado de Playwright inicia un pequeño stub de salud VROOM exclusivo de tests para el flujo de interfaz multivehículo existente, cuyo cálculo ya usa respuestas controladas. No se presenta como una prueba de VROOM real. En producción esa funcionalidad permanece deshabilitada explícitamente hasta verificar el backend.
+
+Las mediciones reproducibles se documentan en [sincronización](sincronizacion_rendimiento.md) y [OSRM](osrm.md). No ejecutar benchmarks con credenciales/red de producción. Las pruebas físicas pendientes y la diferencia respecto de Chromium están en [dispositivos](pruebas_dispositivos_piloto.md).

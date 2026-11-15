@@ -97,6 +97,16 @@ class CustomerImporterTest < ActiveSupport::TestCase
     assert_raises(CustomerImporter::InvalidImport) { confirm(import) }
   end
 
+  test "spreadsheet coordinates preserve valid precision by rounding only after checking geographic bounds" do
+    import = csv_import("codigo,nombre,direccion,ciudad,latitud,longitud\nP,Preciso,Calle 1,CABA,-34.6037123456789,-5.83816012345e1\n")
+    row = CustomerImporter.new(import).preview.first
+    assert_empty row.errors
+    assert_equal BigDecimal("-34.6037123"), row.customer.latitude
+    assert_equal BigDecimal("-58.3816012"), row.customer.longitude
+    invalid = csv_import("nombre,direccion,ciudad,latitud,longitud\nBad,Calle,CABA,90.000000001,180\n")
+    assert CustomerImporter.new(invalid).preview.first.errors.any? { |error| error.include?("fuera de rango") }
+  end
+
   test "database enforces tenant uniqueness and optional phone while rejecting blank codes" do
     customers(:one).update!(external_code: "A", phone: nil)
     assert customers(:other_company).update(external_code: "A")

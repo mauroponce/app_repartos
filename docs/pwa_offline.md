@@ -19,7 +19,7 @@ Se conserva Rails, PostgreSQL, Stimulus, importmap y la interfaz existente. No s
 - **Presentación:** la descarga incluye HTML generado con los mismos templates escapados de Rails usados online, sin tokens CSRF. Se conserva en IndexedDB dentro de su cuenta y permite reconstruir la misma interfaz desde el shell público. Los registros locales se superponen a la presentación descargada; nunca se confunden con la confirmación del servidor.
 - **Servidor:** `DriverOperationSync` coordina deduplicación, autorización de la descarga y ejecución mediante `DriverVisitRecorder`. Las reglas de cumplimiento por producto y auditoría de `Visit` se conservan. `DriverWorkSnapshot` firma la revisión de la planificación.
 
-Los mapas requieren red para cargar sus imágenes. Direcciones, teléfonos, productos y orden de paradas permanecen descargados. Se retiraron `watchPosition()` y los controles de GPS; no existe tracking.
+Los mapas requieren red para cargar sus imágenes. Direcciones, teléfonos, productos y orden de paradas permanecen descargados. El GPS de jornada es opcional, está apagado por defecto y requiere una activación voluntaria distinta del permiso del navegador. Solo envía con sesión/jornada activa y PWA visible; no hay tracking en segundo plano. Ver [consentimiento y revocación](gps_opcional.md).
 
 ## Cola local
 
@@ -120,3 +120,11 @@ Ejecutar en una instalación de prueba HTTPS, con una cuenta y entregas de prueb
 9. **Safari/iPhone:** repetir la secuencia abriendo primero Safari y luego **Compartir → Agregar a inicio**. Probar desde la PWA instalada, cerrándola desde el selector de aplicaciones y reabriéndola en modo avión. Verificar especialmente persistencia tras reinicio, regreso al primer plano, reinstalación/almacenamiento y cambios de cuenta. Sincronizar con la app abierta; no depender de tareas en segundo plano.
 
 Android físico y Safari/iPhone instalado quedan pendientes de ejecución manual. Referencias de plataforma: [Service Workers](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers), [commit de IndexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IDBTransaction/complete_event), [Background Sync](https://developer.mozilla.org/en-US/docs/Web/API/Background_Synchronization_API) y [pruebas offline con Playwright](https://playwright.dev/docs/api/class-browsercontext#browser-context-set-offline).
+
+## Actualización incremental y prueba del piloto
+
+El trabajo conserva protocolo v4, grants de 48 horas y el esquema IndexedDB existente. El ETag por cuenta permite 304 con sesión revalidada y CSRF nuevo solo en memoria. No se borra ni transforma la cola al desplegar estos cambios. Se renuevan las descargas al cambiar el trabajo y como máximo cada hora para mantener los grants vigentes. Detalles y mediciones reales: [sincronización](sincronizacion_rendimiento.md).
+
+La ubicación compartida no se encola como recorrido ni se activa por un permiso anterior. Una revocación offline se conserva por cuenta y se confirma cuando vuelve una sesión válida. Las evidencias de ubicación voluntaria adjuntas a visitas conservan su protocolo anterior.
+
+Antes de comercializar hay que ejecutar el [plan físico de Android/iOS](pruebas_dispositivos_piloto.md). Los escenarios automatizados de Chromium incluyen también importación XLSX, remapeo CSV y revocación GPS offline tras recargar; no equivalen a pruebas en un iPhone real.
