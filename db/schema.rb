@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_16_031000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_16_040000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -130,6 +130,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_031000) do
     t.integer "routing_preferred_tolerance", default: 15, null: false
     t.integer "routing_service_minutes", default: 5, null: false
     t.string "province", default: "Buenos Aires", null: false
+    t.bigint "primary_administrator_id"
+    t.index ["primary_administrator_id"], name: "index_companies_on_primary_administrator_id"
     t.index ["slug"], name: "index_companies_on_slug", unique: true
     t.check_constraint "currency::text = ANY (ARRAY['ARS'::character varying::text, 'USD'::character varying::text, 'EUR'::character varying::text])", name: "companies_currency"
     t.check_constraint "depot_latitude IS NULL AND depot_longitude IS NULL OR depot_latitude IS NOT NULL AND depot_longitude IS NOT NULL AND depot_latitude >= '-90'::integer::numeric AND depot_latitude <= 90::numeric AND depot_longitude >= '-180'::integer::numeric AND depot_longitude <= 180::numeric", name: "company_depot_coordinates"
@@ -172,7 +174,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_031000) do
     t.index ["customer_import_id", "precision", "id"], name: "customer_import_rows_precision"
     t.index ["customer_import_id", "processed_at", "id"], name: "customer_import_rows_pending"
     t.index ["customer_import_id"], name: "index_customer_import_rows_on_customer_import_id"
-    t.check_constraint "(\"precision\"::text = ANY (ARRAY['reliable'::character varying::text, 'approximate'::character varying::text, 'ambiguous'::character varying::text, 'unlocated'::character varying::text])) AND (review_state::text = ANY (ARRAY['pending'::character varying::text, 'automatic'::character varying::text, 'manual'::character varying::text, 'unlocated'::character varying::text]))", name: "customer_import_row_states"
+    t.check_constraint "(\"precision\"::text = ANY (ARRAY['reliable'::character varying, 'approximate'::character varying, 'ambiguous'::character varying, 'unlocated'::character varying]::text[])) AND (review_state::text = ANY (ARRAY['pending'::character varying, 'automatic'::character varying, 'manual'::character varying, 'unlocated'::character varying]::text[]))", name: "customer_import_row_states"
     t.check_constraint "NOT manual_confirmation OR review_state::text = 'manual'::text AND latitude IS NOT NULL AND longitude IS NOT NULL", name: "customer_import_row_manual"
     t.check_constraint "latitude IS NULL AND longitude IS NULL OR latitude IS NOT NULL AND longitude IS NOT NULL AND latitude >= '-90'::integer::numeric AND latitude <= 90::numeric AND longitude >= '-180'::integer::numeric AND longitude <= 180::numeric", name: "customer_import_row_coordinates"
     t.check_constraint "review_state::text <> 'automatic'::text OR \"precision\"::text = 'reliable'::text AND latitude IS NOT NULL AND longitude IS NOT NULL", name: "customer_import_row_automatic"
@@ -204,7 +206,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_031000) do
     t.index ["company_id"], name: "index_customer_imports_on_company_id"
     t.index ["initiated_by_id"], name: "index_customer_imports_on_initiated_by_id"
     t.index ["state", "heartbeat_at"], name: "index_customer_imports_on_state_and_heartbeat_at"
-    t.check_constraint "state::text = ANY (ARRAY['legacy'::character varying::text, 'reading'::character varying::text, 'mapping'::character varying::text, 'preparing'::character varying::text, 'processing'::character varying::text, 'review'::character varying::text, 'importing'::character varying::text, 'completed'::character varying::text, 'cancelled'::character varying::text, 'failed'::character varying::text])", name: "customer_import_state"
+    t.check_constraint "state::text = ANY (ARRAY['legacy'::character varying, 'reading'::character varying, 'mapping'::character varying, 'preparing'::character varying, 'processing'::character varying, 'review'::character varying, 'importing'::character varying, 'completed'::character varying, 'cancelled'::character varying, 'failed'::character varying]::text[])", name: "customer_import_state"
     t.check_constraint "total_rows >= 0 AND processed_rows >= 0 AND processed_rows <= total_rows AND generation >= 0", name: "customer_import_progress"
   end
 
@@ -248,7 +250,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_031000) do
     t.index ["company_id"], name: "index_customers_on_company_id"
     t.check_constraint "external_code IS NULL OR length(btrim(external_code::text)) > 0 AND length(external_code::text) <= 255", name: "customers_external_code_present"
     t.check_constraint "latitude IS NULL AND longitude IS NULL OR latitude IS NOT NULL AND longitude IS NOT NULL AND latitude >= '-90'::integer::numeric AND latitude <= 90::numeric AND longitude >= '-180'::integer::numeric AND longitude <= 180::numeric", name: "customers_valid_coordinates"
-    t.check_constraint "location_verification::text = ANY (ARRAY['legacy'::character varying::text, 'pending'::character varying::text, 'provided'::character varying::text, 'reliable'::character varying::text, 'manual'::character varying::text])", name: "customers_location_verification"
+    t.check_constraint "location_verification::text = ANY (ARRAY['legacy'::character varying, 'pending'::character varying, 'provided'::character varying, 'reliable'::character varying, 'manual'::character varying]::text[])", name: "customers_location_verification"
     t.check_constraint "status::text = ANY (ARRAY['active'::character varying::text, 'inactive'::character varying::text])", name: "customers_valid_status"
   end
 
@@ -659,6 +661,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_031000) do
     t.check_constraint "status::text = ANY (ARRAY['requested'::character varying::text, 'accepted'::character varying::text, 'delivered'::character varying::text, 'failed'::character varying::text, 'suppressed'::character varying::text])", name: "notification_events_status"
   end
 
+  create_table "platform_admins", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "email_address", null: false
+    t.string "password_digest", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email_address"], name: "index_platform_admins_on_email_address", unique: true
+  end
+
+  create_table "platform_sessions", force: :cascade do |t|
+    t.bigint "platform_admin_id", null: false
+    t.string "ip_address"
+    t.string "user_agent"
+    t.datetime "expires_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["platform_admin_id"], name: "index_platform_sessions_on_platform_admin_id"
+  end
+
   create_table "product_imports", force: :cascade do |t|
     t.bigint "company_id", null: false
     t.jsonb "headers", default: [], null: false
@@ -937,6 +958,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_031000) do
   add_foreign_key "communication_consents", "companies"
   add_foreign_key "communication_consents", "customers", column: ["company_id", "customer_id"], primary_key: ["company_id", "id"], name: "communication_consents_customer_tenant"
   add_foreign_key "communication_consents", "users", column: ["company_id", "user_id"], primary_key: ["company_id", "id"], name: "communication_consents_user_tenant"
+  add_foreign_key "companies", "users", column: "primary_administrator_id"
   add_foreign_key "customer_import_rows", "companies"
   add_foreign_key "customer_import_rows", "customer_imports", column: ["company_id", "customer_import_id"], primary_key: ["company_id", "id"], name: "customer_import_row_tenant"
   add_foreign_key "customer_import_rows", "customers", column: ["company_id", "customer_id"], primary_key: ["company_id", "id"], name: "customer_import_row_customer_tenant"
@@ -1010,6 +1032,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_031000) do
   add_foreign_key "internal_notices", "workflow_tasks", column: ["company_id", "workflow_task_id"], primary_key: ["company_id", "id"], name: "internal_notices_workflow_task_tenant"
   add_foreign_key "notification_events", "companies"
   add_foreign_key "notification_events", "customer_notifications", column: ["company_id", "customer_notification_id"], primary_key: ["company_id", "id"], name: "notification_event_tenant"
+  add_foreign_key "platform_sessions", "platform_admins"
   add_foreign_key "product_imports", "companies"
   add_foreign_key "products", "companies"
   add_foreign_key "route_optimization_proposals", "companies"

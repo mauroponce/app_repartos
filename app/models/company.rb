@@ -1,4 +1,10 @@
 class Company < ApplicationRecord
+  belongs_to :primary_administrator, class_name: "User", optional: true
+  validate do
+    if primary_administrator && (primary_administrator.company_id != id || !primary_administrator.administrator?)
+      errors.add(:primary_administrator, "debe ser administrador de esta empresa")
+    end
+  end
   include RoutingChangeHooks
   validates :province, inclusion: { in: ->(_) { Geocoding::ProvinceBoundary.names } }
   validate do

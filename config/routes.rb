@@ -1,4 +1,9 @@
 Rails.application.routes.draw do
+  namespace :platform, path: "plataforma" do
+    resource :session, only: %i[new create destroy]
+    resources :companies, path: "empresas", only: %i[index show new create]
+    root to: "companies#index"
+  end
   resource :session, only: [ :new, :create, :destroy ]
   get "up" => "rails/health#show", as: :rails_health_check
   get "/repartidor/manifest.webmanifest", to: "repartidor_pwa#manifest", as: :repartidor_manifest, defaults: { format: :json }
@@ -17,6 +22,8 @@ Rails.application.routes.draw do
   resources :delivery_receipts, path: "comprobantes", only: :show
   get "/repartidor/api/v1/operations/:id", to: "driver_api/v1/sync#show"
   get "/repartidor", to: "repartidor#index", as: :repartidor_root
+  get "/repartidor/hojas", to: "repartidor#scheduled", as: :repartidor_runs
+  get "/repartidor/hojas/:id", to: "repartidor#upcoming", as: :repartidor_run
   patch "/repartidor/visitas/:id", to: "repartidor#update", as: :repartidor_visit
   scope "/admin" do
     resource :company_settings, path: "configuracion-empresa", only: [ :edit, :update ]

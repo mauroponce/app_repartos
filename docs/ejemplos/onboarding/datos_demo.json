@@ -1,0 +1,345 @@
+{
+  "notice": "Identidades ficticias. Direcciones ilustrativas NO verificadas. Ninguna coordenada de este archivo es una geocodificación real. Los puntos del seed se construyen sintéticamente y solo sirven para demostración.",
+  "customers": [
+    {
+      "external_code": "CLI-001",
+      "name": "Almacén El Sol",
+      "phone": "1155551001",
+      "address": "Mitre 450",
+      "city": "Adrogué"
+    },
+    {
+      "external_code": "CLI-002",
+      "name": "Autoservicio Central",
+      "phone": "1155551002",
+      "address": "Av. Espora 1200",
+      "city": "Burzaco"
+    },
+    {
+      "external_code": "CLI-003",
+      "name": "Dietética Natural",
+      "phone": "1155551003",
+      "address": "Alsina 450",
+      "city": "Banfield"
+    },
+    {
+      "external_code": "CLI-004",
+      "name": "Despensa Los Aromos",
+      "phone": "1155551004",
+      "address": "Esteban Adrogué 1020",
+      "city": "Adrogué"
+    },
+    {
+      "external_code": "CLI-005",
+      "name": "Kiosco La Esquina",
+      "phone": "1155551005",
+      "address": "Gral. Belgrano 730",
+      "city": "Burzaco"
+    },
+    {
+      "external_code": "CLI-006",
+      "name": "Mercadito El Ombú",
+      "phone": "1155551006",
+      "address": "San Martín 800",
+      "city": "Adrogué"
+    },
+    {
+      "external_code": "CLI-007",
+      "name": "Almacén La Ronda",
+      "phone": "1155551007",
+      "address": "Maipú 450",
+      "city": "Banfield"
+    },
+    {
+      "external_code": "CLI-008",
+      "name": "Autoservicio El Molino",
+      "phone": "1155551008",
+      "address": "Meeks 1350",
+      "city": "Temperley"
+    },
+    {
+      "external_code": "CLI-009",
+      "name": "Dietética Raíces",
+      "phone": "1155551009",
+      "address": "España 650",
+      "city": "Lomas de Zamora"
+    },
+    {
+      "external_code": "CLI-010",
+      "name": "Despensa La Amistad",
+      "phone": "1155551010",
+      "address": "Av. Alsina 920",
+      "city": "Banfield"
+    },
+    {
+      "external_code": "CLI-011",
+      "name": "Panadería La Espiga Dorada",
+      "phone": "1155551011",
+      "address": "Gral. Paz 500",
+      "city": "Temperley"
+    },
+    {
+      "external_code": "CLI-012",
+      "name": "Bebidas El Encuentro",
+      "phone": "1155551012",
+      "address": "Laprida 350",
+      "city": "Lomas de Zamora"
+    },
+    {
+      "external_code": "CLI-013",
+      "name": "Almacén La Vereda",
+      "phone": "1155551013",
+      "address": "Av. Espora 821",
+      "city": "Adrogué"
+    },
+    {
+      "external_code": "CLI-014",
+      "name": "Mercado Los Tilos",
+      "phone": "1155551014",
+      "address": "Roca 950",
+      "city": "Burzaco"
+    },
+    {
+      "external_code": "CLI-015",
+      "name": "Kiosco Lucero",
+      "phone": "1155551015",
+      "address": "Colombres 440",
+      "city": "Lomas de Zamora"
+    },
+    {
+      "external_code": "CLI-016",
+      "name": "Despensa El Trébol",
+      "phone": "1155551016",
+      "address": "Dorrego 710",
+      "city": "Temperley"
+    },
+    {
+      "external_code": "CLI-017",
+      "name": "Autoservicio La Familia",
+      "phone": "1155551017",
+      "address": "French 600",
+      "city": "Banfield"
+    },
+    {
+      "external_code": "CLI-018",
+      "name": "Dietética Semilla Viva",
+      "phone": "1155551018",
+      "address": "Seguí 320",
+      "city": "Adrogué"
+    },
+    {
+      "external_code": "CLI-019",
+      "name": "Almacén El Hornero",
+      "phone": "1155551019",
+      "address": "25 de Mayo 750",
+      "city": "Temperley"
+    },
+    {
+      "external_code": "CLI-020",
+      "name": "Mercado La Estación",
+      "phone": "1155551020",
+      "address": "Av. Hipólito Yrigoyen 9120",
+      "city": "Lomas de Zamora"
+    },
+    {
+      "external_code": "CLI-021",
+      "name": "Bebidas Las Acacias",
+      "phone": "1155551021",
+      "address": "Pellegrini 860",
+      "city": "Burzaco"
+    },
+    {
+      "external_code": "CLI-022",
+      "name": "Panadería El Amanecer",
+      "phone": "1155551022",
+      "address": "Rosales 430",
+      "city": "Adrogué"
+    },
+    {
+      "external_code": "CLI-023",
+      "name": "Despensa La Calesita",
+      "phone": "1155551023",
+      "address": "Acevedo 1050",
+      "city": "Banfield"
+    },
+    {
+      "external_code": "CLI-024",
+      "name": "Almacén Los Fresnos",
+      "phone": "1155551024",
+      "address": "Av. Meeks 570",
+      "city": "Temperley"
+    },
+    {
+      "external_code": "CLI-025",
+      "name": "Kiosco Del Andén",
+      "phone": "1155551025",
+      "address": "Mitre",
+      "city": "Adrogué"
+    },
+    {
+      "external_code": "CLI-026",
+      "name": "Mercado Buena Mesa",
+      "phone": "1155551026",
+      "address": "San Martín al 800",
+      "city": "Burzaco"
+    },
+    {
+      "external_code": "CLI-027",
+      "name": "Autoservicio El Puente",
+      "phone": "1155551027",
+      "address": "Alsina y Maipú",
+      "city": "Banfield"
+    },
+    {
+      "external_code": "CLI-028",
+      "name": "Dietética Brotes",
+      "phone": "1155551028",
+      "address": "Belgrano",
+      "city": "Lomas de Zamora"
+    },
+    {
+      "external_code": "CLI-029",
+      "name": "Almacén La Placita",
+      "phone": "1155551029",
+      "address": "cerca de la estación",
+      "city": "Temperley"
+    },
+    {
+      "external_code": "CLI-030",
+      "name": "Despensa Los Vecinos",
+      "phone": "1155551030",
+      "address": "Av. Espora",
+      "city": "Burzaco"
+    }
+  ],
+  "products": [
+    {
+      "sku": "HAR-025",
+      "name": "Harina bolsa 25 kg",
+      "unit": "bolsa",
+      "package_content_quantity": "25",
+      "package_content_unit": "kg",
+      "active": "sí"
+    },
+    {
+      "sku": "AZU-001",
+      "name": "Azúcar a granel",
+      "unit": "kilo",
+      "package_content_quantity": "",
+      "package_content_unit": "",
+      "active": "sí"
+    },
+    {
+      "sku": "GAS-002",
+      "name": "Gaseosa 2 litros",
+      "unit": "unidad",
+      "package_content_quantity": "2",
+      "package_content_unit": "l",
+      "active": "sí"
+    },
+    {
+      "sku": "GAL-012",
+      "name": "Galletitas caja x 12",
+      "unit": "caja",
+      "package_content_quantity": "12",
+      "package_content_unit": "unidad",
+      "active": "sí"
+    },
+    {
+      "sku": "ARR-001",
+      "name": "Arroz por kilogramo",
+      "unit": "kilogramo",
+      "package_content_quantity": "",
+      "package_content_unit": "",
+      "active": "sí"
+    },
+    {
+      "sku": "ACE-001",
+      "name": "Aceite de girasol 1,5 litros",
+      "unit": "unidad",
+      "package_content_quantity": "1,5",
+      "package_content_unit": "litro",
+      "active": "sí"
+    },
+    {
+      "sku": "AGU-006",
+      "name": "Agua mineral pack x 6",
+      "unit": "paquete",
+      "package_content_quantity": "6",
+      "package_content_unit": "unidad",
+      "active": "sí"
+    },
+    {
+      "sku": "LEC-001",
+      "name": "Leche entera 1 litro",
+      "unit": "unit",
+      "package_content_quantity": "1",
+      "package_content_unit": "l",
+      "active": "sí"
+    },
+    {
+      "sku": "FDE-500",
+      "name": "Fideos secos 500 g",
+      "unit": "paquete",
+      "package_content_quantity": "500",
+      "package_content_unit": "gramo",
+      "active": "sí"
+    },
+    {
+      "sku": "YER-001",
+      "name": "Yerba mate 1 kg",
+      "unit": "pack",
+      "package_content_quantity": "1",
+      "package_content_unit": "kg",
+      "active": "sí"
+    },
+    {
+      "sku": "SAL-025",
+      "name": "Sal fina 250 g",
+      "unit": "unidad",
+      "package_content_quantity": "250",
+      "package_content_unit": "g",
+      "active": "sí"
+    },
+    {
+      "sku": "TOM-520",
+      "name": "Puré de tomate 520 g",
+      "unit": "caja",
+      "package_content_quantity": "520",
+      "package_content_unit": "g",
+      "active": "sí"
+    },
+    {
+      "sku": "LEN-001",
+      "name": "Lentejas a granel",
+      "unit": "kg",
+      "package_content_quantity": "",
+      "package_content_unit": "",
+      "active": "sí"
+    },
+    {
+      "sku": "JUG-001",
+      "name": "Jugo de naranja 1 litro",
+      "unit": "unidad",
+      "package_content_quantity": "1",
+      "package_content_unit": "l",
+      "active": "sí"
+    },
+    {
+      "sku": "000015",
+      "name": "Té clásico caja x 25",
+      "unit": "caja",
+      "package_content_quantity": "25",
+      "package_content_unit": "unidad",
+      "active": "sí"
+    },
+    {
+      "sku": "CAF-250",
+      "name": "Café molido 250 g",
+      "unit": "paquete",
+      "package_content_quantity": "250",
+      "package_content_unit": "g",
+      "active": "sí"
+    }
+  ]
+}

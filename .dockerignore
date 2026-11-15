@@ -28,3 +28,7 @@ docs/*
 docs/ejemplos/*
 !docs/ejemplos/clientes/
 !docs/ejemplos/clientes/*.xlsx
+!docs/ejemplos/onboarding/
+!docs/ejemplos/onboarding/*.xlsx
+!docs/ejemplos/onboarding/*.json
+!docs/ejemplos/onboarding/*.csv

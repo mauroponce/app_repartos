@@ -1,0 +1,13 @@
+<h1>Crear empresa y administrador</h1>
+<% if @registration.errors.any? %><div role="alert"><ul><% @registration.errors.full_messages.each do |message| %><li><%= message %></li><% end %></ul></div><% end %>
+<%= form_with model: @registration, scope: :registration, url: platform_companies_path, class: "field-grid" do |form| %>
+  <div class="field"><%= form.label :name, "Nombre comercial" %><%= form.text_field :name, required: true %></div>
+  <div class="field"><%= form.label :slug, "Slug único" %><%= form.text_field :slug, required: true, pattern: "[a-z0-9]+(-[a-z0-9]+)*" %></div>
+  <div class="field"><%= form.label :province, "Provincia" %><%= form.select :province, Geocoding::ProvinceBoundary.names %></div>
+  <div class="field"><%= form.label :time_zone, "Zona horaria" %><%= form.text_field :time_zone, required: true %></div>
+  <div class="field"><%= form.label :currency, "Moneda" %><%= form.select :currency, %w[ARS USD EUR] %></div>
+  <div class="field"><%= form.label :administrator_name, "Nombre del administrador" %><%= form.text_field :administrator_name, required: true, maxlength: 255 %></div>
+  <div class="field"><%= form.label :administrator_email, "Email del administrador" %><%= form.email_field :administrator_email, required: true, autocomplete: "off" %></div>
+  <div class="field"><%= form.label :password, "Contraseña inicial" %><%= form.password_field :password, required: true, minlength: 12, maxlength: 72, autocomplete: "new-password" %><p>Al menos 12 caracteres, con letras y números. Compartila por un canal seguro.</p></div>
+  <div class="form-actions"><%= form.submit "Crear empresa y administrador", class: "btn btn-dark" %></div>
+<% end %>

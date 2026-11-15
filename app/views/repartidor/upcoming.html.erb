@@ -1,0 +1,6 @@
+<main class="content">
+  <%= link_to "Volver a mi jornada", repartidor_root_path, data: { turbo: false } %>
+  <h1><%= @run.name %></h1><p><%= l(@run.scheduled_date) %> · <%= Current.user.name %></p>
+  <p>Consulta de la hoja. Para registrar entregas, abrí tu jornada el día de la fecha asignada.</p>
+  <ol><% @visits.each do |visit| %><li><h2><%= visit.position %>. <%= visit.customer_name %></h2><p><%= visit.customer_address %></p><% visit.delivery_orders.each do |order| %><p><%= schedule_time(order) %></p><% end %><ul><% visit.delivery_items.each do |item| %><li><%= item.description %> · <%= quantity_text(item.planned_quantity) %> <%= DeliveryUnits::LABELS[item.unit] %></li><% end %></ul></li><% end %></ol>
+</main>

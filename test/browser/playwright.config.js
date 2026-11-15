@@ -14,6 +14,12 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: 0,
   webServer: managedServer ? [{
+    command: "node test/browser/geocoding_stub.js",
+    cwd: fileURLToPath(new URL("../../", import.meta.url)),
+    env: { PWA_BROWSER_TEST: "1" },
+    url: `http://127.0.0.1:${process.env.PWA_GEOCODING_PORT || 3198}/health`,
+    reuseExistingServer: false
+  }, {
     command: "node test/browser/vroom_health_stub.js",
     cwd: fileURLToPath(new URL("../../", import.meta.url)),
     env: { PWA_BROWSER_TEST: "1" },

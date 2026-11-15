@@ -1,0 +1,5 @@
+<h1><%= @company.name %></h1>
+<p>Slug: <%= @company.slug %> · Provincia: <%= @company.province %> · Zona horaria: <%= @company.time_zone %> · Moneda: <%= @company.currency %></p>
+<h2>Administrador principal</h2>
+<% if (admin = @company.primary_administrator) %><p><%= admin.name %> · <%= admin.email_address %></p><p>Ingresá en <%= link_to "Login de la empresa", new_session_path %> con ese email y la contraseña inicial definida al crear la empresa.</p><p>Después del ingreso, importá clientes y productos desde el panel de administración.</p>
+<% else %><p>Empresa preexistente sin administrador principal designado.</p><% end %>

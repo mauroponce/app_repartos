@@ -13,6 +13,16 @@ class RepartidorController < ApplicationController
     end
   end
 
+  def upcoming
+    @run = assigned_runs.where(status: %w[assigned in_progress completed]).find(params[:id])
+    @visits = @run.visits.includes(:delivery_items, :delivery_orders)
+  end
+
+  def scheduled
+    today = Current.company.local_date
+    @upcoming_runs = assigned_runs.where(scheduled_date: (today + 1)..(today + 14), status: %w[assigned in_progress]).order(:scheduled_date, :id).limit(30)
+  end
+
   def update
     @submitted = visit_params.to_h.deep_symbolize_keys
     visit = DriverVisitRecorder.call(user: Current.user, visit_id: params[:id], attributes: @submitted)

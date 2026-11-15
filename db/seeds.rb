@@ -207,3 +207,4 @@ Company.transaction do
 end
 
 RoutingDemoSeeds.call
+DemoOnboardingSeeds.call

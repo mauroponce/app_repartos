@@ -183,7 +183,12 @@ class CustomerImportJob < ApplicationJob
       unless @import.import_rows.where(excluded: false, customer_id: nil).exists?
         created = @import.import_rows.where.not(customer_id: nil)
         summary = { "created" => created.count, "updated" => 0, "skipped" => @import.import_rows.where(excluded: true).count,
-          "pending_location" => created.where.not(review_state: %w[manual automatic]).count, "errors" => 0 }
+          "pending_location" => created.where.not(review_state: %w[manual automatic]).count,
+          "reliable" => created.where(review_state: "automatic").count,
+          "manual" => created.where(review_state: "manual").count,
+          "approximate" => created.where(precision: "approximate", manual_confirmation: false).count,
+          "ambiguous" => created.where(precision: "ambiguous", manual_confirmation: false).count,
+          "unlocated" => created.where(precision: "unlocated", manual_confirmation: false).count, "errors" => 0 }
         @import.update!(state: "completed", confirmed_at: Time.current, summary: summary, heartbeat_at: Time.current)
       end
     end

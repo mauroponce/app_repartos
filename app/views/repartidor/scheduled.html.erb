@@ -1,0 +1,7 @@
+<main class="content">
+  <%= link_to "Volver a mi jornada", repartidor_root_path, data: { turbo: false } %>
+  <h1>Próximas hojas asignadas</h1>
+  <p>Consulta con conexión de los próximos 14 días. Las entregas se registran desde la jornada del día.</p>
+  <ul><% @upcoming_runs.each do |run| %><li><%= link_to "#{l(run.scheduled_date)} · #{run.name}", repartidor_run_path(run), data: { turbo: false } %></li><% end %></ul>
+  <% if @upcoming_runs.empty? %><p>No tenés próximas hojas asignadas.</p><% end %>
+</main>

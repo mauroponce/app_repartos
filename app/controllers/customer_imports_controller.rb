@@ -101,17 +101,19 @@ class CustomerImportsController < ManagementController
 
   def prepare_results
     rows = @customer_import.import_rows
-    @counts = rows.group(:precision).count
+    @counts = rows.where(manual_confirmation: false).group(:precision).count
+    @counts["manual"] = rows.where(manual_confirmation: true).count
     @error_count = rows.where("issues <> '[]'::jsonb").count
     @duplicate_count = rows.where("duplicates <> '[]'::jsonb").count
     @query = params[:q].to_s.strip.first(120)
-    @precision = params[:precision].presence_in(CustomerImportRow::PRECISION_LABELS.keys + %w[errors duplicates pending])
+    @precision = params[:precision].presence_in(CustomerImportRow::PRECISION_LABELS.keys + %w[manual errors duplicates pending])
     rows = case @precision
     when "errors" then rows.where("issues <> '[]'::jsonb")
     when "duplicates" then rows.where("duplicates <> '[]'::jsonb")
     when "pending" then rows.where(review_state: "pending", excluded: false)
+    when "manual" then rows.where(manual_confirmation: true)
     when nil then rows
-    else rows.where(precision: @precision)
+    else rows.where(precision: @precision, manual_confirmation: false)
     end
     if @query.present?
       rows = rows.where("data->>'name' ILIKE :q OR data->>'address' ILIKE :q OR normalized->>'city' ILIKE :q", q: "%#{CustomerImportRow.sanitize_sql_like(@query)}%")

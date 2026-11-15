@@ -1,0 +1,17 @@
+SKU,Nombre,Unidad,Contenido,Unidad de contenido,Activo
+HAR-025,Harina bolsa 25 kg,bolsa,25,kg,sí
+AZU-001,Azúcar a granel,kilo,,,sí
+GAS-002,Gaseosa 2 litros,unidad,2,l,sí
+GAL-012,Galletitas caja x 12,caja,12,unidad,sí
+ARR-001,Arroz por kilogramo,kilogramo,,,sí
+ACE-001,"Aceite de girasol 1,5 litros",unidad,"1,5",litro,sí
+AGU-006,Agua mineral pack x 6,paquete,6,unidad,sí
+LEC-001,Leche entera 1 litro,unit,1,l,sí
+FDE-500,Fideos secos 500 g,paquete,500,gramo,sí
+YER-001,Yerba mate 1 kg,pack,1,kg,sí
+SAL-025,Sal fina 250 g,unidad,250,g,sí
+TOM-520,Puré de tomate 520 g,caja,520,g,sí
+LEN-001,Lentejas a granel,kg,,,sí
+JUG-001,Jugo de naranja 1 litro,unidad,1,l,sí
+000015,Té clásico caja x 25,caja,25,unidad,sí
+CAF-250,Café molido 250 g,paquete,250,g,sí

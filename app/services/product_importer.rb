@@ -9,6 +9,7 @@ class ProductImporter
     "active" => "active", "activo" => "active"
   }.freeze
   Row = Data.define(:number, :product, :errors, :action)
+  UNIT_ALIASES = { "bolsa" => "bag", "unidad" => "unit", "caja" => "box", "paquete" => "pack", "kilogramo" => "kg", "kilo" => "kg", "gramo" => "g", "litro" => "l" }.freeze
   class InvalidImport < StandardError; end
 
   def initialize(product_import)
@@ -22,11 +23,17 @@ class ProductImporter
     end
   end
 
+  def self.normalize_unit(value)
+    text = value.to_s.strip.downcase.presence
+    UNIT_ALIASES.fetch(text, text)
+  end
+
   def preview
     used_skus = {}
     @import.rows.each_with_index.filter_map do |values, index|
       next if values.all?(&:blank?)
       attributes = mapped_attributes(values)
+      %w[unit package_content_unit].each { |field| attributes[field] = self.class.normalize_unit(attributes[field]) }
       errors = []
       %w[name unit].each { |field| errors << "Mapeá la columna #{field}." unless @import.mapping[field].present? }
       begin

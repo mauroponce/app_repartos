@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+  <head><title>Plataforma · App Repartos</title><%= render "shared/head" %></head>
+  <body>
+    <main class="management-panel">
+      <nav class="form-actions" aria-label="Plataforma"><%= link_to "Empresas", platform_root_path, class: "btn btn-white" %><%= button_to "Cerrar sesión de plataforma", platform_session_path, method: :delete, class: "btn btn-white" %></nav>
+      <%= render "shared/flash" %>
+      <%= yield %>
+    </main>
+  </body>
+</html>

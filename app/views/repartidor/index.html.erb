@@ -19,6 +19,7 @@
     <% if @recording_error %><div class="validation-errors" role="alert"><%= @recording_error %></div><% end %>
     <section class="screen" id="screen-route" data-repartidor-target="screen" aria-label="Mi ruta">
       <div class="greeting"><div class="eyebrow"><%= l(@today, format: "%A %-d de %B") %></div><h2>¡Buen día, <%= Current.user.name.split.first %>!</h2><p>Tu próxima parada, siempre a mano.</p></div>
+      <p><%= link_to "Próximas hojas asignadas", repartidor_runs_path, data: { turbo: false } %></p>
       <% if @runs.size > 1 %>
         <%= form_with url: repartidor_root_path, method: :get, class: "route-picker" do |form| %>
           <%= form.label :run_id, "Reparto" %><%= form.select :run_id, @runs.map { |run| [run.name, run.id] }, { selected: @run.id }, data: { action: "change->repartidor#chooseRun" } %>

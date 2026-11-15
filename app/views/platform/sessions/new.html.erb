@@ -1,0 +1,7 @@
+<h1>Administración de plataforma</h1>
+<p>Ingresá con tu cuenta de propietario de App Repartos.</p>
+<%= form_with url: platform_session_path, class: "auth-form" do |form| %>
+  <div class="field"><%= form.label :email_address, "Email" %><%= form.email_field :email_address, required: true, autofocus: true, autocomplete: "username" %></div>
+  <div class="field"><%= form.label :password, "Contraseña" %><%= form.password_field :password, required: true, maxlength: 72, autocomplete: "current-password" %></div>
+  <%= form.submit "Ingresar a plataforma", class: "btn btn-dark" %>
+<% end %>
