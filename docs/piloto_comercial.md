@@ -77,6 +77,7 @@ El comando productivo es independiente, exige mantenimiento y confirmación exac
 ## 10. Pruebas y evidencia
 
 - Línea base: 405 tests Rails/3.006 aserciones, 32 JavaScript y 16 Playwright, todos aprobados; RuboCop, Brakeman y auditorías de gems/importmap/npm aprobadas.
+- **CI local final sobre `69e785b`, en checkout aislado: 435 tests Rails/3.248 aserciones, 40 JavaScript, 18 Playwright y 10 Python, todos aprobados.** Sin fallos, errores, omisiones ni reintentos de navegador. RuboCop inspeccionó 273 archivos sin infracciones; ShellCheck/Bash, Brakeman y auditorías de gems/importmap/npm aprobadas. La ejecución completa tomó 14 min 41 s; Chromium, 10 min 34 s.
 - Importación: pruebas de CSV/XLSX, ceros, normalización, validaciones, coordenadas, idempotencia, concurrencia de revisión, errores y tenant.
 - GPS: consentimiento, revocación, sesión/cuenta, muestras demoradas, retención y navegador real Chromium.
 - Offline: tests de lectura/locks/MVCC, 304, caché ausente, sesión y conservación de cola/evidencias. Pruebas existentes de reinicio, fotos/firma, cortes y conflictos preservadas.
@@ -84,7 +85,7 @@ El comando productivo es independiente, exige mantenimiento y confirmación exac
 - Rutas: 125 tests/515 aserciones y 49 finales/303 aserciones aprobados; native Kamal y Compose válidos; OSRM real aprobado.
 - Backups: diez tests Python, ShellCheck/Bash, validación de unidades y paquete local. La integración ejecuta age/rclone reales, catálogo Disk/R2 simulado, dos PostgreSQL desechables, restauración protegida que revoca sesiones/GPS, compatibilidad v1, errores, retención y webhook local. [Resultado completo aprobado](benchmarks/backup-recovery-local.json). R2 no fue utilizado como backend real.
 
-La imagen de producción se construyó y aprobó `bin/test-production`: UID 1000, assets, `/up` interno, ambas bases PostgreSQL con rol restringido, migraciones sin seeds demo, adjuntos Disk, worker Solid Queue y persistencia después de reiniciar. Se verificó sin publicar puertos ni desplegar. La pasada completa final de CI se registrará al finalizar su ejecución aislada. Los comandos reproducibles están en [CI](ci.md). No se atribuyen pruebas físicas a dispositivos no disponibles.
+La imagen de producción se construyó y aprobó `bin/test-production`: UID 1000, assets, `/up` interno, ambas bases PostgreSQL con rol restringido, migraciones sin seeds demo, adjuntos Disk, worker Solid Queue y persistencia después de reiniciar. Se verificó sin publicar puertos ni desplegar. Se compararon SHA-256 de 78 archivos modificados de aplicación/scripts/configuración contra el checkout de la entrega: coincidieron y excluyen las ediciones concurrentes. No se ejecutó GitHub Actions remoto; la evidencia anterior corresponde a `bin/ci` local con Compose. Los comandos reproducibles están en [CI](ci.md). No se atribuyen pruebas físicas a dispositivos no disponibles.
 
 ## 11. Riesgos y comprobaciones abiertas
 
@@ -115,7 +116,7 @@ La imagen de producción se construyó y aprobó `bin/test-production`: UID 1000
 - [x] VROOM deshabilitado hasta disponer de servicio verificado.
 - [x] Backups cifrados y restauración implementados con pruebas locales reales.
 - [x] Circuito integrado y separación multiempresa verificados automáticamente.
-- [ ] Última CI completa y comprobación de imagen de producción: completar con resultado final.
+- [x] CI local completa e imagen de producción aprobadas sobre la entrega aislada.
 - [ ] Cuenta/bucket R2 privados, copia externa y recuperación real verificadas.
 - [ ] Hetzner/HTTPS/secretos/volúmenes/monitoring y límites del VPS validados.
 - [ ] Pruebas físicas Android/iPhone y prueba con personal de la distribuidora.
