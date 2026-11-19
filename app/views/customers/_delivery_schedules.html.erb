@@ -5,10 +5,9 @@
     <article class="schedule-card">
       <div class="panel-heading"><strong><%= DeliverySchedule::WEEKDAYS[schedule.weekday] %> · <%= schedule_time(schedule) %></strong><span class="chip <%= schedule.active? ? 'active' : 'inactive' %>"><%= schedule.active? ? "Activa" : "Inactiva" %></span></div>
       <p class="hint">Desde <%= l(schedule.starts_on) %><%= " hasta #{l(schedule.ends_on)}" if schedule.ends_on %></p>
-      <ul class="merchandise-summary"><% schedule.delivery_schedule_items.each do |item| %><li><%= quantity_text(item.quantity) %> <%= DeliveryUnits::LABELS[item.unit] %> · <%= item.description %></li><% end %></ul>
+      <ul class="merchandise-summary"><% schedule.delivery_schedule_items.each do |item| %><li><%= quantity_text(item.quantity) %> <%= quantity_unit(item.unit, item.quantity) %> · <%= item.description %></li><% end %></ul>
       <p><%= schedule.notes %></p>
       <div class="drawer-actions"><%= link_to "Editar", edit_customer_delivery_schedule_path(@customer, schedule), class: "text-action", data: { turbo_frame: "_top" } %><%= button_to(schedule.active? ? "Desactivar" : "Activar", customer_delivery_schedule_path(@customer, schedule), method: :patch, params: { delivery_schedule: { active: !schedule.active? } }, class: "text-action", form: { data: { turbo_frame: "_top" } }) %></div>
     </article>
   <% end %>
-  <% if @delivery_schedules.empty? %><p class="drawer-note">Este cliente todavía no tiene entregas programadas.</p><% end %>
 </section>

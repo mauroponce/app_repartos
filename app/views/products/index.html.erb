@@ -1,38 +1,37 @@
 <% content_for :title, "Productos · App Repartos" %>
 <div class="breadcrumb"><span>Operación</span><%= icon("chevron-right") %><strong>Productos</strong></div>
-<div class="heading"><div><div class="eyebrow">Catálogo de la empresa</div><h1>Productos</h1><p>Mercadería y unidades para tus entregas habituales.</p></div><div class="heading-actions"><%= link_to "Importar CSV / Excel", new_product_import_path, class: "btn btn-white" %><%= link_to "Nuevo producto", new_product_path, class: "btn btn-dark" %></div></div>
-<%= turbo_frame_tag "products", data: { turbo_action: "advance" } do %>
+<div class="heading"><div><h1>Productos</h1><p>Mercadería y unidades para tus entregas habituales.</p></div><div class="heading-actions"><%= link_to "Importar CSV / Excel", new_product_import_path, class: "btn btn-white" %><%= link_to "Nuevo producto", new_product_path, class: "btn btn-dark" %></div></div>
+<div data-controller="product-filter">
   <section class="panel table-panel" aria-labelledby="product-list-title">
     <div class="panel-heading">
       <div><h2 class="panel-title" id="product-list-title">Listado de productos</h2><p class="panel-sub">Mercadería y unidades de entrega de tu empresa</p></div>
-      <span class="result-count" role="status"><%= pluralize(@filtered_count, "producto", "productos") %></span>
     </div>
     <div class="toolbar">
-      <%= form_with url: products_path, method: :get, class: "filters" do |form| %>
-        <div class="field-search"><%= icon("search", "sm") %><%= form.search_field :q, value: @query, placeholder: "Buscar nombre o SKU", aria: { label: "Buscar productos" } %></div>
-        <%= form.select :active, [["Todos los estados", ""], ["Activos", "true"], ["Inactivos", "false"]], { selected: @active_filter }, class: "select-filter", aria: { label: "Estado del producto" } %>
-        <%= form.submit "Buscar", class: "btn btn-white btn-sm" %>
+      <%= form_with url: products_path, method: :get, class: "filters", data: { turbo_frame: "product-results", product_filter_target: "form" } do |form| %>
+        <div class="field-search"><%= icon("search", "sm") %><%= form.search_field :q, value: @query, placeholder: "Buscar nombre o SKU", aria: { label: "Buscar productos" }, autocomplete: "off", maxlength: 120, data: { product_filter_target: "query", action: "input->product-filter#search" } %></div>
+        <%= form.select :active, [["Todos los estados", ""], ["Activos", "true"], ["Inactivos", "false"]], { selected: @active_filter }, class: "select-filter product-status-filter", aria: { label: "Estado del producto" }, data: { action: "change->product-filter#submit" } %>
       <% end %>
     </div>
+    <%= turbo_frame_tag "product-results" do %>
+    <p class="result-count" role="status"><%= pluralize(@filtered_count, "producto", "productos") %></p>
     <div class="table-scroll" tabindex="0" role="region" aria-label="Listado de productos, desplazamiento horizontal">
       <table class="data-table products-table">
         <caption class="sr-only">Productos ordenados alfabéticamente por nombre</caption>
-        <thead><tr><th scope="col" aria-sort="ascending">PRODUCTO</th><th scope="col">SKU</th><th scope="col">UNIDAD DE ENTREGA</th><th scope="col">CONTENIDO</th><th scope="col">ESTADO</th><th scope="col"><span class="sr-only">Acciones</span></th></tr></thead>
+        <thead><tr><th scope="col" aria-sort="ascending">PRODUCTO</th><th scope="col">SKU</th><th scope="col">UNIDAD DE ENTREGA</th><th scope="col">ESTADO</th><th scope="col"><span class="sr-only">Acciones</span></th></tr></thead>
         <tbody>
           <% @products.each do |product| %>
-            <tr id="<%= dom_id(product) %>">
-              <td><div class="td-person"><span class="mini-avatar violet" aria-hidden="true"><%= icon("package", "sm") %></span><strong><%= product.name %></strong></div></td>
+            <tr id="<%= dom_id(product) %>" class="product-row" data-controller="product-row-link" data-action="click->product-row-link#open">
+              <td><div class="td-person"><span class="mini-avatar violet" aria-hidden="true"><%= icon("package", "sm") %></span><%= link_to product.name, product_path(product), class: "customer-name", data: { turbo_frame: "modal", product_row_link_target: "link" } %></div></td>
               <td><%= product.sku.presence || "Sin SKU" %></td>
               <td><%= DeliveryUnits::LABELS[product.unit] %></td>
-              <td><%= product.package_content_quantity ? "#{quantity_text(product.package_content_quantity)} #{product.package_content_unit}" : "—" %></td>
               <td><span class="chip <%= product.active? ? 'active' : 'inactive' %>"><%= product.active? ? "Activo" : "Inactivo" %></span></td>
-              <td><div class="panel-actions"><%= link_to "Editar", edit_product_path(product), class: "text-action", data: { turbo_frame: "_top" }, aria: { label: "Editar #{product.name}" } %><%= button_to(product.active? ? "Desactivar" : "Activar", product_path(product), method: :patch, params: { product: { active: !product.active? } }, class: "btn btn-white btn-sm", form: { data: { turbo_frame: "_top" } }, aria: { label: "#{product.active? ? 'Desactivar' : 'Activar'} #{product.name}" }) %></div></td>
+              <td><%= link_to product_path(product), class: "row-link", data: { turbo_frame: "modal" }, aria: { label: "Ver producto #{product.name}" } do %><%= icon("chevron", "sm") %><% end %></td>
             </tr>
           <% end %>
         </tbody>
       </table>
     </div>
     <% if @products.empty? %><div class="empty"><h2>No hay productos para mostrar</h2><p>Agregá productos o ajustá los filtros.</p></div><% end %>
-    <nav class="table-footer" aria-label="Paginación de productos"><span>Página <%= @page %> de <%= @pages %></span><div class="pagination"><% if @page > 1 %><%= link_to "← Anterior", products_path(q: @query, active: @active_filter, page: @page - 1), class: "btn btn-white btn-sm" %><% end %><% if @page < @pages %><%= link_to "Siguiente →", products_path(q: @query, active: @active_filter, page: @page + 1), class: "btn btn-white btn-sm" %><% end %></div></nav>
+    <% end %>
   </section>
-<% end %>
+</div>

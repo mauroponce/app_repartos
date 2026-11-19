@@ -172,13 +172,15 @@ class CustomersControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "&lt;script&gt;"
   end
 
-  test "requires a complete location when creating a customer" do
-    assert_no_difference "Customer.count" do
+  test "creates a customer with an address and no coordinates" do
+    assert_difference "Customer.count", 1 do
       post customers_path, params: { customer: valid_attributes.except(:latitude, :longitude) }
     end
-    assert_response :unprocessable_entity
-    assert_select "[role=alert]", text: /Latitud/
-    assert_select "[role=alert]", text: /Longitud/
+    assert_redirected_to customers_path
+    customer = companies(:one).customers.find_by!(name: "Nuevo Comercio")
+    assert_not customer.located?
+    assert_equal "pending", customer.location_verification
+    assert_not customer.routing_location?
   end
 
   test "persists geographic coordinates and displays the saved map" do
@@ -195,7 +197,9 @@ class CustomersControllerTest < ActionDispatch::IntegrationTest
     customer = customers(:one)
     get edit_customer_path(customer), headers: { "Turbo-Frame" => "modal" }
     assert_response :success
-    assert_select "input[name='customer[latitude]'][value='-34.8003128']"
+    assert_select "input[type=hidden][name='customer[latitude]'][value='-34.8003128']"
+    assert_select "input[type=hidden][name='customer[longitude]']"
+    assert_select "label[for=customer_latitude], label[for=customer_longitude]", count: 0
     assert_select "input[name='customer[company_id]']", count: 0
     patch customer_path(customer), params: { customer: { name: "Comercio editado", latitude: "-34.8012345", longitude: "-58.3412345", company_id: companies(:two).id } }
     assert_redirected_to customer_path(customer)
@@ -215,22 +219,29 @@ class CustomersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Comercio Privado Norte", customer.reload.name
   end
 
-  test "changed address requires a newly confirmed point" do
+  test "editing address and city preserves the selected point" do
     customer = customers(:one)
-    patch customer_path(customer), params: { customer: { address: "Otra calle 123" } }
-    assert_response :unprocessable_entity
-    assert_equal "San Martín 123", customer.reload.address
-    patch customer_path(customer), params: { customer: { address: "Otra calle 123", latitude: customer.latitude, longitude: customer.longitude, location_confirmed: "true" } }
+    latitude, longitude = customer.latitude, customer.longitude
+    patch customer_path(customer), params: { customer: { address: "Otra calle 123", city: "Otra localidad", latitude: latitude, longitude: longitude } }
     assert_redirected_to customer_path(customer)
-    assert_equal "Otra calle 123", customer.reload.address
-    assert customer.located?
+    customer.reload
+    assert_equal "Otra calle 123", customer.address
+    assert_equal "Otra localidad", customer.city
+    assert_equal latitude, customer.latitude
+    assert_equal longitude, customer.longitude
   end
 
-  test "legacy customer must be located when edited" do
+  test "a customer without coordinates can be edited" do
     customer = customers(:inactive)
     patch customer_path(customer), params: { customer: { contact: "Nuevo contacto" } }
-    assert_response :unprocessable_entity
-    patch customer_path(customer), params: { customer: { contact: "Nuevo contacto", latitude: "-34.75", longitude: "-58.39" } }
+    assert_redirected_to customer_path(customer)
+    assert_equal "Nuevo contacto", customer.reload.contact
+    assert_not customer.located?
+  end
+
+  test "a confirmed point is retained when the address changes" do
+    customer = customers(:one)
+    patch customer_path(customer), params: { customer: { address: "Otra calle 123", latitude: customer.latitude, longitude: customer.longitude, location_confirmed: "true" } }
     assert_redirected_to customer_path(customer)
     assert customer.reload.located?
   end

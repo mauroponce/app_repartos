@@ -59,7 +59,7 @@ Rails.application.routes.draw do
     resources :customers, path: "clientes", only: [ :index, :new, :create, :show, :edit, :update ], path_names: { new: "nuevo", edit: "editar" } do
       get :autocomplete, on: :collection, path: "sugerencias"
     end
-    resources :products, path: "productos", except: [ :show, :destroy ], path_names: { new: "nuevo", edit: "editar" }
+    resources :products, path: "productos", except: [ :destroy ], path_names: { new: "nuevo", edit: "editar" }
     resources :product_imports, path: "importaciones-productos", only: [ :new, :create, :show, :update ] do
       get :template, on: :collection
       post :confirm, on: :member

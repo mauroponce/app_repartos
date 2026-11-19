@@ -7,6 +7,13 @@ module ApplicationHelper
     quantity.nil? ? "Sin registrar" : number_with_precision(quantity, precision: 3, strip_insignificant_zeros: true, delimiter: ".", separator: ",")
   end
 
+  def quantity_unit(unit, quantity)
+    label = DeliveryUnits::LABELS.fetch(unit, unit.to_s)
+    return label if !DeliveryUnits::LABELS.key?(unit) || quantity.nil? || quantity.to_d == 1
+
+    unit == "unit" ? "unidades" : "#{label}s"
+  end
+
   def product_options(products)
     products.map { |product| [ product.name + (product.active? ? "" : " (inactivo)"), product.id, { "data-description" => product.name, "data-unit" => product.unit } ] }
   end
@@ -30,7 +37,7 @@ module ApplicationHelper
   end
 
   def merchandise_summary(order)
-    order.delivery_order_items.map { |item| "#{quantity_text(item.quantity)} #{item.unit} · #{item.description}" }.join("; ")
+    order.delivery_order_items.map { |item| "#{quantity_text(item.quantity)} #{quantity_unit(item.unit, item.quantity)} · #{item.description}" }.join("; ")
   end
 
   def operation_status(status)

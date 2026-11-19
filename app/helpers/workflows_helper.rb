@@ -57,7 +57,7 @@ module WorkflowsHelper
     elsif key == "reasons"
       Array(value).map { |reason| (reason == "no_quantity_delivered" ? "Sin mercadería entregada" : nil) || Visit::FAILURE_REASONS[reason] || Incident::KINDS[reason] || operation_status(reason) }.join(", ")
     elsif key == "missing_lines"
-      Array(value).map { |row| "#{row['description']}: #{quantity_text(row['missing'].to_d)} #{DeliveryUnits::LABELS[row['unit']]}" }.join("; ")
+      Array(value).map { |row| "#{row['description']}: #{quantity_text(row['missing'].to_d)} #{quantity_unit(row['unit'], row['missing'])}" }.join("; ")
     else
       value.is_a?(Array) ? value.join(", ") : value.to_s
     end

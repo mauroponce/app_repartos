@@ -1,13 +1,14 @@
 class ProductsController < ManagementController
-  before_action :set_product, only: [ :edit, :update ]
+  before_action :set_product, only: [ :show, :edit, :update ]
 
   def index
     @query = params[:q].to_s.strip.first(120)
-    @active_filter = params[:active].presence_in(%w[true false])
+    @active_filter = params.key?(:active) ? params[:active].presence_in(%w[true false]) : "true"
     products = Current.company.products.alphabetical
     products = products.search(@query) if @query.present?
     products = products.where(active: @active_filter == "true") if @active_filter
-    @products = paginate(products)
+    @products = products
+    @filtered_count = products.count
   end
 
   def new
@@ -21,6 +22,9 @@ class ProductsController < ManagementController
     else
       render :new, status: :unprocessable_entity
     end
+  end
+
+  def show
   end
 
   def edit

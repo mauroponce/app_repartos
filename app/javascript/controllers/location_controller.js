@@ -3,7 +3,7 @@ import { photonPlaces } from "photon_places"
 
 export default class extends Controller {
   static targets = ["map", "query", "results", "searchMessage", "positionMessage", "latitude", "longitude", "confirmed", "address", "city", "name"]
-  static values = { readonly: Boolean, latitude: String, longitude: String, photonUrl: String, tilesUrl: String }
+  static values = { customerForm: Boolean, readonly: Boolean, latitude: String, longitude: String, photonUrl: String, tilesUrl: String }
 
   async connect() {
     this.connection = Symbol()
@@ -26,10 +26,10 @@ export default class extends Controller {
       }).on("tileerror", () => {
         if (!this.connection || this.tileErrorShown) return
         this.tileErrorShown = true
-        this.positionMessageTarget.textContent = "No pudimos cargar las imágenes del mapa. Las coordenadas se conservan y podés ingresarlas directamente."
+        this.positionMessageTarget.textContent = "No pudimos cargar las imágenes del mapa. Podés buscar una dirección para seleccionar la ubicación."
       }).addTo(this.map)
       if (located) this.setPosition(latitude, longitude, { write: false })
-      if (!this.readonlyValue) {
+      if (!this.readonlyValue && !this.customerFormValue) {
         this.map.on("click", event => {
           const point = event.latlng.wrap()
           this.setPosition(point.lat, point.lng, { confirm: true })
@@ -41,7 +41,7 @@ export default class extends Controller {
       })
       this.resizeObserver.observe(this.mapTarget)
     } catch {
-      if (this.connection === connection) this.positionMessageTarget.textContent = "No pudimos cargar el mapa. Podés ingresar latitud y longitud directamente."
+      if (this.connection === connection) this.positionMessageTarget.textContent = "No pudimos cargar el mapa. Podés buscar una dirección para seleccionar la ubicación."
     }
   }
 
@@ -93,7 +93,7 @@ export default class extends Controller {
       this.longitudeTarget.value = longitude.toFixed(7)
     }
     if (confirm && this.hasConfirmedTarget) this.confirmedTarget.value = "true"
-    this.positionMessageTarget.textContent = this.readonlyValue ? "Punto de entrega guardado." : `Punto de entrega: ${latitude.toFixed(7)}, ${longitude.toFixed(7)}.`
+    this.positionMessageTarget.textContent = this.readonlyValue ? "Punto de entrega guardado." : this.customerFormValue ? "" : "Punto de entrega seleccionado."
   }
 
   coordinatesChanged() {
@@ -103,20 +103,9 @@ export default class extends Controller {
     } else {
       this.marker?.remove()
       this.marker = null
-      this.confirmedTarget.value = "false"
+      if (this.hasConfirmedTarget) this.confirmedTarget.value = "false"
       this.positionMessageTarget.textContent = "Completá una latitud entre -90 y 90 y una longitud entre -180 y 180."
     }
-  }
-
-  addressChanged() {
-    this.cancelSearch()
-    this.hideResults()
-    this.latitudeTarget.value = ""
-    this.longitudeTarget.value = ""
-    this.confirmedTarget.value = "false"
-    this.marker?.remove()
-    this.marker = null
-    this.positionMessageTarget.textContent = "La dirección cambió. Buscala nuevamente o confirmá el punto en el mapa."
   }
 
   cancelSearch() {
@@ -159,10 +148,10 @@ export default class extends Controller {
       if (!Array.isArray(data.features)) throw new Error("Invalid Photon response")
       this.places = photonPlaces(data.features)
       this.renderResults()
-      this.searchMessageTarget.textContent = this.places.length ? "Elegí una dirección de la lista." : "No encontramos direcciones. Agregá la ciudad a la búsqueda o marcá el punto en el mapa."
+      this.searchMessageTarget.textContent = this.places.length ? "Elegí una dirección de la lista." : "No encontramos direcciones. Agregá la ciudad a la búsqueda."
     } catch {
       if (version === this.requestVersion && this.element.isConnected) {
-        this.searchMessageTarget.textContent = "No pudimos buscar direcciones. Podés marcar el punto en el mapa o ingresar las coordenadas."
+        this.searchMessageTarget.textContent = "No pudimos buscar direcciones. Intentá nuevamente."
       }
     } finally {
       if (version === this.requestVersion) clearTimeout(this.requestTimeout)

@@ -19,7 +19,7 @@ class OnboardingPwaTest < ActionDispatch::IntegrationTest
     get repartidor_run_path(run)
     assert_response :success
     assert_select "h1", "Mañana AMBA"
-    assert_select "li", text: /Harina demo · 2 bolsa/
+    assert_select "li", text: /Harina demo · 2 bolsas/
     assert_select "form", count: 0
     visit = run.visits.first
     patch repartidor_visit_path(visit), params: { visit: { status: "closed", notes: "Fuera de fecha" } }

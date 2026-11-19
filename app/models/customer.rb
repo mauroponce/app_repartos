@@ -27,7 +27,6 @@ class Customer < ApplicationRecord
   validates :longitude, numericality: { greater_than_or_equal_to: -180, less_than_or_equal_to: 180 }, allow_nil: true
   validates :latitude, presence: true, if: -> { longitude.present? }
   validates :longitude, presence: true, if: -> { latitude.present? }
-  validates :latitude, :longitude, presence: true, on: :geocoded
 
   def located?
     latitude.present? && longitude.present?
@@ -52,6 +51,7 @@ class Customer < ApplicationRecord
   end
 
   def clear_outdated_location
+    return if validation_context == :geocoded
     return unless persisted? && (will_save_change_to_address? || will_save_change_to_city?)
     return if will_save_change_to_latitude? || will_save_change_to_longitude?
     return if ActiveModel::Type::Boolean.new.cast(location_confirmed)

@@ -4,6 +4,6 @@ module DeliveryUnits
   CODES = LABELS.keys.freeze
 
   def self.options
-    LABELS.map { |code, label| [ "#{label} (#{code})", code ] }
+    LABELS.map { |code, label| [ label.capitalize, code ] }
   end
 end

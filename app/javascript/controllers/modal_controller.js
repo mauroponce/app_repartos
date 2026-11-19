@@ -15,7 +15,7 @@ export default class extends Controller {
 
   close(event) {
     // A direct visit needs normal navigation; a Turbo frame can close in place.
-    if (!document.querySelector("#directory")) return
+    if (!document.querySelector("#directory, #product-results")) return
     event?.preventDefault()
     this.element.close()
   }
@@ -26,7 +26,7 @@ export default class extends Controller {
   }
 
   closed() {
-    if (document.querySelector("#directory")) {
+    if (document.querySelector("#directory, #product-results")) {
       this.element.closest("turbo-frame").removeAttribute("src")
       this.previousFocus?.focus()
     } else {

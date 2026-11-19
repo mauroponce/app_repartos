@@ -1,15 +1,15 @@
 <% content_for :title, "#{@customer.name} · App Repartos" %>
 <% content_for :modal_page, "true" %>
 <%= turbo_frame_tag "modal", target: "_top" do %>
-  <dialog class="customer-dialog" data-controller="modal" data-modal-return-url-value="<%= customers_path %>" data-action="click->modal#backdrop close->modal#closed" aria-labelledby="customer-detail-title">
-    <div class="modal-title"><div><div class="eyebrow">Directorio de clientes</div><h1 id="customer-detail-title"><%= @customer.name %></h1><p><%= Current.company.name %></p></div><%= link_to customers_path, class: "icon-btn", aria: { label: "Cerrar detalle" }, data: { action: "modal#close" } do %><%= icon("close") %><% end %></div>
+  <dialog class="customer-dialog customer-dialog-location" data-controller="modal" data-modal-return-url-value="<%= customers_path %>" data-action="click->modal#backdrop close->modal#closed" aria-labelledby="customer-detail-title">
+    <div class="modal-title"><div><h1 id="customer-detail-title"><%= @customer.name %></h1><p><%= Current.company.name %></p></div><%= link_to customers_path, class: "icon-btn", aria: { label: "Cerrar detalle" }, data: { action: "modal#close" } do %><%= icon("close") %><% end %></div>
     <span class="chip <%= @customer.status %>"><%= customer_status(@customer) %></span>
     <dl class="drawer-data">
       <% [["Código externo", @customer.external_code], ["Persona de contacto", @customer.contact], ["Teléfono", @customer.phone], ["Email", @customer.email], ["Dirección de entrega", @customer.address], ["Ciudad / zona", @customer.city]].each do |label, value| %>
         <div class="drawer-data-row"><dt><%= label %></dt><dd><%= value.presence || "Sin informar" %></dd></div>
       <% end %>
     </dl>
-    <% unless @customer.routing_location? %><p class="drawer-note">Ubicación pendiente de verificación. Confirmá el punto desde la edición del cliente antes de optimizar rutas.</p><% end %>
+    <% if @customer.located? && !@customer.routing_location? %><p class="drawer-note">Ubicación pendiente de verificación. Confirmá el punto desde la edición del cliente antes de optimizar rutas.</p><% end %>
     <% if @customer.located? %>
       <section class="customer-location-detail" <%= tag.attributes(data: customer_location_data(@customer, readonly: true)) %> aria-label="Ubicación del cliente">
         <div class="customer-map" data-location-target="map" role="region" aria-label="Mapa de ubicación del cliente"></div>
@@ -20,7 +20,6 @@
       <p class="drawer-note">Ubicación pendiente. Editá el cliente para marcar su punto de entrega.</p>
     <% end %>
     <%= render "delivery_schedules" %>
-    <p><%= link_to "Preferencias e historial de comunicaciones", customer_communications_path(@customer), class: "btn btn-white", data: { turbo_frame: "_top" } %></p>
     <div class="form-actions"><%= link_to "Volver a clientes", customers_path, class: "btn btn-white", data: { action: "modal#close" } %><%= link_to edit_customer_path(@customer), class: "btn btn-dark", data: { turbo_frame: "modal" } do %><%= icon("edit") %>Editar cliente<% end %></div>
   </dialog>
 <% end %>

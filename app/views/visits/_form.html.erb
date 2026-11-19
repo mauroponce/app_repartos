@@ -12,7 +12,7 @@
   <% if @visit.delivery_orders.any? %>
     <p class="drawer-note">La mercadería planificada se modifica desde cada entrega mientras la hoja sea editable. Aquí se registran las cantidades realmente entregadas.</p>
     <%= form.fields_for :delivery_items do |fields| %>
-      <fieldset class="merchandise-row"><legend><%= fields.object.description %> · <%= quantity_text(fields.object.planned_quantity) %> <%= fields.object.unit %> planificados</legend>
+      <fieldset class="merchandise-row"><legend><%= fields.object.description %> · <%= quantity_text(fields.object.planned_quantity) %> <%= quantity_unit(fields.object.unit, fields.object.planned_quantity) %> · cantidad planificada</legend>
         <%= fields.hidden_field :id %><div class="field-grid"><div class="field"><%= fields.label :delivered_quantity, "Cantidad entregada" %><%= fields.number_field :delivered_quantity, min: 0, step: DeliveryUnits::DISCRETE.include?(fields.object.unit) ? "1" : "0.001" %><span class="hint">Cero: no se entregó. Completá todos los productos antes de marcar la visita realizada.</span></div><div class="field"><%= fields.label :notes, "Observaciones" %><%= fields.text_area :notes, rows: 2 %></div></div>
       </fieldset>
     <% end %>

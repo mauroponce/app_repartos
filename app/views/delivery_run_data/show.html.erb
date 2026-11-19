@@ -41,6 +41,6 @@
     <div class="field"><%= form.label :reason, "Motivo (obligatorio para ajustes y mermas)" %><%= form.text_field :reason, maxlength: 500 %></div>
     <div class="form-actions full"><%= form.submit "Registrar movimiento", class: "btn btn-dark" %></div>
   <% end %>
-  <details><summary>Historial de movimientos</summary><% @movements.each do |row| %><p><%= l(row.created_at, format: :short) %> · <%= RunStockMovement::KINDS[row.kind] %> · <%= row.description %> · <%= quantity_text(row.quantity) %> <%= row.unit %> · <%= row.user&.name || "Sistema" %> · <%= row.reason %></p><% end %></details>
+  <details><summary>Historial de movimientos</summary><% @movements.each do |row| %><p><%= l(row.created_at, format: :short) %> · <%= RunStockMovement::KINDS[row.kind] %> · <%= row.description %> · <%= quantity_text(row.quantity) %> <%= quantity_unit(row.unit, row.quantity) %> · <%= row.user&.name || "Sistema" %> · <%= row.reason %></p><% end %></details>
 </section>
 <section class="management-panel"><h2>Historial de estados</h2><%= render "delivery_status_events/history", events: @events %></section>

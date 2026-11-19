@@ -19,7 +19,7 @@
         <div data-quantities>
           <p>Registrá lo que entregaste de cada producto. Si no entregaste un producto, ingresá 0.</p>
           <% visit.delivery_items.each do |item| %>
-            <label class="record-item" for="quantity-<%= item.id %>"><span><strong><%= item.description %></strong><small>Previsto: <%= quantity_text(item.planned_quantity) %> <%= DeliveryUnits::LABELS.fetch(item.unit) %></small></span>
+            <label class="record-item" for="quantity-<%= item.id %>"><span><strong><%= item.description %></strong><small>Previsto: <%= quantity_text(item.planned_quantity) %> <%= quantity_unit(item.unit, item.planned_quantity) %></small></span>
               <%= hidden_field_tag "visit[items][][id]", item.id %>
               <% submitted_item = Array(@submitted&.dig(:items)).find { |values| values[:id].to_s == item.id.to_s } if @invalid_visit_id == visit.id %>
               <%= number_field_tag "visit[items][][delivered_quantity]", submitted_item ? submitted_item[:delivered_quantity] : item.delivered_quantity, id: "quantity-#{item.id}", required: true, min: 0, max: "999999999.999", step: DeliveryUnits::DISCRETE.include?(item.unit) ? 1 : "0.001", inputmode: "decimal", aria: { label: "Cantidad entregada de #{item.description}" } %>

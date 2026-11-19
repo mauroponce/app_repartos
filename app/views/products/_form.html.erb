@@ -1,14 +1,10 @@
-<%= form_with model: @product, class: "field-grid management-form" do |form| %>
+<%= form_with model: @product, class: "field-grid management-form product-form" do |form| %>
   <%= render "shared/validation_errors", record: @product %>
-  <div class="field full"><%= form.label :name, "Nombre *" %><%= form.text_field :name, required: true, maxlength: 255 %></div>
-  <div class="field"><%= form.label :sku, "SKU / código" %><%= form.text_field :sku, maxlength: 255 %></div>
-  <div class="field"><%= form.label :unit, "Unidad de entrega *" %><%= form.select :unit, DeliveryUnits.options, { prompt: "Elegí una unidad" }, required: true %></div>
-  <div class="field"><%= form.label :package_content_quantity, "Cantidad de contenido (opcional)" %><%= form.number_field :package_content_quantity, step: "0.001", min: "0.001" %></div>
-  <div class="field"><%= form.label :package_content_unit, "Unidad de contenido" %><%= form.select :package_content_unit, DeliveryUnits.options, include_blank: "Sin contenido informado" %></div>
-  <p class="hint full">El contenido describe el envase; no convierte las cantidades de entrega. Por ejemplo: 2 bolsas de 25 kg se entregan como 2 bolsas.</p>
-  <div class="field"><%= form.label :unit_price, "Precio unitario (#{Current.company.currency})" %><%= form.number_field :unit_price, min: 0, step: "0.0001", placeholder: "Sin informar" %></div>
-  <div class="field"><%= form.label :unit_cost, "Costo unitario estimado (#{Current.company.currency})" %><%= form.number_field :unit_cost, min: 0, step: "0.0001", placeholder: "Sin informar" %></div>
-  <p class="hint full">Estos valores se copian al crear pedidos nuevos. Los pedidos existentes conservan sus precios y costos históricos. Vacío significa desconocido; cero significa un valor informado de cero.</p>
-  <div class="field"><%= form.label :active, "Estado" %><%= form.select :active, [["Activo", true], ["Inactivo", false]] %></div>
+  <div class="field product-name"><%= form.label :name, "Nombre *" %><%= form.text_field :name, required: true, maxlength: 255 %></div>
+  <div class="field product-sku"><%= form.label :sku, "SKU / código" %><%= form.text_field :sku, maxlength: 255 %></div>
+  <div class="field product-unit"><%= form.label :unit, "Unidad de entrega *" %><%= form.select :unit, DeliveryUnits.options, { prompt: "Elegí una unidad" }, required: true %></div>
+  <div class="field product-price"><%= form.label :unit_price, "Precio unitario (#{Current.company.currency})" %><%= form.number_field :unit_price, min: 0, step: "0.0001", placeholder: "Sin informar" %></div>
+  <div class="field product-status"><%= form.label :active, "Estado" %><%= form.select :active, [["Activo", true], ["Inactivo", false]] %></div>
+  <p class="hint full">El precio se copia al crear pedidos nuevos. Los pedidos existentes conservan sus precios históricos. Vacío significa desconocido; cero significa un valor informado de cero.</p>
   <div class="form-actions full"><%= link_to "Cancelar", products_path, class: "btn btn-white" %><%= form.submit "Guardar producto", class: "btn btn-dark", data: { turbo_submits_with: "Guardando..." } %></div>
 <% end %>

@@ -3,11 +3,14 @@ require "test_helper"
 class DeliveryManagementControllerTest < ActionDispatch::IntegrationTest
   setup { sign_in_as users(:one) }
 
-  test "catalog list search filter and pagination stay inside the tenant" do
+  test "catalog list search and filter stay inside the tenant" do
     get products_path
     assert_response :success
-    assert_select ".products-table tbody tr", count: 3
+    assert_select ".products-table tbody tr", count: 2
+    assert_select "select[name=active] option[selected][value=true]", text: "Activos"
     assert_select ".products-table td", text: "Almendras", count: 0
+    get products_path, params: { active: "" }
+    assert_select ".products-table tbody tr", count: 3
     get products_path, params: { q: "PAN-01", active: "true" }
     assert_select ".products-table tbody tr", count: 1
     get products_path, params: { active: "false" }
@@ -16,9 +19,23 @@ class DeliveryManagementControllerTest < ActionDispatch::IntegrationTest
     assert_select ".products-table tbody tr", count: 0
     13.times { |i| companies(:one).products.create!(name: "Nuevo #{i}", unit: "kg") }
     get products_path, params: { q: "Nuevo" }
-    assert_select ".products-table tbody tr", count: 12
-    get products_path, params: { q: "Nuevo", page: 2 }
-    assert_select ".products-table tbody tr", count: 1
+    assert_select ".products-table tbody tr", count: 13
+    get products_path, params: { q: "Producto", active: "false" }, headers: { "Turbo-Frame" => "product-results" }
+    assert_select "turbo-frame#product-results .products-table tbody tr", count: 1
+    assert_select ".products-table td", text: "Producto retirado"
+  end
+
+  test "product detail is available only within the current company" do
+    get products_path
+    assert_select "tr#product_#{products(:bread).id} a[href=?][data-turbo-frame=modal]", product_path(products(:bread)), minimum: 1
+    assert_select ".products-table button", text: /Desactivar|Activar/, count: 0
+    get product_path(products(:bread)), headers: { "Turbo-Frame" => "modal" }
+    assert_response :success
+    assert_select "dialog #product-detail-title", text: products(:bread).name
+    assert_select "a[href=?]", edit_product_path(products(:bread)), text: /Editar producto/
+    assert_select "a", text: "Volver a productos"
+    get product_path(products(:almonds))
+    assert_response :not_found
   end
 
   test "product create update toggle and errors preserve tenant and history" do
