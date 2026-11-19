@@ -1,0 +1,10 @@
+<div class="heading"><div><h1>Importar operación</h1><p>Cargá repartidores, clientes, productos, pedidos y programaciones desde una sola planilla.</p></div><%= link_to "Descargar plantilla Excel", template_operation_imports_path, class: "btn btn-white", data: { turbo: false } %></div>
+<section class="management-panel">
+  <h2>Subir planilla</h2>
+  <p>CSV UTF-8 o XLSX, hasta 25 MB y 50.000 filas. Analizaremos coincidencias y problemas antes de crear registros. Provincia: <%= Current.company.province %>.</p>
+  <%= form_with url: operation_imports_path, multipart: true, class: "management-form" do |form| %>
+    <div class="field"><%= form.label :file, "Archivo" %><%= form.file_field :file, accept: ".csv,.xlsx", required: true %></div>
+    <div class="form-actions"><%= form.submit "Analizar operación", class: "btn btn-dark" %></div>
+  <% end %>
+</section>
+<% if @imports.any? %><section class="management-panel"><h2>Importaciones recientes</h2><ul><% @imports.each do |batch| %><li><%= link_to "Lote ##{batch.id} · #{batch.state} · #{batch.total_rows} filas", operation_import_path(batch) %></li><% end %></ul></section><% end %>

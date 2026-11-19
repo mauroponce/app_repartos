@@ -1,0 +1,34 @@
+<% if @import.state.in?(%w[reading analyzing importing]) %><meta http-equiv="refresh" content="5"><% end %>
+<div class="heading"><div><h1>Importación de operación #<%= @import.id %></h1><p>Estado: <strong><%= @import.state %></strong> · <%= @import.processed_rows %> de <%= @import.total_rows %> filas analizadas · <%= @import.imported_groups %> grupos guardados</p></div><%= link_to "Nueva importación", new_operation_import_path, class: "btn btn-white" %></div>
+<% if @import.last_error.present? %><section class="management-panel"><p><%= @import.last_error %></p></section><% end %>
+<section class="management-panel">
+  <h2>Resumen</h2>
+  <p>Detectados: <strong><%= @detected.customers_count %></strong> clientes · <strong><%= @detected.drivers_count %></strong> repartidores · <strong><%= @detected.products_count %></strong> productos · <strong><%= @detected.addresses_count %></strong> direcciones</p>
+  <% if @customer_matches %><p>Coincidencias encontradas: <strong><%= @customer_matches %></strong> clientes · <strong><%= @driver_matches %></strong> repartidores</p><% end %>
+  <p><%= link_to "Todos (#{@counts.values.sum})", operation_import_path(@import) %> · <% %w[review pending ready imported duplicate excluded].each do |state| %><%= link_to "#{state} (#{@counts.fetch(state, 0)})", operation_import_path(@import, state: state) %> · <% end %></p>
+  <% if @import.state.in?(%w[review finished]) && @counts.fetch("ready", 0).positive? %><%= button_to "Confirmar grupos válidos", confirm_operation_import_path(@import), class: "btn btn-dark" %><% end %>
+</section>
+<section class="management-panel"><h2>Grupos y excepciones</h2>
+  <% @groups.each do |group| %>
+    <article class="management-panel">
+      <h3><%= group.data["cliente"] %> · <%= group.data["tipo_pedido"] %></h3>
+      <p><%= group.data["repartidor"] %> · <%= group.data["calle"] %>, <%= group.data["localidad"] %> · <%= group.row_count %> fila(s) · <strong><%= group.state %></strong></p>
+      <% if group.issues.any? %><ul><% group.issues.each do |issue| %><li><%= issue %></li><% end %></ul><% end %>
+      <% if group.state.in?(%w[review pending ready]) %><p>Filas: <% group.rows.order(:number).limit(20).each do |row| %><%= link_to "#{row.number}", edit_operation_import_row_path(@import, row) %> <% end %></p><% end %>
+      <% if group.state.in?(%w[review pending ready]) %>
+        <%= form_with url: operation_import_group_path(@import, group), method: :patch, class: "management-form" do |form| %>
+          <div class="field"><%= form.label :cliente, "Cliente" %><%= form.text_field :cliente, value: group.data["cliente"] %></div>
+          <div class="field"><%= form.label :calle, "Calle y número" %><%= form.text_field :calle, value: group.data["calle"] %></div>
+          <div class="field"><%= form.label :localidad, "Localidad" %><%= form.text_field :localidad, value: group.data["localidad"] %></div>
+          <div class="field"><%= form.label :repartidor, "Repartidor" %><%= form.text_field :repartidor, value: group.data["repartidor"] %></div>
+          <div class="field"><%= label_tag "customer_id_#{group.id}", "Reutilizar cliente" %><%= select_tag :customer_id, options_from_collection_for_select(@customers, :id, :name, group.customer_id), include_blank: "Crear o detectar", id: "customer_id_#{group.id}" %></div>
+          <div class="field"><%= label_tag "driver_profile_id_#{group.id}", "Reutilizar repartidor" %><%= select_tag :driver_profile_id, options_from_collection_for_select(@drivers, :id, :name, group.driver_profile_id), include_blank: "Crear o detectar", id: "driver_profile_id_#{group.id}" %></div>
+          <div class="field"><%= check_box_tag :new_customer, "1", false, id: "new_customer_#{group.id}" %><%= label_tag "new_customer_#{group.id}", "Crear otro cliente aunque coincida el nombre" %></div>
+          <div class="field"><%= check_box_tag :new_driver, "1", false, id: "new_driver_#{group.id}" %><%= label_tag "new_driver_#{group.id}", "Crear otro repartidor homónimo" %></div>
+          <div class="form-actions"><%= form.button "Corregir / crear", name: :decision, value: "create", class: "btn btn-dark" %><%= form.button "Dejar pendiente", name: :decision, value: "pending", class: "btn btn-white" %><%= form.button "Excluir", name: :decision, value: "exclude", class: "btn btn-white" %></div>
+        <% end %>
+      <% end %>
+    </article>
+  <% end %>
+  <p><%= link_to "Siguiente página", operation_import_path(@import, state: @selected_state, page: params[:page].to_i + 1) if @groups.size == 50 %></p>
+</section>

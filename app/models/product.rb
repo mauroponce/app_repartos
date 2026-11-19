@@ -6,6 +6,7 @@ class Product < ApplicationRecord
 
   normalizes :sku, :package_content_unit, with: ->(value) { value.strip.presence }
   normalizes :name, with: ->(value) { value.strip }
+  before_validation :refresh_name_key
   validates :unit_price, :unit_cost, monetary_value: { allow_nil: true }
   validates :name, presence: true, length: { maximum: 255 }
   validates :sku, uniqueness: { scope: :company_id }, allow_nil: true, length: { maximum: 255 }
@@ -22,6 +23,10 @@ class Product < ApplicationRecord
   }
 
   private
+
+  def refresh_name_key
+    self.name_key = Geocoding::Address.fold(name)
+  end
 
   def complete_package
     if package_content_quantity.present? != package_content_unit.present?

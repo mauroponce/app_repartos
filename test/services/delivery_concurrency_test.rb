@@ -12,10 +12,11 @@ class DeliveryConcurrencyTest < ActiveSupport::TestCase
   teardown do
     # This class commits data so separate connections can exercise real locks.
     # Delete only the tenant created by this test, in foreign-key order.
-    [ RoutePublication, RoutingCacheEntry, RouteOptimizationProposal, IncidentPhoto, InternalNotice, WorkflowEvent, WorkflowCommand, WorkflowTask, CommercialOpportunity, Incident, CommercialRuleSetting, NotificationEvent, CustomerNotification, CommunicationConsent, DeliveryStatusEvent, DeliveryRunCost, RunStockMovement,
+    [ OperationImportRow, OperationImportGroup, OperationImport, RoutePublication, RoutingCacheEntry, RouteOptimizationProposal, IncidentPhoto, InternalNotice, WorkflowEvent, WorkflowCommand, WorkflowTask, CommercialOpportunity, Incident, CommercialRuleSetting, NotificationEvent, CustomerNotification, CommunicationConsent, DeliveryStatusEvent, DeliveryRunCost, RunStockMovement,
       DriverSyncOperation, DeliveryItem, DeliveryOrderItem, DeliveryOrder, Visit, DeliveryRun, DeliveryScheduleItem, DeliverySchedule, ProductImport, Product ].each do |model|
       model.where(company_id: @company.id).delete_all
     end
+    DriverProfile.where(company_id: @company.id).delete_all
     @customer.destroy!
     User.where(company_id: @company.id).delete_all
     @company.reload.destroy!
@@ -64,6 +65,20 @@ class DeliveryConcurrencyTest < ActiveSupport::TestCase
     assert_equal [ 0, 1 ], results.sort
     assert_equal 1, @company.products.count
     assert product_import.reload.confirmed_at
+  end
+
+  test "concurrent operation confirmations save one weekly visit" do
+    raw = OperationImports::Reader::HEADERS.zip([ "Ana", @customer.name, "visita_semanal", "", "lunes", "", "",
+      @customer.city, @customer.address, "", "", "", "", "" ]).to_h
+    data, issues = OperationImports::Normalizer.call(raw)
+    assert_empty issues
+    batch = @company.operation_imports.create!(sha256: SecureRandom.hex(32), state: "importing")
+    group = batch.groups.create!(company: @company, group_key: data["group_key"], data: data, state: "ready", row_count: 1)
+    batch.rows.create!(company: @company, operation_import_group: group, number: 2, original: raw, data: data)
+    concurrently { OperationImports::Processor.new(OperationImport.find(batch.id)).commit_batch }
+    assert_equal "imported", group.reload.state
+    assert_equal 1, @company.delivery_schedules.where(import_key: data["group_key"]).count
+    assert_equal 1, @company.driver_profiles.where(name_key: "ana").count
   end
 
   test "concurrent visit submissions commit quantities and author once" do

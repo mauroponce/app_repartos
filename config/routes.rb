@@ -60,6 +60,15 @@ Rails.application.routes.draw do
       get :autocomplete, on: :collection, path: "sugerencias"
     end
     resources :products, path: "productos", except: [ :destroy ], path_names: { new: "nuevo", edit: "editar" }
+    resources :operation_imports, path: "importar-operacion", only: %i[index new create show] do
+      get :template, on: :collection
+      post :confirm, on: :member
+      resources :groups, controller: "operation_import_groups", only: :update
+      resources :rows, controller: "operation_import_rows", only: %i[edit update]
+    end
+    get "repartidores-operativos", to: "operation_directories#drivers", as: :operation_drivers
+    get "programaciones-semanales", to: "operation_directories#schedules", as: :operation_schedules
+    get "ubicaciones-clientes", to: "operation_directories#locations", as: :operation_locations
     resources :product_imports, path: "importaciones-productos", only: [ :new, :create, :show, :update ] do
       get :template, on: :collection
       post :confirm, on: :member

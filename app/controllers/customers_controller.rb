@@ -9,7 +9,8 @@ class CustomersController < ApplicationController
     @active = directory.active.count
     @cities = directory.distinct.count(:city)
     @inactive = directory.inactive.count
-    sort_columns = { "name" => 'LOWER(customers.name) COLLATE "es-x-icu"', "contact" => 'LOWER(customers.contact) COLLATE "es-x-icu"', "address" => 'LOWER(customers.address) COLLATE "es-x-icu"', "phone" => 'LOWER(customers.phone) COLLATE "es-x-icu"', "status" => 'customers.status' }
+    sort_columns = { "name" => "LOWER(customers.name) COLLATE \"es-x-icu\"", "contact" => "LOWER(customers.contact) COLLATE \"es-x-icu\"",
+      "address" => "LOWER(customers.address) COLLATE \"es-x-icu\"", "phone" => "LOWER(customers.phone) COLLATE \"es-x-icu\"", "status" => "customers.status" }
     @sort = params[:sort].presence_in(sort_columns.keys) || "name"
     @direction = params[:direction] == "desc" ? "desc" : "asc"
     filtered = filtered_customers.reorder(Arel.sql("#{sort_columns.fetch(@sort)} #{@direction.upcase} NULLS LAST"), :id)
@@ -47,7 +48,8 @@ class CustomersController < ApplicationController
 
   def update
     @customer.assign_attributes(customer_params)
-    if @customer.save(context: :geocoded)
+    context = @customer.location_verification == "pending" && !@customer.located? ? nil : :geocoded
+    if @customer.save(context: context)
       redirect_to customer_path(@customer), notice: "Cliente actualizado correctamente.", status: :see_other
     else
       render :edit, status: :unprocessable_entity

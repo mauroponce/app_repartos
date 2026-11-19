@@ -6,6 +6,7 @@ class DeliveryOrder < ApplicationRecord
   include StatusAudited
   self.skip_time_zone_conversion_for_attributes = %i[preferred_time window_start window_end]
   belongs_to :customer
+  belongs_to :driver_profile, optional: true
   belongs_to :delivery_schedule, optional: true
   belongs_to :visit, optional: true
   belongs_to :rescheduled_from, class_name: "DeliveryOrder", optional: true
@@ -102,6 +103,7 @@ class DeliveryOrder < ApplicationRecord
 
   def valid_associations_and_times
     same_company(:customer)
+    same_company(:driver_profile)
     same_company(:delivery_schedule)
     same_company(:visit)
     errors.add(:delivery_schedule, "debe corresponder al cliente") if delivery_schedule && delivery_schedule.customer_id != customer_id

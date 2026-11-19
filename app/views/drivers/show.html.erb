@@ -2,7 +2,7 @@
 <% content_for :modal_page, "true" %>
 <%= turbo_frame_tag "modal", target: "_top" do %>
   <dialog class="customer-dialog" data-controller="modal" data-modal-return-url-value="<%= drivers_path %>" data-action="click->modal#backdrop close->modal#closed" aria-labelledby="driver-detail-title">
-    <div class="modal-title"><div><div class="eyebrow">Equipo de repartidores</div><h1 id="driver-detail-title"><%= @driver.name %></h1><p><%= Current.company.name %></p></div><%= link_to drivers_path, class: "icon-btn", aria: { label: "Cerrar detalle" }, data: { action: "modal#close" } do %><%= icon("close") %><% end %></div>
+    <div class="modal-title"><div><h1 id="driver-detail-title"><%= @driver.name %></h1><p><%= Current.company.name %></p></div><%= link_to drivers_path, class: "icon-btn", aria: { label: "Cerrar detalle" }, data: { action: "modal#close" } do %><%= icon("close") %><% end %></div>
     <span class="chip <%= @driver.status %>"><%= @driver.active? ? "Activo" : "Inactivo" %></span>
     <dl class="drawer-data">
       <% [["Email de acceso", @driver.email_address], ["Teléfono", @driver.phone], ["Repartos asociados", @driver.delivery_runs.count]].each do |label, value| %>

@@ -1,0 +1,3 @@
+<div class="heading"><div><h1>Programaciones semanales</h1></div></div>
+<section class="management-panel"><ul><% @schedules.each do |schedule| %><li><%= DeliverySchedule::WEEKDAYS[schedule.weekday] %> · <%= schedule.customer.name %> · <%= schedule.driver_profile&.name || "Sin repartidor" %> · <%= schedule.operation_kind %> · <%= @item_counts.fetch(schedule.id, 0) %> productos</li><% end %></ul></section>
+<%= link_to "Siguiente", operation_schedules_path(page: @page + 1) if @page < @pages %>

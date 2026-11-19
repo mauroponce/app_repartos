@@ -6,6 +6,7 @@ class DeliverySchedule < ApplicationRecord
   self.skip_time_zone_conversion_for_attributes = %i[preferred_time window_start window_end]
   WEEKDAYS = { 1 => "Lunes", 2 => "Martes", 3 => "Miércoles", 4 => "Jueves", 5 => "Viernes", 6 => "Sábado", 7 => "Domingo" }.freeze
   belongs_to :customer
+  belongs_to :driver_profile, optional: true
   has_many :delivery_schedule_items, -> { order(:position, :id) }, inverse_of: :delivery_schedule, dependent: :destroy
   has_many :delivery_orders, dependent: :restrict_with_error
   has_many :visits, dependent: :restrict_with_error
@@ -17,6 +18,10 @@ class DeliverySchedule < ApplicationRecord
   validates :active, inclusion: { in: [ true, false ] }
   validate :coherent_dates_and_times
   validate -> { same_company(:customer) }
+  validate -> { same_company(:driver_profile) }
+  validates :operation_kind, inclusion: { in: %w[visita_semanal pedido_semanal] }
+  validates :visit_order, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
+  validate :visit_has_no_merchandise
 
   scope :active, -> { where(active: true) }
   scope :applicable_on, ->(date) {
@@ -24,6 +29,12 @@ class DeliverySchedule < ApplicationRecord
   }
 
   private
+
+  def visit_has_no_merchandise
+    if operation_kind == "visita_semanal" && delivery_schedule_items.any? { |item| !item.marked_for_destruction? }
+      errors.add(:delivery_schedule_items, "una visita semanal no lleva mercadería")
+    end
+  end
 
   def coherent_dates_and_times
     errors.add(:ends_on, "no puede ser anterior al inicio") if starts_on && ends_on && ends_on < starts_on

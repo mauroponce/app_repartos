@@ -1,0 +1,3 @@
+<div class="heading"><div><h1>Ubicaciones de clientes</h1></div></div>
+<section class="management-panel"><ul><% @customers.each do |customer| %><li><%= link_to customer.name, edit_customer_path(customer) %> · <%= customer.address %>, <%= customer.city %> · <%= customer.location_verification %> <%= customer.geocoding_precision %></li><% end %></ul></section>
+<%= link_to "Siguiente", operation_locations_path(page: @page + 1) if @page < @pages %>

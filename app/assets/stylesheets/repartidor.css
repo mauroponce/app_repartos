@@ -112,7 +112,7 @@ html,body{height:100%;background:#e8ecf4}
 .validation-errors{border-radius:12px;padding:12px;font-size:12px;line-height:1.7;margin-bottom:15px}
 .delivery-item[hidden]{display:none}.delivery-info span{line-height:1.6}.delivery-item-foot{gap:8px;flex-wrap:wrap}
 .delivery-list{margin-top:15px}.setting-row-text{min-width:0;overflow-wrap:anywhere}.profile-card strong{overflow-wrap:anywhere}
-.driver-dialog{border:0;width:min(520px,100%);max-height:88dvh;margin:auto auto 0;padding:23px 22px calc(25px + env(safe-area-inset-bottom,0px));border-radius:27px 27px 0 0;color:var(--ink);background:#fff;box-shadow:var(--shadow-lg);overflow:auto}
+.driver-dialog{border:0;width:min(760px,calc(100vw - 26px));max-height:88dvh;margin:auto auto 0;padding:23px 22px calc(25px + env(safe-area-inset-bottom,0px));border-radius:27px 27px 0 0;color:var(--ink);background:#fff;box-shadow:var(--shadow-lg);overflow:auto}
 .driver-dialog::backdrop{background:#0a143061;backdrop-filter:blur(3px)}
 .driver-dialog h2{font-size:20px;letter-spacing:-.8px;margin:0}.driver-dialog .modal-heading{margin-bottom:13px}
 .driver-dialog p{font-size:12px;color:var(--sub);line-height:1.7}.driver-dialog label{font-size:12px;font-weight:700}

@@ -8,7 +8,14 @@ class DriversController < ManagementController
     @active = directory.active.count
     @inactive = directory.inactive.count
     @assigned = Current.company.delivery_runs.where(status: [ :assigned, :in_progress ]).distinct.count(:driver_id)
-    @drivers = paginate(filtered_drivers)
+    sort_columns = { "name" => 'LOWER(users.name) COLLATE "es-x-icu"', "email" => 'LOWER(users.email_address) COLLATE "es-x-icu"', "phone" => 'LOWER(users.phone) COLLATE "es-x-icu"', "runs" => "(SELECT COUNT(*) FROM delivery_runs WHERE delivery_runs.driver_id = users.id AND delivery_runs.company_id = users.company_id)", "status" => "users.status" }
+    @sort = params[:sort].presence_in(sort_columns.keys) || "name"
+    @direction = params[:direction] == "desc" ? "desc" : "asc"
+    filtered = filtered_drivers.reorder(Arel.sql("#{sort_columns.fetch(@sort)} #{@direction.upcase} NULLS LAST"), :id)
+    @filtered_count = filtered.count
+    @pages = [ (@filtered_count / 25.0).ceil, 1 ].max
+    @page = params[:page].to_i.clamp(1, @pages)
+    @drivers = filtered.limit(25).offset((@page - 1) * 25)
     @run_counts = Current.company.delivery_runs.where(driver_id: @drivers.map(&:id)).group(:driver_id).count
   end
 
@@ -62,7 +69,11 @@ class DriversController < ManagementController
 
   def set_filters
     @query = params[:q].to_s.strip.first(120)
-    @status = params[:status].presence_in(User.statuses.keys)
+    @status = if action_name == "index" && !params.key?(:status)
+      "active"
+    else
+      params[:status].presence_in(User.statuses.keys)
+    end
   end
 
   def filtered_drivers

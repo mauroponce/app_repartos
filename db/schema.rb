@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_16_040000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_19_050000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -70,7 +70,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_040000) do
     t.index ["customer_id"], name: "index_commercial_opportunities_on_customer_id"
     t.index ["delivery_order_id"], name: "index_commercial_opportunities_on_delivery_order_id"
     t.index ["product_id"], name: "index_commercial_opportunities_on_product_id"
-    t.check_constraint "(status::text = ANY (ARRAY['open'::character varying::text, 'managed'::character varying::text, 'snoozed'::character varying::text, 'dismissed'::character varying::text, 'cleared'::character varying::text])) AND (rule::text = ANY (ARRAY['inactive'::character varying::text, 'decline'::character varying::text, 'shortage'::character varying::text, 'repeated_failure'::character varying::text, 'unfollowed_partial'::character varying::text])) AND generation > 0", name: "opportunities_codes"
+    t.check_constraint "(status::text = ANY (ARRAY['open'::character varying, 'managed'::character varying, 'snoozed'::character varying, 'dismissed'::character varying, 'cleared'::character varying]::text[])) AND (rule::text = ANY (ARRAY['inactive'::character varying, 'decline'::character varying, 'shortage'::character varying, 'repeated_failure'::character varying, 'unfollowed_partial'::character varying]::text[])) AND generation > 0", name: "opportunities_codes"
     t.check_constraint "status::text <> 'snoozed'::text OR snoozed_until IS NOT NULL", name: "opportunities_snoozed_until"
   end
 
@@ -110,7 +110,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_040000) do
     t.index ["company_id"], name: "index_communication_consents_on_company_id"
     t.index ["customer_id"], name: "index_communication_consents_on_customer_id"
     t.index ["user_id"], name: "index_communication_consents_on_user_id"
-    t.check_constraint "(channel::text = ANY (ARRAY['email'::character varying::text, 'sms'::character varying::text, 'whatsapp'::character varying::text])) AND (purpose::text = ANY (ARRAY['operational'::character varying::text, 'marketing'::character varying::text])) AND (decision::text = ANY (ARRAY['granted'::character varying::text, 'revoked'::character varying::text]))", name: "consents_codes"
+    t.check_constraint "(channel::text = ANY (ARRAY['email'::character varying, 'sms'::character varying, 'whatsapp'::character varying]::text[])) AND (purpose::text = ANY (ARRAY['operational'::character varying, 'marketing'::character varying]::text[])) AND (decision::text = ANY (ARRAY['granted'::character varying, 'revoked'::character varying]::text[]))", name: "consents_codes"
   end
 
   create_table "companies", force: :cascade do |t|
@@ -133,7 +133,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_040000) do
     t.bigint "primary_administrator_id"
     t.index ["primary_administrator_id"], name: "index_companies_on_primary_administrator_id"
     t.index ["slug"], name: "index_companies_on_slug", unique: true
-    t.check_constraint "currency::text = ANY (ARRAY['ARS'::character varying::text, 'USD'::character varying::text, 'EUR'::character varying::text])", name: "companies_currency"
+    t.check_constraint "currency::text = ANY (ARRAY['ARS'::character varying, 'USD'::character varying, 'EUR'::character varying]::text[])", name: "companies_currency"
     t.check_constraint "depot_latitude IS NULL AND depot_longitude IS NULL OR depot_latitude IS NOT NULL AND depot_longitude IS NOT NULL AND depot_latitude >= '-90'::integer::numeric AND depot_latitude <= 90::numeric AND depot_longitude >= '-180'::integer::numeric AND depot_longitude <= 180::numeric", name: "company_depot_coordinates"
     t.check_constraint "length(btrim(province::text)) > 0 AND length(province::text) <= 100", name: "company_province_present"
     t.check_constraint "routing_preferred_tolerance >= 0 AND routing_preferred_tolerance <= 120 AND routing_service_minutes >= 0 AND routing_service_minutes <= 240 AND routing_departure::text ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'::text AND (NOT routing_return_to_depot OR depot_latitude IS NOT NULL)", name: "company_routing_settings"
@@ -225,7 +225,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_040000) do
     t.index ["company_id", "operation_id"], name: "index_customer_notifications_on_company_id_and_operation_id", unique: true
     t.index ["company_id"], name: "index_customer_notifications_on_company_id"
     t.index ["customer_id"], name: "index_customer_notifications_on_customer_id"
-    t.check_constraint "(channel::text = ANY (ARRAY['email'::character varying::text, 'sms'::character varying::text, 'whatsapp'::character varying::text])) AND (purpose::text = ANY (ARRAY['operational'::character varying::text, 'marketing'::character varying::text]))", name: "notifications_codes"
+    t.check_constraint "(channel::text = ANY (ARRAY['email'::character varying, 'sms'::character varying, 'whatsapp'::character varying]::text[])) AND (purpose::text = ANY (ARRAY['operational'::character varying, 'marketing'::character varying]::text[]))", name: "notifications_codes"
   end
 
   create_table "customers", force: :cascade do |t|
@@ -243,15 +243,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_040000) do
     t.decimal "longitude", precision: 10, scale: 7
     t.string "external_code"
     t.string "location_verification", default: "legacy", null: false
+    t.string "geocoding_precision"
+    t.datetime "geocoding_checked_at"
+    t.string "import_identity_key"
     t.index ["company_id", "external_code"], name: "index_customers_on_company_id_and_external_code", unique: true, where: "(external_code IS NOT NULL)"
     t.index ["company_id", "id"], name: "index_customers_on_company_id_and_id", unique: true
+    t.index ["company_id", "import_identity_key"], name: "index_customers_on_company_id_and_import_identity_key"
     t.index ["company_id", "name", "id"], name: "index_customers_on_company_id_and_name_and_id"
     t.index ["company_id", "status"], name: "index_customers_on_company_id_and_status"
     t.index ["company_id"], name: "index_customers_on_company_id"
     t.check_constraint "external_code IS NULL OR length(btrim(external_code::text)) > 0 AND length(external_code::text) <= 255", name: "customers_external_code_present"
     t.check_constraint "latitude IS NULL AND longitude IS NULL OR latitude IS NOT NULL AND longitude IS NOT NULL AND latitude >= '-90'::integer::numeric AND latitude <= 90::numeric AND longitude >= '-180'::integer::numeric AND longitude <= 180::numeric", name: "customers_valid_coordinates"
     t.check_constraint "location_verification::text = ANY (ARRAY['legacy'::character varying, 'pending'::character varying, 'provided'::character varying, 'reliable'::character varying, 'manual'::character varying]::text[])", name: "customers_location_verification"
-    t.check_constraint "status::text = ANY (ARRAY['active'::character varying::text, 'inactive'::character varying::text])", name: "customers_valid_status"
+    t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'inactive'::character varying]::text[])", name: "customers_valid_status"
   end
 
   create_table "delivery_dispatch_changes", force: :cascade do |t|
@@ -286,7 +290,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_040000) do
     t.index ["company_id"], name: "index_delivery_evidences_on_company_id"
     t.index ["driver_sync_operation_id"], name: "index_delivery_evidences_on_driver_sync_operation_id"
     t.index ["user_id"], name: "index_delivery_evidences_on_user_id"
-    t.check_constraint "kind::text = ANY (ARRAY['photo'::character varying::text, 'signature'::character varying::text])", name: "evidence_valid_kind"
+    t.check_constraint "kind::text = ANY (ARRAY['photo'::character varying, 'signature'::character varying]::text[])", name: "evidence_valid_kind"
     t.check_constraint "sha256::text ~ '^[0-9a-f]{64}$'::text", name: "evidence_valid_digest"
   end
 
@@ -312,15 +316,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_040000) do
     t.index ["delivery_order_item_id"], name: "index_delivery_items_on_delivery_order_item_id", unique: true
     t.index ["product_id"], name: "index_delivery_items_on_product_id"
     t.index ["visit_id"], name: "index_delivery_items_on_visit_id"
-    t.check_constraint "(unit::text <> ALL (ARRAY['unit'::character varying::text, 'pack'::character varying::text, 'bag'::character varying::text, 'box'::character varying::text])) OR planned_quantity = trunc(planned_quantity)", name: "delivery_items_integer_quantity"
-    t.check_constraint "btrim(description::text) <> ''::text AND (unit::text = ANY (ARRAY['unit'::character varying::text, 'pack'::character varying::text, 'bag'::character varying::text, 'box'::character varying::text, 'kg'::character varying::text, 'g'::character varying::text, 'l'::character varying::text])) AND planned_quantity > 0::numeric", name: "delivery_items_valid_merchandise"
-    t.check_constraint "currency IS NULL OR (currency::text = ANY (ARRAY['ARS'::character varying::text, 'USD'::character varying::text, 'EUR'::character varying::text]))", name: "delivery_items_currency"
-    t.check_constraint "delivered_quantity IS NULL OR (unit::text <> ALL (ARRAY['unit'::character varying::text, 'pack'::character varying::text, 'bag'::character varying::text, 'box'::character varying::text])) OR delivered_quantity = trunc(delivered_quantity)", name: "items_integer_delivered"
+    t.check_constraint "(unit::text <> ALL (ARRAY['unit'::character varying, 'pack'::character varying, 'bag'::character varying, 'box'::character varying]::text[])) OR planned_quantity = trunc(planned_quantity)", name: "delivery_items_integer_quantity"
+    t.check_constraint "btrim(description::text) <> ''::text AND (unit::text = ANY (ARRAY['unit'::character varying, 'pack'::character varying, 'bag'::character varying, 'box'::character varying, 'kg'::character varying, 'g'::character varying, 'l'::character varying]::text[])) AND planned_quantity > 0::numeric", name: "delivery_items_valid_merchandise"
+    t.check_constraint "currency IS NULL OR (currency::text = ANY (ARRAY['ARS'::character varying, 'USD'::character varying, 'EUR'::character varying]::text[]))", name: "delivery_items_currency"
+    t.check_constraint "delivered_quantity IS NULL OR (unit::text <> ALL (ARRAY['unit'::character varying, 'pack'::character varying, 'bag'::character varying, 'box'::character varying]::text[])) OR delivered_quantity = trunc(delivered_quantity)", name: "items_integer_delivered"
     t.check_constraint "delivered_quantity IS NULL OR delivered_quantity >= 0::numeric", name: "items_nonnegative_delivered"
     t.check_constraint "planned_quantity < 1000000000::numeric AND (delivered_quantity IS NULL OR delivered_quantity < 1000000000::numeric)", name: "items_finite_quantities"
     t.check_constraint "unit_cost IS NULL OR unit_cost >= 0::numeric AND unit_cost < '1000000000000'::bigint::numeric", name: "delivery_items_unit_cost_range"
     t.check_constraint "unit_price IS NULL AND unit_cost IS NULL OR commercial_source IS NOT NULL", name: "delivery_items_known_value_source"
-    t.check_constraint "unit_price IS NULL AND unit_cost IS NULL OR currency IS NOT NULL AND commercial_captured_at IS NOT NULL AND (commercial_source::text = ANY (ARRAY['catalog'::character varying::text, 'manual'::character varying::text, 'order'::character varying::text, 'legacy'::character varying::text]))", name: "delivery_items_commercial_snapshot"
+    t.check_constraint "unit_price IS NULL AND unit_cost IS NULL OR currency IS NOT NULL AND commercial_captured_at IS NOT NULL AND (commercial_source::text = ANY (ARRAY['catalog'::character varying, 'manual'::character varying, 'order'::character varying, 'legacy'::character varying]::text[]))", name: "delivery_items_commercial_snapshot"
     t.check_constraint "unit_price IS NULL OR unit_price >= 0::numeric AND unit_price < '1000000000000'::bigint::numeric", name: "delivery_items_unit_price_range"
   end
 
@@ -344,13 +348,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_040000) do
     t.index ["company_id"], name: "index_delivery_order_items_on_company_id"
     t.index ["delivery_order_id"], name: "index_delivery_order_items_on_delivery_order_id"
     t.index ["product_id"], name: "index_delivery_order_items_on_product_id"
-    t.check_constraint "(unit::text <> ALL (ARRAY['unit'::character varying::text, 'pack'::character varying::text, 'bag'::character varying::text, 'box'::character varying::text])) OR quantity = trunc(quantity)", name: "order_items_integer_quantity"
+    t.check_constraint "(unit::text <> ALL (ARRAY['unit'::character varying, 'pack'::character varying, 'bag'::character varying, 'box'::character varying]::text[])) OR quantity = trunc(quantity)", name: "order_items_integer_quantity"
     t.check_constraint "\"position\" >= 0", name: "order_items_valid_position"
-    t.check_constraint "btrim(description::text) <> ''::text AND (unit::text = ANY (ARRAY['unit'::character varying::text, 'pack'::character varying::text, 'bag'::character varying::text, 'box'::character varying::text, 'kg'::character varying::text, 'g'::character varying::text, 'l'::character varying::text])) AND quantity > 0::numeric AND quantity < 1000000000::numeric", name: "order_items_valid_merchandise"
-    t.check_constraint "currency IS NULL OR (currency::text = ANY (ARRAY['ARS'::character varying::text, 'USD'::character varying::text, 'EUR'::character varying::text]))", name: "delivery_order_items_currency"
+    t.check_constraint "btrim(description::text) <> ''::text AND (unit::text = ANY (ARRAY['unit'::character varying, 'pack'::character varying, 'bag'::character varying, 'box'::character varying, 'kg'::character varying, 'g'::character varying, 'l'::character varying]::text[])) AND quantity > 0::numeric AND quantity < 1000000000::numeric", name: "order_items_valid_merchandise"
+    t.check_constraint "currency IS NULL OR (currency::text = ANY (ARRAY['ARS'::character varying, 'USD'::character varying, 'EUR'::character varying]::text[]))", name: "delivery_order_items_currency"
     t.check_constraint "unit_cost IS NULL OR unit_cost >= 0::numeric AND unit_cost < '1000000000000'::bigint::numeric", name: "delivery_order_items_unit_cost_range"
     t.check_constraint "unit_price IS NULL AND unit_cost IS NULL OR commercial_source IS NOT NULL", name: "delivery_order_items_known_value_source"
-    t.check_constraint "unit_price IS NULL AND unit_cost IS NULL OR currency IS NOT NULL AND commercial_captured_at IS NOT NULL AND (commercial_source::text = ANY (ARRAY['catalog'::character varying::text, 'manual'::character varying::text, 'order'::character varying::text, 'legacy'::character varying::text]))", name: "delivery_order_items_commercial_snapshot"
+    t.check_constraint "unit_price IS NULL AND unit_cost IS NULL OR currency IS NOT NULL AND commercial_captured_at IS NOT NULL AND (commercial_source::text = ANY (ARRAY['catalog'::character varying, 'manual'::character varying, 'order'::character varying, 'legacy'::character varying]::text[]))", name: "delivery_order_items_commercial_snapshot"
     t.check_constraint "unit_price IS NULL OR unit_price >= 0::numeric AND unit_price < '1000000000000'::bigint::numeric", name: "delivery_order_items_unit_price_range"
   end
 
@@ -372,21 +376,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_040000) do
     t.bigint "rescheduled_from_id"
     t.integer "load_units", default: 1, null: false
     t.integer "service_minutes", default: 10, null: false
+    t.bigint "driver_profile_id"
+    t.string "import_key"
     t.index ["company_id", "customer_id", "id"], name: "orders_tenant_customer_id", unique: true
     t.index ["company_id", "delivery_schedule_id", "scheduled_date"], name: "orders_unique_schedule_date", unique: true, where: "(delivery_schedule_id IS NOT NULL)"
     t.index ["company_id", "id"], name: "index_delivery_orders_on_company_id_and_id", unique: true
+    t.index ["company_id", "import_key"], name: "index_delivery_orders_on_company_id_and_import_key", unique: true, where: "(import_key IS NOT NULL)"
     t.index ["company_id", "scheduled_date", "customer_id"], name: "orders_reporting_date"
     t.index ["company_id", "scheduled_date", "status"], name: "idx_on_company_id_scheduled_date_status_b6fe95a943"
     t.index ["company_id"], name: "index_delivery_orders_on_company_id"
     t.index ["customer_id"], name: "index_delivery_orders_on_customer_id"
     t.index ["delivery_schedule_id"], name: "index_delivery_orders_on_delivery_schedule_id"
+    t.index ["driver_profile_id"], name: "index_delivery_orders_on_driver_profile_id"
     t.index ["rescheduled_from_id"], name: "index_delivery_orders_on_rescheduled_from_id", unique: true
     t.index ["visit_id"], name: "index_delivery_orders_on_visit_id"
     t.check_constraint "btrim(customer_name::text) <> ''::text AND btrim(customer_address::text) <> ''::text", name: "orders_customer_snapshot"
     t.check_constraint "load_units >= 1 AND load_units <= 1000000", name: "orders_load_units"
     t.check_constraint "rescheduled_from_id IS NULL OR rescheduled_from_id <> id", name: "orders_no_self_reschedule"
     t.check_constraint "service_minutes >= 0 AND service_minutes <= 1440", name: "orders_service_minutes"
-    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying::text, 'completed'::character varying::text, 'needs_attention'::character varying::text, 'cancelled'::character varying::text])", name: "orders_valid_status"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'completed'::character varying, 'needs_attention'::character varying, 'cancelled'::character varying]::text[])", name: "orders_valid_status"
     t.check_constraint "window_start IS NULL AND window_end IS NULL OR preferred_time IS NULL AND window_start IS NOT NULL AND window_end IS NOT NULL AND window_end > window_start", name: "orders_valid_times"
   end
 
@@ -410,7 +418,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_040000) do
     t.index ["delivery_run_id"], name: "index_delivery_run_costs_on_delivery_run_id"
     t.index ["reversal_of_id"], name: "index_delivery_run_costs_on_reversal_of_id", unique: true
     t.index ["user_id"], name: "index_delivery_run_costs_on_user_id"
-    t.check_constraint "(category::text = ANY (ARRAY['vehicle'::character varying::text, 'fuel'::character varying::text, 'toll'::character varying::text, 'driver'::character varying::text, 'other'::character varying::text])) AND (currency::text = ANY (ARRAY['ARS'::character varying::text, 'USD'::character varying::text, 'EUR'::character varying::text]))", name: "run_costs_codes"
+    t.check_constraint "(category::text = ANY (ARRAY['vehicle'::character varying, 'fuel'::character varying, 'toll'::character varying, 'driver'::character varying, 'other'::character varying]::text[])) AND (currency::text = ANY (ARRAY['ARS'::character varying, 'USD'::character varying, 'EUR'::character varying]::text[]))", name: "run_costs_codes"
     t.check_constraint "amount > '-1000000000000'::bigint::numeric AND amount < '1000000000000'::bigint::numeric AND (reversal_of_id IS NULL AND amount >= 0::numeric OR reversal_of_id IS NOT NULL AND amount <= 0::numeric)", name: "run_costs_amount"
   end
 
@@ -441,9 +449,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_040000) do
     t.index ["driver_id"], name: "index_delivery_runs_on_driver_id"
     t.check_constraint "assignment_version >= 0", name: "runs_assignment_version"
     t.check_constraint "costs_closed_at IS NULL AND costs_closed_by_id IS NULL OR costs_closed_at IS NOT NULL AND costs_closed_by_id IS NOT NULL", name: "runs_cost_closure"
-    t.check_constraint "currency IS NULL OR (currency::text = ANY (ARRAY['ARS'::character varying::text, 'USD'::character varying::text, 'EUR'::character varying::text]))", name: "runs_currency"
-    t.check_constraint "routing_origin::text = ANY (ARRAY['company'::character varying::text, 'open'::character varying::text])", name: "run_routing_origin"
-    t.check_constraint "status::text = ANY (ARRAY['draft'::character varying::text, 'assigned'::character varying::text, 'in_progress'::character varying::text, 'completed'::character varying::text, 'cancelled'::character varying::text])", name: "runs_valid_status"
+    t.check_constraint "currency IS NULL OR (currency::text = ANY (ARRAY['ARS'::character varying, 'USD'::character varying, 'EUR'::character varying]::text[]))", name: "runs_currency"
+    t.check_constraint "routing_origin::text = ANY (ARRAY['company'::character varying, 'open'::character varying]::text[])", name: "run_routing_origin"
+    t.check_constraint "status::text = ANY (ARRAY['draft'::character varying, 'assigned'::character varying, 'in_progress'::character varying, 'completed'::character varying, 'cancelled'::character varying]::text[])", name: "runs_valid_status"
   end
 
   create_table "delivery_schedule_items", force: :cascade do |t|
@@ -459,8 +467,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_040000) do
     t.index ["company_id"], name: "index_delivery_schedule_items_on_company_id"
     t.index ["delivery_schedule_id"], name: "index_delivery_schedule_items_on_delivery_schedule_id"
     t.index ["product_id"], name: "index_delivery_schedule_items_on_product_id"
-    t.check_constraint "(unit::text <> ALL (ARRAY['unit'::character varying::text, 'pack'::character varying::text, 'bag'::character varying::text, 'box'::character varying::text])) OR quantity = trunc(quantity)", name: "delivery_schedule_items_integer_quantity"
-    t.check_constraint "btrim(description::text) <> ''::text AND (unit::text = ANY (ARRAY['unit'::character varying::text, 'pack'::character varying::text, 'bag'::character varying::text, 'box'::character varying::text, 'kg'::character varying::text, 'g'::character varying::text, 'l'::character varying::text])) AND quantity > 0::numeric", name: "delivery_schedule_items_valid_merchandise"
+    t.check_constraint "(unit::text <> ALL (ARRAY['unit'::character varying, 'pack'::character varying, 'bag'::character varying, 'box'::character varying]::text[])) OR quantity = trunc(quantity)", name: "delivery_schedule_items_integer_quantity"
+    t.check_constraint "btrim(description::text) <> ''::text AND (unit::text = ANY (ARRAY['unit'::character varying, 'pack'::character varying, 'bag'::character varying, 'box'::character varying, 'kg'::character varying, 'g'::character varying, 'l'::character varying]::text[])) AND quantity > 0::numeric", name: "delivery_schedule_items_valid_merchandise"
     t.check_constraint "quantity < 1000000000::numeric AND \"position\" >= 0", name: "schedule_items_finite_quantity_position"
   end
 
@@ -477,12 +485,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_040000) do
     t.text "notes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "driver_profile_id"
+    t.string "operation_kind", default: "pedido_semanal", null: false
+    t.integer "visit_order"
+    t.string "import_key"
     t.index ["company_id", "active", "weekday"], name: "index_delivery_schedules_on_company_id_and_active_and_weekday"
     t.index ["company_id", "customer_id", "id"], name: "index_schedules_tenant_customer_id", unique: true
     t.index ["company_id", "id"], name: "index_delivery_schedules_on_company_id_and_id", unique: true
+    t.index ["company_id", "import_key"], name: "index_delivery_schedules_on_company_id_and_import_key", unique: true, where: "(import_key IS NOT NULL)"
     t.index ["company_id"], name: "index_delivery_schedules_on_company_id"
     t.index ["customer_id"], name: "index_delivery_schedules_on_customer_id"
+    t.index ["driver_profile_id"], name: "index_delivery_schedules_on_driver_profile_id"
     t.check_constraint "ends_on IS NULL OR ends_on >= starts_on", name: "schedules_valid_dates"
+    t.check_constraint "operation_kind::text = ANY (ARRAY['visita_semanal'::character varying, 'pedido_semanal'::character varying]::text[])", name: "schedule_operation_kind"
+    t.check_constraint "visit_order IS NULL OR visit_order > 0", name: "schedule_visit_order"
     t.check_constraint "weekday >= 1 AND weekday <= 7", name: "schedules_valid_weekday"
     t.check_constraint "window_start IS NULL AND window_end IS NULL OR preferred_time IS NULL AND window_start IS NOT NULL AND window_end IS NOT NULL AND window_end > window_start", name: "schedules_valid_times"
   end
@@ -506,7 +522,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_040000) do
     t.index ["company_id", "visit_id", "id"], name: "status_events_visit_id"
     t.index ["company_id"], name: "index_delivery_status_events_on_company_id"
     t.check_constraint "num_nonnulls(delivery_run_id, visit_id, delivery_order_id) = 1", name: "status_events_one_subject"
-    t.check_constraint "source::text = 'baseline'::text AND occurred_at IS NULL OR (source::text = ANY (ARRAY['system'::character varying::text, 'manager'::character varying::text, 'driver'::character varying::text, 'offline'::character varying::text])) AND occurred_at IS NOT NULL", name: "status_events_source"
+    t.check_constraint "source::text = 'baseline'::text AND occurred_at IS NULL OR (source::text = ANY (ARRAY['system'::character varying, 'manager'::character varying, 'driver'::character varying, 'offline'::character varying]::text[])) AND occurred_at IS NOT NULL", name: "status_events_source"
   end
 
   create_table "driver_locations", force: :cascade do |t|
@@ -523,6 +539,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_040000) do
     t.index ["company_id"], name: "index_driver_locations_on_company_id"
     t.index ["user_id"], name: "index_driver_locations_on_user_id", unique: true
     t.check_constraint "latitude >= '-90'::integer::numeric AND latitude <= 90::numeric AND longitude >= '-180'::integer::numeric AND longitude <= 180::numeric AND accuracy >= 0::numeric AND accuracy < 100000000::numeric", name: "driver_location_coordinates"
+  end
+
+  create_table "driver_profiles", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.bigint "user_id"
+    t.string "name", null: false
+    t.string "name_key", null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id", "id"], name: "index_driver_profiles_on_company_id_and_id", unique: true
+    t.index ["company_id", "name_key"], name: "index_driver_profiles_on_company_id_and_name_key"
+    t.index ["company_id", "user_id"], name: "index_driver_profiles_on_company_id_and_user_id", unique: true, where: "(user_id IS NOT NULL)"
+    t.index ["company_id"], name: "index_driver_profiles_on_company_id"
+    t.index ["user_id"], name: "index_driver_profiles_on_user_id"
   end
 
   create_table "driver_sync_operations", force: :cascade do |t|
@@ -542,7 +573,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_040000) do
     t.index ["company_id", "user_id", "operation_id"], name: "driver_sync_unique_operation", unique: true
     t.index ["company_id"], name: "index_driver_sync_operations_on_company_id"
     t.index ["user_id"], name: "index_driver_sync_operations_on_user_id"
-    t.check_constraint "status::text = ANY (ARRAY['synced'::character varying::text, 'conflict'::character varying::text, 'invalid'::character varying::text])", name: "driver_sync_valid_status"
+    t.check_constraint "status::text = ANY (ARRAY['synced'::character varying, 'conflict'::character varying, 'invalid'::character varying]::text[])", name: "driver_sync_valid_status"
   end
 
   create_table "geocoding_cache_entries", force: :cascade do |t|
@@ -618,9 +649,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_040000) do
     t.index ["driver_id"], name: "index_incidents_on_driver_id"
     t.index ["reporter_id"], name: "index_incidents_on_reporter_id"
     t.index ["visit_id"], name: "index_incidents_on_visit_id"
-    t.check_constraint "(status::text <> ALL (ARRAY['resolved'::character varying::text, 'dismissed'::character varying::text])) OR resolution IS NOT NULL", name: "incidents_resolution_present"
-    t.check_constraint "(status::text = ANY (ARRAY['open'::character varying::text, 'needs_decision'::character varying::text, 'follow_up'::character varying::text, 'resolved'::character varying::text, 'dismissed'::character varying::text])) AND (priority::text = ANY (ARRAY['low'::character varying::text, 'normal'::character varying::text, 'high'::character varying::text, 'urgent'::character varying::text])) AND (kind::text = ANY (ARRAY['closed'::character varying::text, 'absent'::character varying::text, 'rejected'::character varying::text, 'shortage'::character varying::text, 'damaged'::character varying::text, 'address'::character varying::text, 'vehicle'::character varying::text, 'other'::character varying::text])) AND (source::text = ANY (ARRAY['manual'::character varying::text, 'automatic'::character varying::text]))", name: "incidents_codes"
-    t.check_constraint "(status::text = ANY (ARRAY['resolved'::character varying::text, 'dismissed'::character varying::text])) AND resolved_at IS NOT NULL AND length(btrim(resolution)) > 0 OR (status::text <> ALL (ARRAY['resolved'::character varying::text, 'dismissed'::character varying::text])) AND resolved_at IS NULL", name: "incident_resolution"
+    t.check_constraint "(status::text <> ALL (ARRAY['resolved'::character varying, 'dismissed'::character varying]::text[])) OR resolution IS NOT NULL", name: "incidents_resolution_present"
+    t.check_constraint "(status::text = ANY (ARRAY['open'::character varying, 'needs_decision'::character varying, 'follow_up'::character varying, 'resolved'::character varying, 'dismissed'::character varying]::text[])) AND (priority::text = ANY (ARRAY['low'::character varying, 'normal'::character varying, 'high'::character varying, 'urgent'::character varying]::text[])) AND (kind::text = ANY (ARRAY['closed'::character varying, 'absent'::character varying, 'rejected'::character varying, 'shortage'::character varying, 'damaged'::character varying, 'address'::character varying, 'vehicle'::character varying, 'other'::character varying]::text[])) AND (source::text = ANY (ARRAY['manual'::character varying, 'automatic'::character varying]::text[]))", name: "incidents_codes"
+    t.check_constraint "(status::text = ANY (ARRAY['resolved'::character varying, 'dismissed'::character varying]::text[])) AND resolved_at IS NOT NULL AND length(btrim(resolution)) > 0 OR (status::text <> ALL (ARRAY['resolved'::character varying, 'dismissed'::character varying]::text[])) AND resolved_at IS NULL", name: "incident_resolution"
   end
 
   create_table "internal_notices", force: :cascade do |t|
@@ -658,7 +689,66 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_040000) do
     t.index ["company_id", "event_key"], name: "index_notification_events_on_company_id_and_event_key", unique: true
     t.index ["company_id"], name: "index_notification_events_on_company_id"
     t.index ["customer_notification_id"], name: "index_notification_events_on_customer_notification_id"
-    t.check_constraint "status::text = ANY (ARRAY['requested'::character varying::text, 'accepted'::character varying::text, 'delivered'::character varying::text, 'failed'::character varying::text, 'suppressed'::character varying::text])", name: "notification_events_status"
+    t.check_constraint "status::text = ANY (ARRAY['requested'::character varying, 'accepted'::character varying, 'delivered'::character varying, 'failed'::character varying, 'suppressed'::character varying]::text[])", name: "notification_events_status"
+  end
+
+  create_table "operation_import_groups", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.bigint "operation_import_id", null: false
+    t.string "group_key", null: false
+    t.string "state", default: "pending", null: false
+    t.jsonb "data", default: {}, null: false
+    t.jsonb "issues", default: [], null: false
+    t.jsonb "decisions", default: {}, null: false
+    t.bigint "customer_id"
+    t.bigint "driver_profile_id"
+    t.integer "row_count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id", "id"], name: "index_operation_import_groups_on_company_id_and_id", unique: true
+    t.index ["company_id", "state"], name: "index_operation_import_groups_on_company_id_and_state"
+    t.index ["company_id"], name: "index_operation_import_groups_on_company_id"
+    t.index ["customer_id"], name: "index_operation_import_groups_on_customer_id"
+    t.index ["driver_profile_id"], name: "index_operation_import_groups_on_driver_profile_id"
+    t.index ["operation_import_id", "group_key"], name: "operation_groups_unique_key", unique: true
+    t.index ["operation_import_id"], name: "index_operation_import_groups_on_operation_import_id"
+  end
+
+  create_table "operation_import_rows", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.bigint "operation_import_id", null: false
+    t.bigint "operation_import_group_id"
+    t.integer "number", null: false
+    t.jsonb "original", default: {}, null: false
+    t.jsonb "data", default: {}, null: false
+    t.jsonb "issues", default: [], null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "operation_import_id, ((data ->> 'customer_key'::text)), ((data ->> 'address_identity_key'::text))", name: "operation_rows_customer_identity"
+    t.index "operation_import_id, ((data ->> 'group_key'::text))", name: "operation_rows_pending_group_key", where: "(operation_import_group_id IS NULL)"
+    t.index ["company_id"], name: "index_operation_import_rows_on_company_id"
+    t.index ["operation_import_group_id", "id"], name: "operation_rows_group"
+    t.index ["operation_import_group_id"], name: "index_operation_import_rows_on_operation_import_group_id"
+    t.index ["operation_import_id", "number"], name: "operation_rows_source_number", unique: true
+    t.index ["operation_import_id"], name: "index_operation_import_rows_on_operation_import_id"
+  end
+
+  create_table "operation_imports", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.bigint "initiated_by_id"
+    t.string "state", default: "reading", null: false
+    t.string "sha256", null: false
+    t.integer "total_rows", default: 0, null: false
+    t.integer "processed_rows", default: 0, null: false
+    t.integer "imported_groups", default: 0, null: false
+    t.text "last_error"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id", "id"], name: "index_operation_imports_on_company_id_and_id", unique: true
+    t.index ["company_id", "sha256"], name: "index_operation_imports_on_company_id_and_sha256"
+    t.index ["company_id", "sha256"], name: "operation_imports_active_file", unique: true, where: "((state)::text <> 'failed'::text)"
+    t.index ["company_id"], name: "index_operation_imports_on_company_id"
+    t.index ["initiated_by_id"], name: "index_operation_imports_on_initiated_by_id"
   end
 
   create_table "platform_admins", force: :cascade do |t|
@@ -703,15 +793,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_040000) do
     t.datetime "updated_at", null: false
     t.decimal "unit_price", precision: 16, scale: 4
     t.decimal "unit_cost", precision: 16, scale: 4
+    t.string "name_key"
     t.index ["company_id", "active", "name"], name: "index_products_on_company_id_and_active_and_name"
     t.index ["company_id", "id"], name: "index_products_on_company_id_and_id", unique: true
+    t.index ["company_id", "name_key"], name: "index_products_on_company_id_and_name_key"
     t.index ["company_id", "sku"], name: "index_products_on_company_id_and_sku", unique: true, where: "(sku IS NOT NULL)"
     t.index ["company_id"], name: "index_products_on_company_id"
     t.check_constraint "btrim(name::text) <> ''::text", name: "products_nonblank_name"
-    t.check_constraint "package_content_quantity IS NULL AND package_content_unit IS NULL OR package_content_quantity IS NOT NULL AND package_content_quantity > 0::numeric AND package_content_quantity < 1000000000::numeric AND package_content_unit IS NOT NULL AND (package_content_unit::text = ANY (ARRAY['unit'::character varying::text, 'pack'::character varying::text, 'bag'::character varying::text, 'box'::character varying::text, 'kg'::character varying::text, 'g'::character varying::text, 'l'::character varying::text]))", name: "products_valid_package"
-    t.check_constraint "package_content_unit IS NULL OR (package_content_unit::text <> ALL (ARRAY['unit'::character varying::text, 'pack'::character varying::text, 'bag'::character varying::text, 'box'::character varying::text])) OR package_content_quantity = trunc(package_content_quantity)", name: "products_integer_package"
+    t.check_constraint "package_content_quantity IS NULL AND package_content_unit IS NULL OR package_content_quantity IS NOT NULL AND package_content_quantity > 0::numeric AND package_content_quantity < 1000000000::numeric AND package_content_unit IS NOT NULL AND (package_content_unit::text = ANY (ARRAY['unit'::character varying, 'pack'::character varying, 'bag'::character varying, 'box'::character varying, 'kg'::character varying, 'g'::character varying, 'l'::character varying]::text[]))", name: "products_valid_package"
+    t.check_constraint "package_content_unit IS NULL OR (package_content_unit::text <> ALL (ARRAY['unit'::character varying, 'pack'::character varying, 'bag'::character varying, 'box'::character varying]::text[])) OR package_content_quantity = trunc(package_content_quantity)", name: "products_integer_package"
     t.check_constraint "sku IS NULL OR btrim(sku::text) <> ''::text", name: "products_nonblank_sku"
-    t.check_constraint "unit::text = ANY (ARRAY['unit'::character varying::text, 'pack'::character varying::text, 'bag'::character varying::text, 'box'::character varying::text, 'kg'::character varying::text, 'g'::character varying::text, 'l'::character varying::text])", name: "products_valid_unit"
+    t.check_constraint "unit::text = ANY (ARRAY['unit'::character varying, 'pack'::character varying, 'bag'::character varying, 'box'::character varying, 'kg'::character varying, 'g'::character varying, 'l'::character varying]::text[])", name: "products_valid_unit"
     t.check_constraint "unit_cost IS NULL OR unit_cost >= 0::numeric AND unit_cost < '1000000000000'::bigint::numeric", name: "products_unit_cost_range"
     t.check_constraint "unit_price IS NULL OR unit_price >= 0::numeric AND unit_price < '1000000000000'::bigint::numeric", name: "products_unit_price_range"
   end
@@ -734,12 +826,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_040000) do
     t.boolean "auto_publish", default: false, null: false
     t.index ["applied_by_id"], name: "index_route_optimization_proposals_on_applied_by_id"
     t.index ["company_id", "delivery_run_id", "created_at"], name: "route_proposals_history"
-    t.index ["company_id", "delivery_run_id", "request_key"], name: "unique_active_route_proposal", unique: true, where: "((status)::text = ANY (ARRAY[('queued'::character varying)::text, ('processing'::character varying)::text, ('ready'::character varying)::text]))"
+    t.index ["company_id", "delivery_run_id", "request_key"], name: "unique_active_route_proposal", unique: true, where: "((status)::text = ANY ((ARRAY['queued'::character varying, 'processing'::character varying, 'ready'::character varying])::text[]))"
     t.index ["company_id"], name: "index_route_optimization_proposals_on_company_id"
     t.index ["delivery_run_id"], name: "index_route_optimization_proposals_on_delivery_run_id"
     t.index ["id", "company_id"], name: "index_route_optimization_proposals_on_id_and_company_id", unique: true
     t.index ["requested_by_id"], name: "index_route_optimization_proposals_on_requested_by_id"
-    t.check_constraint "status::text = ANY (ARRAY['queued'::character varying::text, 'processing'::character varying::text, 'ready'::character varying::text, 'failed'::character varying::text, 'applied'::character varying::text, 'discarded'::character varying::text, 'expired'::character varying::text])", name: "route_proposal_status"
+    t.check_constraint "status::text = ANY (ARRAY['queued'::character varying, 'processing'::character varying, 'ready'::character varying, 'failed'::character varying, 'applied'::character varying, 'discarded'::character varying, 'expired'::character varying]::text[])", name: "route_proposal_status"
   end
 
   create_table "route_publications", force: :cascade do |t|
@@ -758,7 +850,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_040000) do
     t.index ["delivery_run_id"], name: "index_route_publications_on_delivery_run_id", unique: true
     t.index ["proposal_id"], name: "index_route_publications_on_proposal_id"
     t.index ["requested_by_id"], name: "index_route_publications_on_requested_by_id"
-    t.check_constraint "state::text = ANY (ARRAY['pending'::character varying::text, 'ready'::character varying::text, 'failed'::character varying::text, 'manual'::character varying::text])", name: "route_publication_state"
+    t.check_constraint "state::text = ANY (ARRAY['pending'::character varying, 'ready'::character varying, 'failed'::character varying, 'manual'::character varying]::text[])", name: "route_publication_state"
   end
 
   create_table "routing_cache_entries", force: :cascade do |t|
@@ -772,7 +864,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_040000) do
     t.index ["company_id", "kind", "input_digest"], name: "unique_routing_cache_entry", unique: true
     t.index ["company_id"], name: "index_routing_cache_entries_on_company_id"
     t.index ["last_used_at"], name: "index_routing_cache_entries_on_last_used_at"
-    t.check_constraint "kind::text = ANY (ARRAY['matrix'::character varying::text, 'solution'::character varying::text, 'geometry'::character varying::text])", name: "routing_cache_kind"
+    t.check_constraint "kind::text = ANY (ARRAY['matrix'::character varying, 'solution'::character varying, 'geometry'::character varying]::text[])", name: "routing_cache_kind"
   end
 
   create_table "run_stock_movements", force: :cascade do |t|
@@ -793,8 +885,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_040000) do
     t.index ["company_id"], name: "index_run_stock_movements_on_company_id"
     t.index ["delivery_item_id"], name: "index_run_stock_movements_on_delivery_item_id", unique: true, where: "((kind)::text = 'delivery'::text)"
     t.index ["delivery_run_id"], name: "index_run_stock_movements_on_delivery_run_id"
-    t.check_constraint "(kind::text = ANY (ARRAY['load'::character varying::text, 'delivery'::character varying::text, 'return'::character varying::text, 'waste'::character varying::text, 'adjustment_in'::character varying::text, 'adjustment_out'::character varying::text])) AND quantity > 0::numeric AND quantity < 1000000000::numeric", name: "stock_movement_quantity"
-    t.check_constraint "(unit::text = ANY (ARRAY['unit'::character varying::text, 'pack'::character varying::text, 'bag'::character varying::text, 'box'::character varying::text, 'kg'::character varying::text, 'g'::character varying::text, 'l'::character varying::text])) AND ((unit::text <> ALL (ARRAY['unit'::character varying::text, 'pack'::character varying::text, 'bag'::character varying::text, 'box'::character varying::text])) OR quantity = trunc(quantity))", name: "stock_movement_unit"
+    t.check_constraint "(kind::text = ANY (ARRAY['load'::character varying, 'delivery'::character varying, 'return'::character varying, 'waste'::character varying, 'adjustment_in'::character varying, 'adjustment_out'::character varying]::text[])) AND quantity > 0::numeric AND quantity < 1000000000::numeric", name: "stock_movement_quantity"
+    t.check_constraint "(unit::text = ANY (ARRAY['unit'::character varying, 'pack'::character varying, 'bag'::character varying, 'box'::character varying, 'kg'::character varying, 'g'::character varying, 'l'::character varying]::text[])) AND ((unit::text <> ALL (ARRAY['unit'::character varying, 'pack'::character varying, 'bag'::character varying, 'box'::character varying]::text[])) OR quantity = trunc(quantity))", name: "stock_movement_unit"
     t.check_constraint "kind::text <> 'delivery'::text OR delivery_item_id IS NOT NULL", name: "stock_movement_delivery_source"
   end
 
@@ -827,8 +919,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_040000) do
     t.index ["company_id"], name: "index_users_on_company_id"
     t.index ["email_address"], name: "index_users_on_email_address", unique: true
     t.check_constraint "location_consent_version >= 0 AND (NOT location_sharing_enabled OR location_consent_id IS NOT NULL AND location_activated_at IS NOT NULL)", name: "users_location_consent"
-    t.check_constraint "role::text = ANY (ARRAY['administrator'::character varying::text, 'supervisor'::character varying::text, 'driver'::character varying::text])", name: "users_valid_role"
-    t.check_constraint "status::text = ANY (ARRAY['active'::character varying::text, 'inactive'::character varying::text])", name: "users_valid_status"
+    t.check_constraint "role::text = ANY (ARRAY['administrator'::character varying, 'supervisor'::character varying, 'driver'::character varying]::text[])", name: "users_valid_role"
+    t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'inactive'::character varying]::text[])", name: "users_valid_status"
   end
 
   create_table "visits", force: :cascade do |t|
@@ -870,11 +962,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_040000) do
     t.check_constraint "(unloading_started_at IS NULL OR arrived_at IS NOT NULL AND unloading_started_at >= arrived_at) AND (unloading_finished_at IS NULL OR unloading_started_at IS NOT NULL AND unloading_finished_at >= unloading_started_at)", name: "visits_timing_order"
     t.check_constraint "\"position\" >= 0", name: "visits_nonnegative_position"
     t.check_constraint "confirmed_by_id IS NULL AND confirmed_at IS NULL OR confirmed_by_id IS NOT NULL AND confirmed_at IS NOT NULL AND status::text <> 'pending'::text", name: "visits_confirmation_pair"
-    t.check_constraint "failure_reason IS NULL OR (failure_reason::text = ANY (ARRAY['shortage'::character varying::text, 'damaged'::character varying::text, 'customer_request'::character varying::text, 'absent'::character varying::text, 'closed'::character varying::text, 'rejected'::character varying::text, 'other'::character varying::text]))", name: "visits_failure_reason"
+    t.check_constraint "failure_reason IS NULL OR (failure_reason::text = ANY (ARRAY['shortage'::character varying, 'damaged'::character varying, 'customer_request'::character varying, 'absent'::character varying, 'closed'::character varying, 'rejected'::character varying, 'other'::character varying]::text[]))", name: "visits_failure_reason"
     t.check_constraint "receipt_version = ANY (ARRAY[0, 1])", name: "visits_receipt_version"
-    t.check_constraint "recorded_at_source IS NULL OR (recorded_at_source::text = ANY (ARRAY['device'::character varying::text, 'server'::character varying::text])) AND recorded_at IS NOT NULL", name: "visits_recorded_clock_source"
+    t.check_constraint "recorded_at_source IS NULL OR (recorded_at_source::text = ANY (ARRAY['device'::character varying, 'server'::character varying]::text[])) AND recorded_at IS NOT NULL", name: "visits_recorded_clock_source"
     t.check_constraint "recorded_latitude IS NULL AND recorded_longitude IS NULL AND location_accuracy IS NULL AND location_captured_at IS NULL OR recorded_latitude IS NOT NULL AND recorded_longitude IS NOT NULL AND recorded_latitude >= '-90'::integer::numeric AND recorded_latitude <= 90::numeric AND recorded_longitude >= '-180'::integer::numeric AND recorded_longitude <= 180::numeric AND location_accuracy IS NOT NULL AND location_accuracy >= 0::numeric AND location_captured_at IS NOT NULL", name: "visits_receipt_location"
-    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying::text, 'completed'::character varying::text, 'not_attended'::character varying::text, 'closed'::character varying::text, 'rescheduled'::character varying::text, 'rejected'::character varying::text])", name: "visits_valid_status"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'completed'::character varying, 'not_attended'::character varying, 'closed'::character varying, 'rescheduled'::character varying, 'rejected'::character varying]::text[])", name: "visits_valid_status"
   end
 
   create_table "workflow_commands", force: :cascade do |t|
@@ -943,8 +1035,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_040000) do
     t.index ["delivery_run_id"], name: "index_workflow_tasks_on_delivery_run_id"
     t.index ["incident_id"], name: "index_workflow_tasks_on_incident_id"
     t.index ["visit_id"], name: "index_workflow_tasks_on_visit_id"
-    t.check_constraint "(category::text = ANY (ARRAY['operational'::character varying::text, 'commercial'::character varying::text, 'administrative'::character varying::text])) AND (priority::text = ANY (ARRAY['low'::character varying::text, 'normal'::character varying::text, 'high'::character varying::text, 'urgent'::character varying::text])) AND (status::text = ANY (ARRAY['pending'::character varying::text, 'in_progress'::character varying::text, 'completed'::character varying::text, 'cancelled'::character varying::text]))", name: "tasks_codes"
-    t.check_constraint "(status::text = ANY (ARRAY['completed'::character varying::text, 'cancelled'::character varying::text])) AND closed_at IS NOT NULL AND result IS NOT NULL AND length(btrim(result)) > 0 OR (status::text = ANY (ARRAY['pending'::character varying::text, 'in_progress'::character varying::text])) AND closed_at IS NULL", name: "tasks_closure"
+    t.check_constraint "(category::text = ANY (ARRAY['operational'::character varying, 'commercial'::character varying, 'administrative'::character varying]::text[])) AND (priority::text = ANY (ARRAY['low'::character varying, 'normal'::character varying, 'high'::character varying, 'urgent'::character varying]::text[])) AND (status::text = ANY (ARRAY['pending'::character varying, 'in_progress'::character varying, 'completed'::character varying, 'cancelled'::character varying]::text[]))", name: "tasks_codes"
+    t.check_constraint "(status::text = ANY (ARRAY['completed'::character varying, 'cancelled'::character varying]::text[])) AND closed_at IS NOT NULL AND result IS NOT NULL AND length(btrim(result)) > 0 OR (status::text = ANY (ARRAY['pending'::character varying, 'in_progress'::character varying]::text[])) AND closed_at IS NULL", name: "tasks_closure"
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
@@ -989,6 +1081,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_040000) do
   add_foreign_key "delivery_orders", "customers", column: ["company_id", "customer_id"], primary_key: ["company_id", "id"], name: "fk_delivery_orders_customer_id_tenant"
   add_foreign_key "delivery_orders", "delivery_orders", column: ["company_id", "customer_id", "rescheduled_from_id"], primary_key: ["company_id", "customer_id", "id"], name: "orders_reschedule_customer_tenant"
   add_foreign_key "delivery_orders", "delivery_schedules", column: ["company_id", "customer_id", "delivery_schedule_id"], primary_key: ["company_id", "customer_id", "id"], name: "orders_schedule_customer_tenant"
+  add_foreign_key "delivery_orders", "driver_profiles"
+  add_foreign_key "delivery_orders", "driver_profiles", column: ["company_id", "driver_profile_id"], primary_key: ["company_id", "id"], name: "orders_driver_profile_tenant"
   add_foreign_key "delivery_orders", "visits", column: ["company_id", "customer_id", "visit_id"], primary_key: ["company_id", "customer_id", "id"], name: "orders_visit_customer_tenant"
   add_foreign_key "delivery_run_costs", "companies"
   add_foreign_key "delivery_run_costs", "delivery_run_costs", column: ["company_id", "reversal_of_id"], primary_key: ["company_id", "id"], name: "run_costs_reversal_tenant"
@@ -1007,12 +1101,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_040000) do
   add_foreign_key "delivery_schedules", "companies"
   add_foreign_key "delivery_schedules", "customers"
   add_foreign_key "delivery_schedules", "customers", column: ["company_id", "customer_id"], primary_key: ["company_id", "id"], name: "fk_delivery_schedules_customer_id_tenant"
+  add_foreign_key "delivery_schedules", "driver_profiles"
+  add_foreign_key "delivery_schedules", "driver_profiles", column: ["company_id", "driver_profile_id"], primary_key: ["company_id", "id"], name: "schedules_driver_profile_tenant"
   add_foreign_key "delivery_status_events", "companies"
   add_foreign_key "delivery_status_events", "delivery_orders", column: ["company_id", "delivery_order_id"], primary_key: ["company_id", "id"], name: "status_events_delivery_order_tenant"
   add_foreign_key "delivery_status_events", "delivery_runs", column: ["company_id", "delivery_run_id"], primary_key: ["company_id", "id"], name: "status_events_delivery_run_tenant"
   add_foreign_key "delivery_status_events", "users", column: ["company_id", "user_id"], primary_key: ["company_id", "id"], name: "status_events_user_tenant"
   add_foreign_key "driver_locations", "companies"
   add_foreign_key "driver_locations", "users", column: ["company_id", "user_id"], primary_key: ["company_id", "id"]
+  add_foreign_key "driver_profiles", "companies"
+  add_foreign_key "driver_profiles", "users"
+  add_foreign_key "driver_profiles", "users", column: ["company_id", "user_id"], primary_key: ["company_id", "id"], name: "driver_profiles_user_tenant"
   add_foreign_key "driver_sync_operations", "companies"
   add_foreign_key "driver_sync_operations", "users", column: ["company_id", "user_id"], primary_key: ["company_id", "id"], name: "driver_sync_user_tenant"
   add_foreign_key "geocoding_cache_entries", "companies"
@@ -1032,6 +1131,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_040000) do
   add_foreign_key "internal_notices", "workflow_tasks", column: ["company_id", "workflow_task_id"], primary_key: ["company_id", "id"], name: "internal_notices_workflow_task_tenant"
   add_foreign_key "notification_events", "companies"
   add_foreign_key "notification_events", "customer_notifications", column: ["company_id", "customer_notification_id"], primary_key: ["company_id", "id"], name: "notification_event_tenant"
+  add_foreign_key "operation_import_groups", "companies"
+  add_foreign_key "operation_import_groups", "customers"
+  add_foreign_key "operation_import_groups", "customers", column: ["company_id", "customer_id"], primary_key: ["company_id", "id"], name: "operation_groups_customer_tenant"
+  add_foreign_key "operation_import_groups", "driver_profiles"
+  add_foreign_key "operation_import_groups", "driver_profiles", column: ["company_id", "driver_profile_id"], primary_key: ["company_id", "id"], name: "operation_groups_driver_tenant"
+  add_foreign_key "operation_import_groups", "operation_imports"
+  add_foreign_key "operation_import_groups", "operation_imports", column: ["company_id", "operation_import_id"], primary_key: ["company_id", "id"], name: "operation_groups_import_tenant"
+  add_foreign_key "operation_import_rows", "companies"
+  add_foreign_key "operation_import_rows", "operation_import_groups"
+  add_foreign_key "operation_import_rows", "operation_import_groups", column: ["company_id", "operation_import_group_id"], primary_key: ["company_id", "id"], name: "operation_rows_group_tenant"
+  add_foreign_key "operation_import_rows", "operation_imports"
+  add_foreign_key "operation_import_rows", "operation_imports", column: ["company_id", "operation_import_id"], primary_key: ["company_id", "id"], name: "operation_rows_import_tenant"
+  add_foreign_key "operation_imports", "companies"
+  add_foreign_key "operation_imports", "users", column: "initiated_by_id"
+  add_foreign_key "operation_imports", "users", column: ["company_id", "initiated_by_id"], primary_key: ["company_id", "id"], name: "operation_import_user_tenant"
   add_foreign_key "platform_sessions", "platform_admins"
   add_foreign_key "product_imports", "companies"
   add_foreign_key "products", "companies"

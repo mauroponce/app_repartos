@@ -33,6 +33,8 @@ class Company < ApplicationRecord
   has_many :workflow_commands, dependent: :restrict_with_error
   has_many :incident_photos, dependent: :restrict_with_error
   has_many :users, dependent: :restrict_with_error
+  has_many :driver_profiles, dependent: :restrict_with_error
+  has_many :operation_imports, dependent: :destroy
   has_many :customers, dependent: :restrict_with_error
 
   has_many :delivery_status_events, dependent: :restrict_with_error

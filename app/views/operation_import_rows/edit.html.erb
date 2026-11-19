@@ -1,0 +1,14 @@
+<div class="heading"><div><h1>Corregir fila <%= @row.number %></h1><p>Los cambios se vuelven a analizar antes de confirmar.</p></div></div>
+<section class="management-panel">
+  <%= form_with url: operation_import_row_path(@import, @row), method: :patch, scope: :row, class: "management-form" do |form| %>
+    <% OperationImports::Reader::HEADERS.each do |field| %>
+      <div class="field"><%= form.label field, field.humanize %><%= form.text_field field, value: @row.original[field] %></div>
+    <% end %>
+    <% if @row.original["nombre_producto"].present? %>
+      <div class="field"><%= form.label :product_id, "Reutilizar producto existente" %><%= form.select :product_id,
+        options_from_collection_for_select(@product_matches, :id, :name, @row.data["product_id"]), { include_blank: "Detectar por nombre" } %></div>
+      <div class="field"><%= form.check_box :new_product, checked: @row.data["new_product"] == true %><%= form.label :new_product, "Crear otro producto con este nombre" %></div>
+    <% end %>
+    <div class="form-actions"><%= form.submit "Guardar y analizar", class: "btn btn-dark" %><%= link_to "Volver", operation_import_path(@import), class: "btn btn-white" %></div>
+  <% end %>
+</section>

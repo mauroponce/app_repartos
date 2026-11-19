@@ -1,0 +1,2 @@
+<div class="heading"><div><h1>Importaciones de operación</h1></div><%= link_to "Nueva importación", new_operation_import_path, class: "btn btn-dark" %></div>
+<section class="management-panel"><ul><% @imports.each do |batch| %><li><%= link_to "Lote ##{batch.id} · #{batch.state} · #{batch.total_rows} filas", operation_import_path(batch) %></li><% end %></ul></section>

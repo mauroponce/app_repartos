@@ -45,11 +45,12 @@ class CustomerTest < ActiveSupport::TestCase
     assert customer.valid?
   end
 
-  test "legacy records can remain unlocated but admin saves require a location" do
+  test "unlocated customers can be edited while their location remains pending" do
     customer = customers(:inactive)
     assert customer.valid?
     assert_not customer.located?
-    assert_not customer.valid?(:geocoded)
+    assert customer.valid?(:geocoded)
+    assert_equal "pending", customer.location_verification
   end
 
   test "changing an address without reconfirming clears the obsolete coordinates" do

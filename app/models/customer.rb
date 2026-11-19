@@ -12,6 +12,7 @@ class Customer < ApplicationRecord
 
   before_validation :clear_outdated_location
   before_validation :confirm_form_location
+  before_validation :refresh_import_identity
 
   enum :status, { active: "active", inactive: "inactive" }, validate: true
   normalizes :name, :contact, :address, :city, with: ->(value) { value.strip }
@@ -44,6 +45,10 @@ class Customer < ApplicationRecord
   }
 
   private
+
+  def refresh_import_identity
+    self.import_identity_key = [ name, address, city ].map { |value| Geocoding::Address.fold(value) }.join("|")
+  end
 
   def confirm_form_location
     return unless validation_context == :geocoded

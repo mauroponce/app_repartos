@@ -13,6 +13,10 @@
       <%= link_to reports_path, class: "nav-link #{controller_name.in?(%w[reports commercial_opportunities commercial_rule_settings]) ? 'active' : ''}" do %><%= icon("chart") %><span class="nav-text">Reportes</span><small data-workflow-count="opportunities"><%= workflow_counts[:opportunities] %></small><% end %>
       <%= link_to operations_path, class: "nav-link #{controller_name == 'operations' ? 'active' : ''}" do %><%= icon("chart") %><span class="nav-text">Operaciones en vivo</span><% end %>
       <%= link_to drivers_path, class: "nav-link #{controller_name == 'drivers' ? 'active' : ''}", aria: { current: controller_name == "drivers" ? "page" : nil } do %><%= icon("users") %><span class="nav-text">Repartidores</span><% end %>
+      <%= link_to new_operation_import_path, class: "nav-link #{controller_name == 'operation_imports' ? 'active' : ''}" do %><%= icon("package") %><span class="nav-text">Importar operación</span><% end %>
+      <%= link_to operation_drivers_path, class: "nav-link" do %><%= icon("users") %><span class="nav-text">Repartidores operativos</span><% end %>
+      <%= link_to operation_schedules_path, class: "nav-link" do %><%= icon("route") %><span class="nav-text">Programaciones</span><% end %>
+      <%= link_to operation_locations_path, class: "nav-link" do %><%= icon("store") %><span class="nav-text">Ubicaciones</span><% end %>
       <%= link_to customers_path, class: "nav-link #{controller_name.in?(["customers", "delivery_schedules"]) ? 'active' : ''}", aria: { current: controller_name.in?(["customers", "delivery_schedules"]) ? "page" : nil } do %><%= icon("store") %><span class="nav-text">Clientes</span><% end %>
       <%= link_to products_path, class: "nav-link #{controller_name.in?(["products", "product_imports"]) ? 'active' : ''}" do %><%= icon("package") %><span class="nav-text">Productos</span><% end %>
       <%= link_to delivery_orders_path, class: "nav-link #{controller_name == 'delivery_orders' ? 'active' : ''}" do %><%= icon("package") %><span class="nav-text">Entregas</span><% end %>

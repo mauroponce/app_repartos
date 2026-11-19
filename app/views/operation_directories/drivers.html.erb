@@ -1,0 +1,3 @@
+<div class="heading"><div><h1>Repartidores operativos</h1><p>Los perfiles importados pueden vincularse a cuentas de acceso más adelante.</p></div></div>
+<section class="management-panel"><ul><% @drivers.each do |driver| %><li><%= driver.name %> · <%= driver.user ? "Con acceso" : "Sin credenciales" %></li><% end %></ul></section>
+<%= link_to "Siguiente", operation_drivers_path(page: @page + 1) if @page < @pages %>

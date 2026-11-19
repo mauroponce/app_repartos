@@ -1,5 +1,5 @@
-<tr class="driver-row" id="driver_<%= driver.id %>">
-  <td><div class="td-person"><span class="mini-avatar <%= %w[violet blue mint peach pink][driver.id % 5] %>" aria-hidden="true"><%= initials(driver.name) %></span><%= link_to driver.name, driver_path(driver), class: "customer-name", data: { turbo_frame: "modal" } %></div></td>
+<tr class="driver-row" data-controller="product-row-link" data-action="click->product-row-link#open" id="driver_<%= driver.id %>">
+  <td><div class="td-person"><span class="mini-avatar <%= %w[violet blue mint peach pink][driver.id % 5] %>" aria-hidden="true"><%= initials(driver.name) %></span><%= link_to driver.name, driver_path(driver), class: "customer-name", data: { turbo_frame: "modal", product_row_link_target: "link" } %></div></td>
   <td><%= driver.email_address %></td>
   <td class="customer-phone"><%= driver.phone.presence || "Sin informar" %></td>
   <td><%= @run_counts.fetch(driver.id, 0) %></td>

@@ -6,7 +6,10 @@ class DriversControllerTest < ActionDispatch::IntegrationTest
   test "directory only shows drivers from the current company and real counters" do
     get drivers_path
     assert_response :success
-    assert_select ".driver-row", count: 2
+    assert_select ".driver-row", count: 1
+    assert_select "select[name=status] option[selected][value=active]", text: "Activos"
+    assert_select "form[data-turbo-frame=directory]"
+    assert_select ".filters input[type=submit]", count: 0
     assert_select ".customer-name", text: users(:one).name, count: 0
     assert_select ".customer-name", text: users(:other_driver).name, count: 0
     assert_select ".kpi-value", text: "2", count: 1
@@ -31,18 +34,32 @@ class DriversControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "directory has alphabetic pagination and preserves filters" do
-    13.times do |index|
+    26.times do |index|
       companies(:one).users.create!(name: "Equipo #{index.to_s.rjust(2, '0')}", role: :driver, email_address: "equipo-#{index}@example.test", password: "Repartos-test-2026")
     end
     get drivers_path, params: { q: "Equipo", status: "active" }
-    assert_select ".driver-row", count: 12
+    assert_select ".driver-row", count: 25
     assert_select ".customer-name" do |links|
-      assert_equal (0...12).map { |index| "Equipo #{index.to_s.rjust(2, '0')}" }, links.map(&:text)
+      assert_equal (0...25).map { |index| "Equipo #{index.to_s.rjust(2, '0')}" }, links.map(&:text)
     end
-    assert_select "a[href=?]", drivers_path(q: "Equipo", status: "active", page: 2)
+    assert_select "a[href=?]", drivers_path(q: "Equipo", status: "active", sort: "name", direction: "asc", page: 2)
     get drivers_path, params: { q: "Equipo", status: "active", page: 999 }
     assert_select ".driver-row", count: 1
-    assert_select ".customer-name", text: "Equipo 12"
+    assert_select ".customer-name", text: "Equipo 25"
+  end
+
+  test "filtering and ordering update the directory frame within the company" do
+    get drivers_path, params: { status: "" }
+    assert_select ".driver-row", count: 2
+    %w[name email phone runs status].each do |column|
+      get drivers_path, params: { q: "Juan", status: "active", sort: column, direction: "desc" }, headers: { "Turbo-Frame" => "directory" }
+      assert_response :success
+      assert_select "turbo-frame#directory .driver-row", count: 1
+      assert_select "th[aria-sort=descending]", count: 1
+      assert_select ".customer-name", text: users(:other_driver).name, count: 0
+    end
+    get drivers_path, params: { sort: "invalid SQL", direction: "desc" }
+    assert_select "th[aria-sort=descending]", text: /REPARTIDOR/
   end
 
   test "autocomplete stays within tenant role and status and does not expose credentials" do
@@ -91,7 +108,9 @@ class DriversControllerTest < ActionDispatch::IntegrationTest
     driver = users(:driver)
     get driver_path(driver)
     assert_response :success
-    assert_select "dialog[data-modal-return-url-value=?]", drivers_path
+    assert_select "dialog.customer-dialog[data-modal-return-url-value=?]", drivers_path
+    assert_select "a[href=?][data-turbo-frame=modal]", edit_driver_path(driver)
+    assert_select "a", text: "Volver a repartidores"
     assert_select "h1", text: driver.name
     get edit_driver_path(driver)
     assert_response :success
