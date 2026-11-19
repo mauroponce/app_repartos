@@ -112,6 +112,17 @@ Company.transaction do
     [ company.id, catalog ]
   end
 
+  # Additional local records make the catalog and directory pagination easy to exercise.
+  30.times do |index|
+    number = (index + 1).to_s.rjust(2, "0")
+    south.products.find_or_create_by!(sku: "DEMO-#{number}") do |product|
+      product.assign_attributes(name: "Producto de prueba #{number}", unit: "unit", active: true)
+    end
+    south.customers.find_or_create_by!(external_code: "DEMO-#{number}") do |customer|
+      customer.assign_attributes(name: "Comercio de prueba #{number}", address: "Calle de prueba #{index + 1}", city: "Adrogué", status: "active")
+    end
+  end
+
   seed_schedule = lambda do |company, customer_name, code, weekday, attributes, items|
     company.delivery_schedules.find_or_create_by!(notes: "Demo [#{code}]: entrega semanal.") do |schedule|
       schedule.assign_attributes({ customer: company.customers.find_by!(name: customer_name), weekday: weekday,

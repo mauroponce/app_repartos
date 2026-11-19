@@ -342,3 +342,5 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:#737380;box-sh
 }
 .product-row{cursor:pointer}
 .products-table .customer-name{font-size:12px;font-weight:700;color:#34323e;overflow-wrap:anywhere}
+
+.sort-link{display:inline-flex;align-items:center;gap:4px;color:inherit}.sort-link:hover{color:var(--ink)}

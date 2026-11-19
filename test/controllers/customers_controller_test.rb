@@ -21,7 +21,10 @@ class CustomersControllerTest < ActionDispatch::IntegrationTest
   test "directory and metrics are scoped to the current company" do
     get customers_path
     assert_response :success
-    assert_select ".customer-row", count: 2
+    assert_select ".customer-row", count: 1
+    assert_select "select[name=status] option[selected][value=active]", text: "Activos"
+    assert_select ".filters input[type=submit]", count: 0
+    assert_select "form[data-turbo-frame=directory]"
     assert_select ".customer-name", text: customers(:one).name
     assert_select ".customer-name", text: customers(:other_company).name, count: 0
     assert_select ".kpi-value", text: "2", count: 2
@@ -33,6 +36,14 @@ class CustomersControllerTest < ActionDispatch::IntegrationTest
     assert_select ".customer-row", count: 1
     assert_select ".customer-name", text: customers(:other_company).name
     assert_select ".customer-name", text: customers(:one).name, count: 0
+  end
+
+  test "all statuses can be selected and filters render inside the results frame" do
+    get customers_path, params: { status: "" }
+    assert_select ".customer-row", count: 2
+    get customers_path, params: { q: "Adrogué", status: "active" }, headers: { "Turbo-Frame" => "directory" }
+    assert_response :success
+    assert_select "turbo-frame#directory .customer-row", count: 1
   end
 
   test "search and status filters work together" do
@@ -55,9 +66,9 @@ class CustomersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "pagination bounds results and preserves filters" do
-    13.times { |i| companies(:one).customers.create!(valid_attributes.merge(name: "Negocio #{i}")) }
+    26.times { |i| companies(:one).customers.create!(valid_attributes.merge(name: "Negocio #{i}")) }
     get customers_path, params: { q: "Negocio", status: "active" }
-    assert_select ".customer-row", count: 12
+    assert_select ".customer-row", count: 25
     assert_select "a", text: "Siguiente →"
     get customers_path, params: { q: "Negocio", status: "active", page: 2 }
     assert_select ".customer-row", count: 1
@@ -70,11 +81,25 @@ class CustomersControllerTest < ActionDispatch::IntegrationTest
     companies(:one).customers.create!(valid_attributes.merge(name: "Beta"))
     companies(:one).customers.create!(valid_attributes.merge(name: "Álvaro"))
     companies(:one).customers.create!(valid_attributes.merge(name: "Ñandú"))
-    get customers_path
-    assert_select "table th[aria-sort=ascending]", text: "CLIENTE"
+    get customers_path, params: { status: "" }
+    assert_select "table th[aria-sort=ascending]", text: /CLIENTE/
     assert_select ".customer-name" do |names|
       assert_equal [ "alfa", "Álvaro", "Beta", "Ñandú", "zeta" ], names.map(&:text)
     end
+  end
+
+  test "customer sorting preserves filters and rejects unknown columns" do
+    get customers_path, params: { sort: "name", direction: "desc", status: "active" }
+    assert_select "th[aria-sort=descending]", text: /CLIENTE/
+    assert_select "input[name=sort][value=name]"
+    assert_select "input[name=direction][value=desc]"
+    %w[name contact address phone status].each do |column|
+      get customers_path, params: { sort: column, direction: "desc", status: "active" }
+      assert_select "th[aria-sort=descending]", count: 1
+      assert_select ".customer-row", count: 1
+    end
+    get customers_path, params: { sort: "name; DROP TABLE customers", direction: "desc" }
+    assert_select "th[aria-sort=descending]", text: /CLIENTE/
   end
 
   test "autocomplete is bounded alphabetical and scoped to the authenticated company" do

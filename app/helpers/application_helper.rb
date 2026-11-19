@@ -14,6 +14,18 @@ module ApplicationHelper
     unit == "unit" ? "unidades" : "#{label}s"
   end
 
+  def sortable_column(label, column, path, filters, frame: nil)
+    current = @sort == column
+    next_direction = current && @direction == "asc" ? "desc" : "asc"
+    aria_sort = current ? (@direction == "asc" ? "ascending" : "descending") : nil
+    link_data = frame ? { turbo_frame: frame, action: "click->product-filter#sort", sort: column, direction: next_direction } : {}
+    content_tag(:th, scope: "col", aria: { sort: aria_sort }) do
+      link_to(path.call(filters.merge(sort: column, direction: next_direction)), data: link_data, class: "sort-link") do
+        safe_join([ label, content_tag(:span, current ? (@direction == "asc" ? " ↑" : " ↓") : " ↕", aria: { hidden: true }) ])
+      end
+    end
+  end
+
   def product_options(products)
     products.map { |product| [ product.name + (product.active? ? "" : " (inactivo)"), product.id, { "data-description" => product.name, "data-unit" => product.unit } ] }
   end

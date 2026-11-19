@@ -9,11 +9,14 @@ class CustomersController < ApplicationController
     @active = directory.active.count
     @cities = directory.distinct.count(:city)
     @inactive = directory.inactive.count
-    filtered = filtered_customers
+    sort_columns = { "name" => 'LOWER(customers.name) COLLATE "es-x-icu"', "contact" => 'LOWER(customers.contact) COLLATE "es-x-icu"', "address" => 'LOWER(customers.address) COLLATE "es-x-icu"', "phone" => 'LOWER(customers.phone) COLLATE "es-x-icu"', "status" => 'customers.status' }
+    @sort = params[:sort].presence_in(sort_columns.keys) || "name"
+    @direction = params[:direction] == "desc" ? "desc" : "asc"
+    filtered = filtered_customers.reorder(Arel.sql("#{sort_columns.fetch(@sort)} #{@direction.upcase} NULLS LAST"), :id)
     @filtered_count = filtered.count
-    @pages = [ (@filtered_count / 12.0).ceil, 1 ].max
+    @pages = [ (@filtered_count / 25.0).ceil, 1 ].max
     @page = params[:page].to_i.clamp(1, @pages)
-    @customers = filtered.limit(12).offset((@page - 1) * 12)
+    @customers = filtered.limit(25).offset((@page - 1) * 25)
   end
 
   def autocomplete
@@ -55,7 +58,11 @@ class CustomersController < ApplicationController
 
   def set_filters
     @query = params[:q].to_s.strip.first(120)
-    @status = params[:status].presence_in(Customer.statuses.keys)
+    @status = if action_name == "index" && !params.key?(:status)
+      "active"
+    else
+      params[:status].presence_in(Customer.statuses.keys)
+    end
   end
 
   def filtered_customers

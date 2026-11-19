@@ -8,16 +8,17 @@
     </div>
     <div class="toolbar">
       <%= form_with url: products_path, method: :get, class: "filters", data: { turbo_frame: "product-results", product_filter_target: "form" } do |form| %>
+        <%= hidden_field_tag :sort, @sort, data: { product_filter_target: "sort" } %>
+        <%= hidden_field_tag :direction, @direction, data: { product_filter_target: "direction" } %>
         <div class="field-search"><%= icon("search", "sm") %><%= form.search_field :q, value: @query, placeholder: "Buscar nombre o SKU", aria: { label: "Buscar productos" }, autocomplete: "off", maxlength: 120, data: { product_filter_target: "query", action: "input->product-filter#search" } %></div>
         <%= form.select :active, [["Todos los estados", ""], ["Activos", "true"], ["Inactivos", "false"]], { selected: @active_filter }, class: "select-filter product-status-filter", aria: { label: "Estado del producto" }, data: { action: "change->product-filter#submit" } %>
       <% end %>
     </div>
     <%= turbo_frame_tag "product-results" do %>
-    <p class="result-count" role="status"><%= pluralize(@filtered_count, "producto", "productos") %></p>
     <div class="table-scroll" tabindex="0" role="region" aria-label="Listado de productos, desplazamiento horizontal">
       <table class="data-table products-table">
-        <caption class="sr-only">Productos ordenados alfabéticamente por nombre</caption>
-        <thead><tr><th scope="col" aria-sort="ascending">PRODUCTO</th><th scope="col">SKU</th><th scope="col">UNIDAD DE ENTREGA</th><th scope="col">ESTADO</th><th scope="col"><span class="sr-only">Acciones</span></th></tr></thead>
+        <caption class="sr-only">Listado de productos</caption>
+        <thead><tr><% product_filters = { q: @query, active: @active_filter || "" } %><% [["PRODUCTO", "name"], ["SKU", "sku"], ["UNIDAD DE ENTREGA", "unit"], ["ESTADO", "active"]].each do |label, column| %><%= sortable_column(label, column, method(:products_path), product_filters, frame: "product-results") %><% end %><th scope="col"><span class="sr-only">Acciones</span></th></tr></thead>
         <tbody>
           <% @products.each do |product| %>
             <tr id="<%= dom_id(product) %>" class="product-row" data-controller="product-row-link" data-action="click->product-row-link#open">
@@ -32,6 +33,7 @@
       </table>
     </div>
     <% if @products.empty? %><div class="empty"><h2>No hay productos para mostrar</h2><p>Agregá productos o ajustá los filtros.</p></div><% end %>
+    <nav class="table-footer" aria-label="Paginación de productos"><span role="status">Página <%= @page %> de <%= @pages %> · <%= pluralize(@filtered_count, "producto", "productos") %></span><div class="pagination"><% if @page > 1 %><%= link_to "← Anterior", products_path(product_filters.merge(sort: @sort, direction: @direction, page: @page - 1)), class: "btn btn-white btn-sm" %><% end %><% if @page < @pages %><%= link_to "Siguiente →", products_path(product_filters.merge(sort: @sort, direction: @direction, page: @page + 1)), class: "btn btn-white btn-sm" %><% end %></div></nav>
     <% end %>
   </section>
 </div>

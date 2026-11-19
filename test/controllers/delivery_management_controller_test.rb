@@ -17,12 +17,30 @@ class DeliveryManagementControllerTest < ActionDispatch::IntegrationTest
     assert_select ".products-table tbody tr", count: 1
     get products_path, params: { q: "%" }
     assert_select ".products-table tbody tr", count: 0
-    13.times { |i| companies(:one).products.create!(name: "Nuevo #{i}", unit: "kg") }
+    26.times { |i| companies(:one).products.create!(name: "Nuevo #{i}", unit: "kg") }
     get products_path, params: { q: "Nuevo" }
-    assert_select ".products-table tbody tr", count: 13
+    assert_select ".products-table tbody tr", count: 25
+    assert_select "nav[aria-label='Paginación de productos']", text: /26 productos/
+    get products_path, params: { q: "Nuevo", page: 2 }
+    assert_select ".products-table tbody tr", count: 1
+    get products_path, params: { q: "Nuevo", sort: "name", direction: "desc" }
+    assert_select "th[aria-sort=descending]", text: /PRODUCTO/
+    assert_select ".products-table tbody tr", count: 25
     get products_path, params: { q: "Producto", active: "false" }, headers: { "Turbo-Frame" => "product-results" }
     assert_select "turbo-frame#product-results .products-table tbody tr", count: 1
     assert_select ".products-table td", text: "Producto retirado"
+  end
+
+  test "product columns sort within the selected company and status" do
+    %w[name sku unit active].each do |column|
+      get products_path, params: { sort: column, direction: "desc", active: "true" }, headers: { "Turbo-Frame" => "product-results" }
+      assert_response :success
+      assert_select "th[aria-sort=descending]", count: 1
+      assert_select ".products-table tbody tr", count: 2
+      assert_select ".products-table td", text: "Almendras", count: 0
+    end
+    get products_path, params: { sort: "invalid SQL", direction: "desc" }
+    assert_select "th[aria-sort=descending]", text: /PRODUCTO/
   end
 
   test "product detail is available only within the current company" do
